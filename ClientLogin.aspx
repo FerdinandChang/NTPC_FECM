@@ -1,10 +1,12 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="ClientLogin.aspx.cs" Inherits="NTPC_FEC.ClientLogin" %>
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="ClientLogin.aspx.cs" Inherits="NTPC_FEC.ClientLogin" %>
 
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head runat="server">
     <meta charset="utf-8" />
     <title>業者自主申報登入跳轉</title>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 </head>
 <body>
     <form id="form1" runat="server">

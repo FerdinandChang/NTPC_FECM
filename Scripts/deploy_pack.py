@@ -30,7 +30,9 @@ INCLUDE_FILES = [
     "ValidateCode.ashx",
     "Logout.aspx",
     "Web.config",
-    "自主管理平台操作手冊R8.pdf"
+    "自主管理平台操作手冊R8.pdf",
+    "favicon.ico",
+    "apple-touch-icon.png"
 ]
 
 # 發布時必須包含的子目錄

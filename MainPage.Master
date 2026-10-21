@@ -1,4 +1,4 @@
-﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="MainPage.Master.cs" Inherits="NTPC_FEC.MainPageMaster" %>
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="MainPage.Master.cs" Inherits="NTPC_FEC.MainPageMaster" %>
 
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -6,6 +6,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title><%: Page.Title %> - 新北市固定溢散源管理平台</title>
+
+    <!-- 專屬 Favicon & 手機主畫面圖標 -->
+    <link rel="shortcut icon" href="<%= ResolveUrl("~/favicon.ico") %>" type="image/x-icon" />
+    <link rel="apple-touch-icon" href="<%= ResolveUrl("~/apple-touch-icon.png") %>" />
 
     <!-- 本地樣式 (避開機房資安 CSP 阻擋外連) -->
     <link rel="stylesheet" href="<%= ResolveUrl("~/Content/bootstrap.min.css") %>" />
