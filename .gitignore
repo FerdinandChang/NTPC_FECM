@@ -1,0 +1,31 @@
+# Visual Studio 暫存與建置產物
+bin/
+obj/
+dist/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# 舊版站台備份目錄 (絕對不進入版本庫與發布包)
+Backup/
+BAK_FILE/
+*.bak
+*.zip
+*.7z
+*.rar
+
+# 機敏設定檔與正式機帳密保護
+Web.config
+!Web.config.template
+
+# 除錯與日誌檔
+*.log
+*.pdb
+
+# 系統臨時檔
+.vs/
+.vscode/
+Thumbs.db
+ehthumbs.db
+Desktop.ini

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+  新北市固定溢散源管理平台 - 安全環境設定範本 (Web.config.template)
+  請於正式機複製為 Web.config 並填入該伺服器專屬密碼，此範本已由 .gitignore 安全保護
+-->
+<configuration>
+  <appSettings>
+    <add key="SMTPserver" value="msr.hinet.net" />
+    <add key="EmailAddr" value="your_mail@ms6.hinet.net" />
+    <add key="SMTP_User" value="your_mail@ms6.hinet.net" />
+    <add key="SMTP_Password" value="########" />
+    <add key="CCEmail" value="your_mail@ms6.hinet.net" />
+  </appSettings>
+  <connectionStrings>
+    <add name="MainConnectionString" connectionString="Data Source={DB_SERVER}\SQLEXPRESS2017;Initial Catalog=NTPC_FEC;User ID={DB_USER};Password={DB_PASSWORD}" providerName="System.Data.SqlClient" />
+    <add name="AirQualityConnectionString" connectionString="Data Source={DB_SERVER}\SQLEXPRESS;Initial Catalog=NTPC_AirQuality;User ID={DB_USER};Password={DB_PASSWORD}" providerName="System.Data.SqlClient" />
+  </connectionStrings>
+  <system.web>
+    <globalization fileEncoding="utf-8" requestEncoding="utf-8" responseEncoding="utf-8" culture="zh-TW" uiCulture="zh-TW" />
+    <sessionState timeout="180" />
+    <customErrors mode="RemoteOnly" />
+    <compilation debug="false" targetFramework="4.8" />
+    <httpRuntime targetFramework="4.8" maxRequestLength="102400" executionTimeout="600" />
+  </system.web>
+  <system.webServer>
+    <security>
+      <requestFiltering>
+        <requestLimits maxAllowedContentLength="104857600" />
+      </requestFiltering>
+    </security>
+    <staticContent>
+      <remove fileExtension=".webp" />
+      <mimeMap fileExtension=".webp" mimeType="image/webp" />
+    </staticContent>
+  </system.webServer>
+</configuration>
