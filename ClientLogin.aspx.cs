@@ -33,17 +33,17 @@ namespace NTPC_FEC
             if (dt.Rows.Count > 0)
             {
                 var row = dt.Rows[0];
-                string dbPassword = row["Password"]?.ToString() ?? "";
-                string accState = row["Acc_State"]?.ToString() ?? "";
-                string userName = row["Name"]?.ToString() ?? reqUser;
+                string dbPassword = ((row["Password"] != null && row["Password"] != DBNull.Value) ? row["Password"].ToString() : "");
+                string accState = ((row["Acc_State"] != null && row["Acc_State"] != DBNull.Value) ? row["Acc_State"].ToString() : "");
+                string userName = ((row["Name"] != null && row["Name"] != DBNull.Value) ? row["Name"].ToString() : reqUser);
 
                 if (string.Equals(dbPassword, reqPassword) && accState.Equals("OK", StringComparison.OrdinalIgnoreCase))
                 {
                     long lic = 0, lic2 = 0;
-                    long.TryParse(row["LIC"]?.ToString(), out lic);
-                    long.TryParse(row["LIC2"]?.ToString(), out lic2);
+                    long.TryParse((row["LIC"] != null ? row["LIC"].ToString() : ""), out lic);
+                    long.TryParse((row["LIC2"] != null ? row["LIC2"].ToString() : ""), out lic2);
                     int uid = 0;
-                    int.TryParse(row["UID"]?.ToString(), out uid);
+                    int.TryParse((row["UID"] != null ? row["UID"].ToString() : ""), out uid);
 
                     var user = new UserAccount
                     {
@@ -53,7 +53,7 @@ namespace NTPC_FEC
                         AccState = accState,
                         Lic = lic,
                         Lic2 = lic2,
-                        FacID = row["FAC_ID"]?.ToString() ?? ""
+                        FacID = ((row["FAC_ID"] != null && row["FAC_ID"] != DBNull.Value) ? row["FAC_ID"].ToString() : "")
                     };
 
                     Session["LoginUser"] = user.UserID;

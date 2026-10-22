@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- 
   新北市固定溢散源管理平台 - 安全環境設定範本 (Web.config.template)
   請於正式機複製為 Web.config 並填入該伺服器專屬密碼，此範本已由 .gitignore 安全保護
@@ -26,11 +26,35 @@
     <security>
       <requestFiltering>
         <requestLimits maxAllowedContentLength="104857600" />
+        <fileExtensions>
+          <add fileExtension=".woff" allowed="true" />
+          <add fileExtension=".woff2" allowed="true" />
+          <add fileExtension=".ttf" allowed="true" />
+          <add fileExtension=".otf" allowed="true" />
+          <add fileExtension=".eot" allowed="true" />
+        </fileExtensions>
       </requestFiltering>
     </security>
     <staticContent>
       <remove fileExtension=".webp" />
       <mimeMap fileExtension=".webp" mimeType="image/webp" />
+      <remove fileExtension=".woff" />
+      <mimeMap fileExtension=".woff" mimeType="font/woff" />
+      <remove fileExtension=".woff2" />
+      <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
+      <remove fileExtension=".ttf" />
+      <mimeMap fileExtension=".ttf" mimeType="application/font-sfnt" />
+      <remove fileExtension=".otf" />
+      <mimeMap fileExtension=".otf" mimeType="font/otf" />
+      <remove fileExtension=".eot" />
+      <mimeMap fileExtension=".eot" mimeType="application/vnd.ms-fontobject" />
     </staticContent>
+    <httpProtocol>
+      <customHeaders>
+        <!-- 解除 IIS 全域繼承之 COEP 限制，允許國土測繪圖資 WMTS 與開源地圖正常嵌入載入 -->
+        <remove name="Cross-Origin-Embedder-Policy" />
+        <add name="Cross-Origin-Embedder-Policy" value="unsafe-none" />
+      </customHeaders>
+    </httpProtocol>
   </system.webServer>
 </configuration>

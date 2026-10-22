@@ -1,4 +1,4 @@
-<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="ClientLogin.aspx.cs" Inherits="NTPC_FEC.ClientLogin" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="ClientLogin.aspx.cs" Inherits="NTPC_FEC.ClientLogin" %>
 
 <!DOCTYPE html>
 <html lang="zh-TW">

@@ -29,3 +29,10 @@ Web.config
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# 臨時腳本、除錯產物與暫存檔案
+scratch/
+favicon_native.ico
+favicon_small.ico
+Scripts/ico_b64.txt
+Scripts/gen_ico.ps1

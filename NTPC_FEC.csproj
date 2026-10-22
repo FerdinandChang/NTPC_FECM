@@ -3,7 +3,7 @@
     <AssemblyName>NTPC_FEC</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <TargetFramework>net48</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>5</LangVersion>
     <OutputType>Library</OutputType>
     <OutputPath>bin\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -17,6 +17,8 @@
     <None Remove="Backup\**" />
     <Compile Remove="scripts\**" />
     <None Remove="scripts\**" />
+    <Compile Remove="scratch\**" />
+    <None Remove="scratch\**" />
   </ItemGroup>
 
   <ItemGroup>

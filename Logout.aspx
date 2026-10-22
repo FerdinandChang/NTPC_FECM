@@ -4,7 +4,7 @@
 <script runat="server">
     protected void Page_Load(object sender, EventArgs e)
     {
-        string loginMode = Session["LoginMode"]?.ToString();
+        string loginMode = (Session["LoginMode"] != null) ? Session["LoginMode"].ToString() : "";
         
         // 執行安全登出 (清空 Session、清除憑證 Cookie)
         AuthService.Logout(Context);

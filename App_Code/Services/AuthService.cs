@@ -22,7 +22,7 @@ namespace NTPC_FEC.Services
                 return result;
             }
 
-            if (!string.Equals(sessionCode.Trim(), inputValidateCode?.Trim(), StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(sessionCode.Trim(), (inputValidateCode != null ? inputValidateCode.Trim() : ""), StringComparison.OrdinalIgnoreCase))
             {
                 result.Success = false;
                 result.Message = "驗證碼輸入錯誤，請重新確認！";
@@ -40,7 +40,7 @@ namespace NTPC_FEC.Services
             }
 
             // 2. 查詢資料庫使用者
-            string sql = "SELECT UID, UserID, Password, Name, Acc_State, LIC, LIC2, FAC_ID, LastLogin FROM UserAcc WHERE UserID = @UserID";
+            string sql = "SELECT UID, UserID, Password, PUnit, Name, Acc_State, LIC, LIC2, FAC_ID, LastLogin FROM UserAcc WHERE UserID = @UserID";
             var parameters = new SqlParameter[]
             {
                 new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId.Trim() }
@@ -66,9 +66,9 @@ namespace NTPC_FEC.Services
             }
 
             var row = dt.Rows[0];
-            string dbPassword = row["Password"]?.ToString() ?? "";
-            string accState = row["Acc_State"]?.ToString() ?? "";
-            string userName = row["Name"]?.ToString() ?? userId;
+            string dbPassword = ((row["Password"] != null && row["Password"] != DBNull.Value) ? row["Password"].ToString() : "");
+            string accState = ((row["Acc_State"] != null && row["Acc_State"] != DBNull.Value) ? row["Acc_State"].ToString() : "");
+            string userName = ((row["Name"] != null && row["Name"] != DBNull.Value) ? row["Name"].ToString() : userId);
 
             // 3. 密碼驗證 (兼顧歷史明文與安全比對)
             bool isPasswordCorrect = string.Equals(dbPassword, password);
@@ -95,26 +95,27 @@ namespace NTPC_FEC.Services
                     return result;
                 default:
                     result.Success = false;
-                    result.Message = $"帳號狀態異常 ({accState})，請洽系統管理員！";
+                    result.Message = string.Format("帳號狀態異常 ({0})，請洽系統管理員！", accState);
                     return result;
             }
 
             // 5. 封裝使用者資訊
             long lic = 0, lic2 = 0;
-            long.TryParse(row["LIC"]?.ToString(), out lic);
-            long.TryParse(row["LIC2"]?.ToString(), out lic2);
+            long.TryParse((row["LIC"] != null ? row["LIC"].ToString() : ""), out lic);
+            long.TryParse((row["LIC2"] != null ? row["LIC2"].ToString() : ""), out lic2);
             int uid = 0;
-            int.TryParse(row["UID"]?.ToString(), out uid);
+            int.TryParse((row["UID"] != null ? row["UID"].ToString() : ""), out uid);
 
             var user = new UserAccount
             {
                 UID = uid,
                 UserID = userId,
                 Name = userName,
+                PUnit = ((row["PUnit"] != null && row["PUnit"] != DBNull.Value) ? row["PUnit"].ToString() : ""),
                 AccState = accState,
                 Lic = lic,
                 Lic2 = lic2,
-                FacID = row["FAC_ID"]?.ToString() ?? "",
+                FacID = ((row["FAC_ID"] != null && row["FAC_ID"] != DBNull.Value) ? row["FAC_ID"].ToString() : ""),
                 LastLogin = row["LastLogin"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(row["LastLogin"]) : null
             };
 
@@ -139,7 +140,7 @@ namespace NTPC_FEC.Services
             }
 
             result.Success = true;
-            result.Message = $"{userName} 您好，歡迎登入新北市固定溢散源管理平台！";
+            result.Message = string.Format("{0} 您好，歡迎登入新北市固定溢散源管理平台！", userName);
             result.RedirectUrl = "MainPage.aspx";
             result.User = user;
 
@@ -180,6 +181,83 @@ namespace NTPC_FEC.Services
         public static UserAccount GetCurrentUser(HttpContext context)
         {
             return context.Session["UserAccount"] as UserAccount;
+        }
+
+        public static OperationResult ChangePassword(string userId, string oldPwd, string newPwd, string confirmPwd)
+        {
+            var result = new OperationResult();
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                result.Success = false;
+                result.Message = "登入已逾期，請重新登入系統！";
+                return result;
+            }
+
+            if (string.IsNullOrEmpty(oldPwd) || string.IsNullOrEmpty(newPwd) || string.IsNullOrEmpty(confirmPwd))
+            {
+                result.Success = false;
+                result.Message = "請完整輸入所有密碼欄位！";
+                return result;
+            }
+
+            if (newPwd != confirmPwd)
+            {
+                result.Success = false;
+                result.Message = "兩次輸入的新密碼不一致，請重新確認！";
+                return result;
+            }
+
+            if (newPwd.Length < 4)
+            {
+                result.Success = false;
+                result.Message = "新密碼長度過短，請至少輸入 4 個字元以上！";
+                return result;
+            }
+
+            try
+            {
+                string querySql = "SELECT Password FROM UserAcc WHERE UserID = @UserID";
+                var queryParams = new SqlParameter[]
+                {
+                    new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId }
+                };
+
+                DataTable dt = DbHelper.ExecuteDataTable(querySql, queryParams);
+                if (dt == null || dt.Rows.Count == 0)
+                {
+                    result.Success = false;
+                    result.Message = "找不到使用者帳號資料！";
+                    return result;
+                }
+
+                string currentDbPwd = dt.Rows[0]["Password"] != null ? dt.Rows[0]["Password"].ToString() : "";
+                if (currentDbPwd != oldPwd)
+                {
+                    result.Success = false;
+                    result.Message = "目前舊密碼輸入錯誤，無法更新！";
+                    return result;
+                }
+
+                string updateSql = "UPDATE UserAcc SET Password = @NewPassword WHERE UserID = @UserID";
+                var updateParams = new SqlParameter[]
+                {
+                    new SqlParameter("@NewPassword", SqlDbType.VarChar) { Value = newPwd },
+                    new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId }
+                };
+
+                DbHelper.ExecuteNonQuery(updateSql, updateParams);
+
+                result.Success = true;
+                result.Message = "密碼變更成功！請牢記您的新密碼。";
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = "更新失敗，系統資料庫異常：" + ex.Message;
+                return result;
+            }
         }
     }
 }
