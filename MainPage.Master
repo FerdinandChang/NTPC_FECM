@@ -677,35 +677,89 @@
 
 
             @media (max-width: 768px) {
-
         .epd-navbar {
-
-            padding: 10px 16px;
-
+            padding: 8px 12px;
         }
-
         .epd-brand svg {
-
-            width: 34px;
-
-            height: 34px;
-
-            margin-right: 10px;
-
+            width: 30px;
+            height: 30px;
+            margin-right: 6px;
         }
-
         .epd-brand span {
-
-            font-size: 1.45rem;
-
+            font-size: 1.35rem;
         }
-
+        .brand-abbr {
+            font-size: 1.35rem;
+            letter-spacing: 0.8px;
+        }
+        .session-timer-badge {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            margin-right: 6px !important;
+        }
+        .session-countdown-num {
+            min-width: 40px;
+            letter-spacing: 0;
+        }
+        .user-profile-btn {
+            padding: 4px 10px;
+            font-size: 0.85rem;
+        }
+        .user-avatar-icon {
+            font-size: 1.1rem;
+            margin-right: 4px;
+        }
+        .user-name-text {
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
+        }
         .main-container {
-
             padding: 15px 10px 30px;
-
         }
+    }
 
+    @media (max-width: 576px) {
+        .epd-navbar {
+            padding: 8px 10px;
+        }
+        .epd-brand svg {
+            width: 26px;
+            height: 26px;
+            margin-right: 4px;
+        }
+        .epd-brand span,
+        .brand-abbr {
+            font-size: 1.2rem;
+            letter-spacing: 0.5px;
+        }
+        .session-timer-badge {
+            padding: 3px 6px;
+            font-size: 0.78rem;
+        }
+        .session-countdown-num {
+            min-width: 36px;
+        }
+        .user-profile-btn {
+            padding: 4px 8px;
+            font-size: 0.82rem;
+        }
+        .user-name-text {
+            max-width: 75px;
+        }
+    }
+
+    @media (max-width: 400px) {
+        /* 極小螢幕下隱藏外層角色徽章，預留充裕視覺空間，詳細角色於點開選單完整呈現 */
+        .user-role-badge {
+            display: none !important;
+        }
+        .user-name-text {
+            max-width: 60px;
+        }
     }
 
 
@@ -1210,29 +1264,39 @@
             to { transform: scale(1); opacity: 1; }
         }
 
-        /* 頂部導航列 Session 倒數計時膠囊 */
+        /* 頂部導航列 Session 倒數計時膠囊 (健康綠底微光意象，兼顧小螢幕排版空間) */
         .session-timer-badge {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.35);
+            background: rgba(16, 185, 129, 0.22);
+            border: 1px solid rgba(52, 211, 153, 0.5);
             border-radius: 20px;
-            padding: 5px 14px;
-            color: #ffffff;
+            padding: 5px 12px;
+            color: #ecfdf5;
             font-size: 0.85rem;
             cursor: pointer;
             backdrop-filter: blur(6px);
             transition: all 0.25s ease;
             user-select: none;
+            white-space: nowrap;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
         }
 
         .session-timer-badge:hover {
-            background: rgba(255, 255, 255, 0.28);
-            border-color: rgba(255, 255, 255, 0.65);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+            background: rgba(16, 185, 129, 0.35);
+            border-color: rgba(52, 211, 153, 0.8);
+            box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
             transform: translateY(-1px);
+            color: #ffffff;
         }
 
         .session-timer-badge:active {
             transform: translateY(0);
+        }
+
+        /* 脈衝動畫：當自動延長或手動重置時觸發呼吸光暈效果 */
+        .session-timer-badge.pulse {
+            box-shadow: 0 0 16px rgba(52, 211, 153, 0.95);
+            border-color: #34d399;
+            transform: scale(1.04);
         }
 
         .session-countdown-num {
@@ -1244,45 +1308,19 @@
             text-align: center;
         }
 
-        /* 心跳狀態指示小圓點 */
-        .keepalive-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #10b981;
-            box-shadow: 0 0 6px #10b981;
-            transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
-            display: inline-block;
-        }
-
-        /* 脈衝動畫：當自動延長或手動重置時觸發 */
-        .keepalive-dot.pulse {
-            transform: scale(1.7);
-            background-color: #34d399;
-            box-shadow: 0 0 14px #34d399;
-        }
-
         .timer-warning {
             color: #fef08a !important;
-            border-color: rgba(253, 224, 71, 0.65) !important;
-            background: rgba(245, 158, 11, 0.25) !important;
-        }
-
-        .timer-warning .keepalive-dot {
-            background-color: #f59e0b;
-            box-shadow: 0 0 6px #f59e0b;
+            border-color: rgba(253, 224, 71, 0.75) !important;
+            background: rgba(245, 158, 11, 0.35) !important;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.3) !important;
         }
 
         .timer-danger {
             color: #fca5a5 !important;
-            border-color: rgba(248, 113, 113, 0.85) !important;
-            background: rgba(220, 38, 38, 0.3) !important;
+            border-color: rgba(248, 113, 113, 0.9) !important;
+            background: rgba(220, 38, 38, 0.4) !important;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.45) !important;
             animation: timerBlink 1s infinite;
-        }
-
-        .timer-danger .keepalive-dot {
-            background-color: #ef4444;
-            box-shadow: 0 0 8px #ef4444;
         }
 
         @keyframes timerBlink {
@@ -1326,7 +1364,7 @@
 
 
 
-        <div class="d-flex justify-content-between align-items-center w-100">
+        <div class="d-flex justify-content-between align-items-center w-100 flex-nowrap">
 
 
 
@@ -1370,14 +1408,12 @@
 
 
 
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center flex-nowrap">
 
-                <!-- 頂部 Session 連線安全倒數提醒膠囊 (偵測操作自動展延) -->
+                <!-- 頂部 Session 連線安全倒數提醒膠囊 (偵測操作自動展延，綠燈轉化為狀態底色微光) -->
                 <div id="navSessionTimer" class="session-timer-badge mr-2 mr-md-3 d-flex align-items-center" 
                      onclick="handleIdleStay();" 
                      title="資安連線倒數。偵測滑鼠移動或敲擊鍵盤會自動展延，亦可點擊此處立即延長作業時間。">
-                    <span id="navKeepAliveDot" class="keepalive-dot mr-2" aria-hidden="true"></span>
-                    <i class="fas fa-clock mr-1 text-light-cyan"></i>
                     <span class="d-none d-sm-inline mr-1" style="font-size: 0.8rem; opacity: 0.85;">連線倒數</span>
                     <span id="navSessionCountdown" class="session-countdown-num">30:00</span>
                 </div>
@@ -2196,14 +2232,14 @@
             var keepAliveUrl = '<%= ResolveUrl("~/KeepAlive.ashx") %>';
             var logoutUrl = '<%= ResolveUrl("~/Logout.aspx?reason=timeout") %>';
 
-            // 觸發右上角綠色指示燈脈衝發光動畫 (視覺化驗證自動延長)
+            // 觸發右上角倒數膠囊脈衝發光動畫 (視覺化驗證自動延長)
             function triggerKeepAlivePulse() {
-                var dot = document.getElementById('navKeepAliveDot');
-                if (!dot) return;
-                dot.classList.add('pulse');
+                var badge = document.getElementById('navSessionTimer');
+                if (!badge) return;
+                badge.classList.add('pulse');
                 if (pulseTimer) clearTimeout(pulseTimer);
                 pulseTimer = setTimeout(function () {
-                    dot.classList.remove('pulse');
+                    badge.classList.remove('pulse');
                 }, 600);
             }
 
@@ -2377,3 +2413,4 @@
 </body>
 
 </html>
+
