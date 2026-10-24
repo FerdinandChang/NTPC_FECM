@@ -438,15 +438,128 @@
             justify-content: center;
         }
 
-        /* 分頁列樣式 */
-        .pagination-modern {
+                /* ========================================================
+           自適應現代化底部分頁列 (Responsive Pagination Footer)
+           解決小尺寸螢幕 (手機) 壅擠與按鈕折行難以點擊問題
+           ======================================================== */
+        .pagination-footer {
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+                gap: 16px;
+            }
+        }
+
+        .pagination-footer-info {
+            font-size: 0.88rem;
+            color: #64748b;
+            text-align: center;
+            white-space: nowrap !important;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer-info {
+                text-align: left;
+            }
+        }
+
+        .pagination-action-group {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border-color);
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            max-width: 100%;
+        }
+        @media (min-width: 768px) {
+            .pagination-action-group {
+                width: auto;
+                justify-content: flex-end;
+            }
+        }
+
+        .btn-page-ctrl {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #334155;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.15s ease-in-out;
+            white-space: nowrap !important;
+            text-decoration: none !important;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .btn-page-ctrl:hover:not(:disabled) {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+        .btn-page-ctrl:active:not(:disabled) {
+            background: #e2e8f0;
+            transform: translateY(1px);
+        }
+        .btn-page-ctrl:disabled,
+        .btn-page-ctrl.disabled {
+            background: #f8fafc;
+            color: #94a3b8;
+            border-color: #e2e8f0;
+            cursor: not-allowed;
+            opacity: 0.55;
+            box-shadow: none;
+        }
+
+        /* 頁碼指示膠囊 */
+        .page-indicator-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #166534;
+            white-space: nowrap !important;
+        }
+
+        /* 手機端大按鈕排版 (Mobile Touch Optimized) */
+        @media (max-width: 767.98px) {
+            .btn-page-ctrl.btn-step {
+                flex: 1;
+                min-width: 0;
+                padding: 0 8px;
+            }
+            .btn-page-ctrl.btn-edge {
+                width: 40px;
+                min-width: 40px;
+                padding: 0;
+                flex-shrink: 0;
+            }
+            .page-indicator-pill {
+                flex-shrink: 0;
+                padding: 0 10px;
+                font-size: 0.84rem;
+            }
         }
     </style>
 </head>
@@ -459,9 +572,10 @@
                     <i class="fas fa-arrow-left"></i>
                     <span class="d-none d-sm-inline">回主系統</span>
                 </a>
-                <h1 class="brand-title">
-                    <i class="fas fa-smog text-white"></i>
-                    <span>空品不良應變回報管理清單</span>
+                <h1 class="brand-title mb-0" style="white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">
+                    <i class="fas fa-smog text-white mr-1"></i>
+                    <span class="d-none d-md-inline">空品不良應變回報管理清單</span>
+                    <span class="d-inline d-md-none">空品應變清單</span>
                 </h1>
                 <span class="badge badge-light text-dark font-weight-bold ml-2 d-none d-md-inline" style="font-size: 0.85rem;">
                     <i class="fas fa-user-shield text-primary mr-1" v-if="isManager"></i>
@@ -893,11 +1007,35 @@
                         </div>
                     </div>
 
-                    <!-- 現代分頁控制列 -->
-                    <div class="pagination-modern px-3 pb-3" v-if="totalPages > 1">
-                        <div class="text-muted" style="font-size: 13px;">
-                            顯示第 <strong>{{ (filters.pageIndex - 1) * filters.pageSize + 1 }}</strong> 至 <strong>{{ Math.min(filters.pageIndex * filters.pageSize, totalCount) }}</strong> 筆，共 <strong>{{ totalCount }}</strong> 筆資料
+                    <!-- 自適應底部分頁導覽列 (Responsive Pagination Footer) -->
+                    <div v-if="!loading && totalCount > 0" class="pagination-footer">
+                        <div class="pagination-footer-info">
+                            顯示第 <strong class="text-dark">{{ (filters.pageIndex - 1) * filters.pageSize + 1 }}</strong> 至 <strong class="text-dark">{{ Math.min(filters.pageIndex * filters.pageSize, totalCount) }}</strong> 筆，共 <strong class="text-dark">{{ totalCount }}</strong> 筆資料
                         </div>
+                        <div class="pagination-action-group">
+                            <button type="button" class="btn-page-ctrl btn-edge" :disabled="filters.pageIndex <= 1" v-on:click="changePage(1)" title="第一頁">
+                                <i class="fas fa-angle-double-left"></i>
+                                <span class="d-none d-md-inline ml-1">首頁</span>
+                            </button>
+                            <button type="button" class="btn-page-ctrl btn-step" :disabled="filters.pageIndex <= 1" v-on:click="changePage(filters.pageIndex - 1)" title="上一頁">
+                                <i class="fas fa-chevron-left mr-1"></i>
+                                <span>上一頁</span>
+                            </button>
+                            <div class="page-indicator-pill" title="目前頁次 / 總頁數">
+                                <span>{{ filters.pageIndex }}</span>
+                                <span class="mx-1 text-muted" style="opacity: 0.5; font-weight: normal;">/</span>
+                                <span>{{ totalPages }}</span>
+                            </div>
+                            <button type="button" class="btn-page-ctrl btn-step" :disabled="filters.pageIndex >= totalPages" v-on:click="changePage(filters.pageIndex + 1)" title="下一頁">
+                                <span>下一頁</span>
+                                <i class="fas fa-chevron-right ml-1"></i>
+                            </button>
+                            <button type="button" class="btn-page-ctrl btn-edge" :disabled="filters.pageIndex >= totalPages" v-on:click="changePage(totalPages)" title="末頁">
+                                <span class="d-none d-md-inline ml-1">末頁</span>
+                                <i class="fas fa-angle-double-right"></i>
+                            </button>
+                        </div>
+                    </div>
 
                         <nav aria-label="分頁導航">
                             <ul class="pagination pagination-sm mb-0">
@@ -1148,41 +1286,74 @@
                 this.initPage();
             },
             methods: {
-                // 初始化載入
+                // 初始化載入 (極速並行載入，保證 loading 必定解除不卡死)
                 initPage() {
                     this.loading = true;
-                    axios.get('AirQuality_List.aspx?action=getinitdata')
-                        .then(res => {
-                            if (res.data && res.data.Success) {
-                                const d = res.data.Data;
+
+                    // 1. 前端預設近一個月日期區間
+                    const today = new Date();
+                    const fmt = d => d.toISOString().split('T')[0];
+                    const endStr = fmt(today);
+                    const dStart = new Date();
+                    dStart.setMonth(today.getMonth() - 1);
+                    const startStr = fmt(dStart);
+
+                    this.filters.dateStart = startStr;
+                    this.filters.dateEnd = endStr;
+
+                    // 2. 請求基礎參數與清單
+                    const initReq = axios.get('AirQuality_List.aspx?action=getinitdata');
+                    const listReq = axios.get('AirQuality_List.aspx', {
+                        params: {
+                            action: 'getlist',
+                            facId: 'ALL',
+                            dateStart: startStr,
+                            dateEnd: endStr,
+                            contentType: 'ALL',
+                            status: 'ALL',
+                            less: 'ALL',
+                            keyword: '',
+                            pageIndex: 1,
+                            pageSize: this.filters.pageSize
+                        }
+                    });
+
+                    Promise.all([initReq, listReq])
+                        .then(([resInit, resList]) => {
+                            if (resInit.data && resInit.data.Success) {
+                                const d = resInit.data.Data;
                                 this.isManager = d.IsManager;
                                 this.currentUser = d.CurrentUser;
                                 this.userFacId = d.UserFacId;
                                 this.userFacName = d.UserFacName;
                                 this.facList = d.FacList || [];
 
-                                // 預設日期區間
-                                this.filters.dateStart = d.DefaultDateStart;
-                                this.filters.dateEnd = d.DefaultDateEnd;
+                                if (d.DefaultDateStart) this.filters.dateStart = d.DefaultDateStart;
+                                if (d.DefaultDateEnd) this.filters.dateEnd = d.DefaultDateEnd;
 
                                 if (!this.isManager && this.userFacId) {
                                     this.filters.facId = this.userFacId;
                                 }
+                            }
 
-                                this.fetchList();
-                            } else {
-                                alert(res.data ? res.data.Message : '初始化載入失敗');
-                                this.loading = false;
+                            if (resList.data && resList.data.Success) {
+                                const ld = resList.data.Data;
+                                this.list = ld.Items || [];
+                                this.totalCount = ld.TotalCount || 0;
+                                this.totalPages = ld.TotalPages || 1;
+                                this.stats = ld.Stats || this.stats;
                             }
                         })
                         .catch(err => {
                             console.error(err);
-                            alert('網路連線錯誤，無法載入初始化資料');
+                            alert('網路請求異常，請重新整理頁面');
+                        })
+                        .finally(() => {
                             this.loading = false;
                         });
                 },
 
-                // 查詢列表與統計
+                // 查詢列表與統計 (支援 finally 防禦)
                 fetchList(resetPage) {
                     if (resetPage) {
                         this.filters.pageIndex = 1;
@@ -1204,7 +1375,6 @@
 
                     axios.get('AirQuality_List.aspx', { params: params })
                         .then(res => {
-                            this.loading = false;
                             if (res.data && res.data.Success) {
                                 const d = res.data.Data;
                                 this.list = d.Items || [];
@@ -1216,9 +1386,11 @@
                             }
                         })
                         .catch(err => {
-                            this.loading = false;
                             console.error(err);
                             alert('網路請求異常，無法取得回報單清單');
+                        })
+                        .finally(() => {
+                            this.loading = false;
                         });
                 },
 

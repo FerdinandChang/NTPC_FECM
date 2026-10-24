@@ -511,7 +511,7 @@
                     <div class="header-content-right">
                         <!-- 待辦事項標籤 -->
                         <span v-if="mod.BadgeCount > 0" class="badge-pending">
-                            {{ mod.BadgeCount }} 件待辦
+                            {{ mod.BadgeCount }} {{ mod.Id === 'OwnReport' ? '筆回報' : '件待辦' }}
                         </span>
                         <!-- 展開/收合箭頭 -->
                         <i class="fas fa-chevron-down toggle-arrow" :class="{ 'rotated': isExpanded(mod.Id) }"></i>

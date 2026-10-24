@@ -45,15 +45,15 @@
             display: none !important;
         }
 
-        /* 頂部導覽列 (新北青藍現代漸層) */
+        /* 頂部導覽列 (新北青藍現代漸層，全載具自適應) */
         .top-navbar {
             background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
             color: #ffffff;
-            height: 56px;
+            min-height: 54px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
+            padding: 8px 16px;
             box-shadow: 0 2px 10px rgba(0, 153, 229, 0.25);
             position: sticky;
             top: 0;
@@ -61,36 +61,59 @@
         }
 
         .top-navbar .brand-title {
-            font-size: 1.08rem;
+            font-size: 1.05rem;
             font-weight: 700;
             margin: 0;
             display: flex;
             align-items: center;
             gap: 8px;
+            line-height: 1.3;
         }
 
         .nav-btn {
             background: rgba(255, 255, 255, 0.18);
             border: none;
             color: #ffffff;
-            font-size: 0.92rem;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            height: 36px;
+            height: 34px;
             border-radius: 8px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0 14px;
+            padding: 0 12px;
             gap: 6px;
             transition: all 0.2s;
             text-decoration: none;
+            white-space: nowrap;
         }
 
         .nav-btn:hover {
             background-color: rgba(255, 255, 255, 0.32);
             color: #ffffff;
             text-decoration: none;
+        }
+
+        /* 針對小螢幕頂部列優化，防折行破版 */
+        @media screen and (max-width: 576px) {
+            .top-navbar {
+                padding: 6px 10px;
+                min-height: 50px;
+            }
+            .top-navbar .brand-title {
+                font-size: 0.95rem;
+                gap: 6px;
+            }
+            .nav-btn {
+                height: 32px;
+                padding: 0 8px;
+                font-size: 0.82rem;
+            }
+            .badge-mode {
+                font-size: 0.72rem !important;
+                padding: 2px 6px;
+            }
         }
 
         /* 主容器 (最大寬度 1560px 居中) */
@@ -149,6 +172,55 @@
             }
         }
 
+        /* 表單標籤與快捷按鈕流動列 (避免手機版字元被擠壓折斷) */
+        .form-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .form-label-row .field-title {
+            margin-bottom: 0;
+            font-weight: 700;
+            color: var(--brand-navy);
+            white-space: nowrap;
+            font-size: 0.95rem;
+        }
+
+        .quick-chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 快捷晶片按鈕 (加強熱區與自適應) */
+        .quick-chip {
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #334155;
+            padding: 3px 10px;
+            border-radius: 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            line-height: 1.4;
+            min-height: 28px;
+        }
+
+        .quick-chip:hover {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #0284c7;
+        }
+
         /* 認養單位資訊晶片 */
         .fac-chip {
             background: #f8fafc;
@@ -168,6 +240,14 @@
             font-weight: 700;
             padding: 3px 8px;
             border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        /* 下拉選單長字省略 */
+        select.form-control {
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
         }
 
         /* 執行方式大按鈕 (Segmented Toggle) */
@@ -231,30 +311,6 @@
             margin-top: 2px;
         }
 
-        /* 快捷晶片按鈕 */
-        .quick-chip {
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            color: #334155;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            margin-right: 6px;
-            margin-bottom: 6px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .quick-chip:hover {
-            background: #0284c7;
-            color: #ffffff;
-            border-color: #0284c7;
-        }
-
         /* 里程統計資訊看版 (Stat Board) */
         .stat-board {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -273,14 +329,14 @@
         }
 
         .stat-number {
-            font-size: 2.2rem;
+            font-size: 2.1rem;
             font-weight: 800;
             color: #38bdf8;
             line-height: 1.1;
         }
 
         .stat-unit {
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #cbd5e1;
             font-weight: 600;
             margin-left: 4px;
@@ -304,7 +360,7 @@
             text-align: center;
             transition: all 0.2s ease;
             position: relative;
-            min-height: 260px;
+            min-height: 250px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -402,10 +458,14 @@
             color: #0284c7;
         }
 
-        /* 手機底部常駐動作列 */
+        /* 手機底部常駐動作列與邊距防遮擋 (徹底解決 Bottom Bar Overlap) */
         @media screen and (max-width: 991px) {
             body {
-                padding-bottom: 76px;
+                padding-bottom: calc(96px + env(safe-area-inset-bottom, 24px)) !important;
+            }
+
+            .container-fluid-custom {
+                padding-bottom: calc(96px + env(safe-area-inset-bottom, 24px)) !important;
             }
 
             .mobile-bottom-bar {
@@ -416,19 +476,23 @@
                 right: 0;
                 z-index: 1010;
                 background: #ffffff;
-                border-top: 1px solid #e2e8f0;
-                box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+                border-top: 1px solid #cbd5e1;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
                 padding: 10px 16px;
                 padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-                gap: 10px;
+                gap: 12px;
             }
 
             .mobile-bottom-bar .btn {
                 flex: 1;
                 font-weight: 700;
-                padding: 10px;
+                padding: 11px;
                 border-radius: 8px;
-                min-height: 44px;
+                min-height: 46px;
+                font-size: 0.98rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
         }
 
@@ -479,25 +543,21 @@
     <div id="washApp" v-cloak>
         <!-- 頂部置頂導覽列 -->
         <header class="top-navbar">
-            <div class="d-flex align-items-center">
-                <a href="WashList.aspx" class="nav-btn mr-2" title="返回洗掃紀錄清單">
+            <div class="d-flex align-items-center flex-grow-1 overflow-hidden pr-2">
+                <a href="WashList.aspx" class="nav-btn mr-2 flex-shrink-0" title="返回洗掃紀錄清單">
                     <i class="fas fa-arrow-left"></i>
                     <span class="d-none d-sm-inline">返回清單</span>
                 </a>
-                <h1 class="brand-title">
-                    <i class="fas fa-broom text-white"></i>
-                    <span>道路認養洗/掃街里程日誌</span>
-                    <span class="badge badge-light text-dark font-weight-bold ml-2" style="font-size: 0.85rem;">
-                        {{ mode === 'edit' ? '編輯序號 #' + form.pIndex : '全新填報' }}
+                <div class="brand-title text-truncate">
+                    <i class="fas fa-broom text-white mr-1"></i>
+                    <span>道路洗掃里程日誌</span>
+                    <span class="badge badge-light text-dark font-weight-bold ml-1 badge-mode">
+                        {{ mode === 'edit' ? '編輯 #' + form.pIndex : '全新填報' }}
                     </span>
-                </h1>
+                </div>
             </div>
 
-            <div class="d-flex align-items-center">
-                <button type="button" class="nav-btn bg-white text-dark shadow-sm mr-2" v-on:click="printLog">
-                    <i class="fas fa-print"></i>
-                    <span class="d-none d-md-inline">列印日誌</span>
-                </button>
+            <div class="d-flex align-items-center flex-shrink-0">
                 <button type="button" class="btn btn-primary font-weight-bold d-none d-md-inline-flex align-items-center px-3" 
                         v-on:click="submitData" :disabled="saving">
                     <i v-if="saving" class="fas fa-spinner fa-spin mr-1"></i>
@@ -543,7 +603,7 @@
                             <div class="card-modern-body">
                                 <!-- 事業單位選單 (管理者可切換 / 一般用戶顯示固定晶片) -->
                                 <div class="form-group" v-if="isManager">
-                                    <label class="font-weight-bold text-dark">
+                                    <label class="font-weight-bold text-dark mb-1">
                                         選擇認養事業單位 <span class="text-danger">*</span>
                                     </label>
                                     <select class="form-control" v-model="form.facId" v-on:change="onFacChange">
@@ -553,22 +613,22 @@
                                     </select>
                                 </div>
                                 <div class="fac-chip" v-else>
-                                    <div>
-                                        <div class="font-weight-bold text-dark" style="font-size: 1.05rem;">
+                                    <div class="pr-2 text-truncate">
+                                        <div class="font-weight-bold text-dark text-truncate" style="font-size: 1.02rem;">
                                             {{ currentFacName || '未指定認養單位' }}
                                         </div>
-                                        <small class="text-muted">事業管制編號：{{ form.facId }}</small>
+                                        <small class="text-muted d-block mt-1">事業管制編號：{{ form.facId }}</small>
                                     </div>
                                     <span class="fac-badge">列管廠場</span>
                                 </div>
 
-                                <!-- 洗掃日期 -->
+                                <!-- 洗掃作業日期 -->
                                 <div class="form-group">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <label class="font-weight-bold text-dark mb-0">
+                                    <div class="form-label-row">
+                                        <label class="field-title">
                                             洗掃作業日期 <span class="text-danger">*</span>
                                         </label>
-                                        <div>
+                                        <div class="quick-chip-group">
                                             <button type="button" class="quick-chip" v-on:click="setDateToday">
                                                 <i class="fas fa-calendar-day"></i> 今天
                                             </button>
@@ -580,13 +640,13 @@
                                     <input type="date" class="form-control" v-model="form.washDate" required />
                                 </div>
 
-                                <!-- 洗掃時間區間 -->
+                                <!-- 洗掃執行時間區間 -->
                                 <div class="form-group">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <label class="font-weight-bold text-dark mb-0">
+                                    <div class="form-label-row">
+                                        <label class="field-title">
                                             洗掃執行時間
                                         </label>
-                                        <div>
+                                        <div class="quick-chip-group">
                                             <button type="button" class="quick-chip" v-on:click="setShift('morning')">
                                                 早班 (08:30~12:00)
                                             </button>
@@ -606,9 +666,9 @@
                                     </div>
                                 </div>
 
-                                <!-- 洗掃街人員 -->
+                                <!-- 洗掃街執行人員 -->
                                 <div class="form-group mb-0">
-                                    <label class="font-weight-bold text-dark">
+                                    <label class="font-weight-bold text-dark mb-1">
                                         洗掃街執行人員
                                     </label>
                                     <div class="input-group">
@@ -645,9 +705,9 @@
 
                                 <!-- 左側長度輸入 -->
                                 <div class="form-group">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <label class="font-weight-bold text-dark mb-0">左側洗掃長度 (公尺)</label>
-                                        <div>
+                                    <div class="form-label-row">
+                                        <label class="field-title">左側洗掃長度 (公尺)</label>
+                                        <div class="quick-chip-group">
                                             <button type="button" class="quick-chip" v-on:click="addLength(1, 100)">+100m</button>
                                             <button type="button" class="quick-chip" v-on:click="addLength(1, 500)">+500m</button>
                                             <button type="button" class="quick-chip" v-on:click="form.length1 = 0">歸零</button>
@@ -656,16 +716,16 @@
                                     <div class="input-group">
                                         <input type="number" min="0" step="1" class="form-control" v-model.number="form.length1" placeholder="請輸入左側公尺數" />
                                         <div class="input-group-append">
-                                            <span class="input-group-text bg-light">m</span>
+                                            <span class="input-group-text bg-light font-weight-bold">m</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- 右側長度輸入 -->
                                 <div class="form-group mb-0">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <label class="font-weight-bold text-dark mb-0">右側洗掃長度 (公尺)</label>
-                                        <div>
+                                    <div class="form-label-row">
+                                        <label class="field-title">右側洗掃長度 (公尺)</label>
+                                        <div class="quick-chip-group">
                                             <button type="button" class="quick-chip" v-on:click="addLength(2, 100)">+100m</button>
                                             <button type="button" class="quick-chip" v-on:click="addLength(2, 500)">+500m</button>
                                             <button type="button" class="quick-chip" v-on:click="form.length2 = 0">歸零</button>
@@ -674,7 +734,7 @@
                                     <div class="input-group">
                                         <input type="number" min="0" step="1" class="form-control" v-model.number="form.length2" placeholder="請輸入右側公尺數" />
                                         <div class="input-group-append">
-                                            <span class="input-group-text bg-light">m</span>
+                                            <span class="input-group-text bg-light font-weight-bold">m</span>
                                         </div>
                                     </div>
                                 </div>
@@ -699,14 +759,14 @@
                                      v-on:click="form.washType = '洗'">
                                     <span class="wash-type-icon text-primary">💧</span>
                                     <h3 class="wash-type-title">洗街作業</h3>
-                                    <div class="wash-type-sub">使用高壓沖洗或洗街車水車抑塵</div>
+                                    <div class="wash-type-sub">使用高壓沖洗或洗街水車抑塵</div>
                                 </div>
 
                                 <div class="wash-type-card" :class="{ 'active': form.washType === '掃' }" 
                                      v-on:click="form.washType = '掃'">
                                     <span class="wash-type-icon text-warning">🧹</span>
                                     <h3 class="wash-type-title">掃街作業</h3>
-                                    <div class="wash-type-sub">使用清掃車或人力機具清除路面砂石</div>
+                                    <div class="wash-type-sub">使用清掃車或人力清除路面砂石</div>
                                 </div>
                             </div>
                             <small class="text-muted d-block">
@@ -723,13 +783,13 @@
                                 <i class="fas fa-camera-retro text-info"></i>
                                 現場作業照片對照成果 (洗掃前 / 洗掃後)
                             </h2>
-                            <small class="text-muted">支援手機拍照或選擇相簿圖片 (自動最佳化)</small>
+                            <small class="text-muted">支援手機直接拍照或選圖</small>
                         </div>
                         <div class="card-modern-body">
                             <div class="row">
                                 <!-- 洗掃前照片 -->
                                 <div class="col-12 col-md-6 mb-3 mb-md-0">
-                                    <h4 class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                                    <h4 class="font-weight-bold text-dark mb-2" style="font-size: 0.95rem;">
                                         <i class="fas fa-image text-danger mr-1"></i> 洗掃前現場照片
                                     </h4>
 
@@ -778,7 +838,7 @@
 
                                 <!-- 洗掃後照片 -->
                                 <div class="col-12 col-md-6">
-                                    <h4 class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                                    <h4 class="font-weight-bold text-dark mb-2" style="font-size: 0.95rem;">
                                         <i class="fas fa-check-circle text-success mr-1"></i> 洗掃後現場照片
                                     </h4>
 
@@ -834,12 +894,18 @@
                             <a href="WashList.aspx" class="btn btn-outline-secondary px-4 py-2 font-weight-bold">
                                 <i class="fas fa-arrow-left mr-1"></i> 放棄並返回清單
                             </a>
-                            <button type="button" class="btn btn-primary px-5 py-2 font-weight-bold shadow-sm" 
-                                    style="font-size: 1.05rem;" v-on:click="submitData" :disabled="saving">
-                                <i v-if="saving" class="fas fa-spinner fa-spin mr-1"></i>
-                                <i v-else class="fas fa-save mr-1"></i>
-                                <span>{{ saving ? '儲存中...' : (mode === 'edit' ? '更新洗掃日誌紀錄' : '確定送出洗掃日誌') }}</span>
-                            </button>
+                            <div class="d-flex align-items-center">
+                                <button type="button" class="btn btn-outline-dark px-4 py-2 font-weight-bold mr-2 shadow-sm" 
+                                        style="font-size: 1.02rem;" v-on:click="printLog">
+                                    <i class="fas fa-print mr-1"></i> 列印日誌
+                                </button>
+                                <button type="button" class="btn btn-primary px-5 py-2 font-weight-bold shadow-sm" 
+                                        style="font-size: 1.05rem;" v-on:click="submitData" :disabled="saving">
+                                    <i v-if="saving" class="fas fa-spinner fa-spin mr-1"></i>
+                                    <i v-else class="fas fa-save mr-1"></i>
+                                    <span>{{ saving ? '儲存中...' : (mode === 'edit' ? '更新洗掃日誌紀錄' : '確定送出洗掃日誌') }}</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -848,12 +914,15 @@
 
         <!-- 手機端常駐浮動動作列 (Sticky Bottom Bar) -->
         <div class="mobile-bottom-bar d-md-none">
-            <a href="WashList.aspx" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> 返回
+            <a href="WashList.aspx" class="btn btn-outline-secondary" style="flex: 0 0 76px;">
+                <i class="fas fa-arrow-left mr-1"></i> 返回
             </a>
-            <button type="button" class="btn btn-primary" v-on:click="submitData" :disabled="saving">
+            <button type="button" class="btn btn-outline-dark" v-on:click="printLog">
+                <i class="fas fa-print mr-1"></i> 列印
+            </button>
+            <button type="button" class="btn btn-primary" v-on:click="submitData" :disabled="saving" style="flex: 1.5;">
                 <i v-if="saving" class="fas fa-spinner fa-spin mr-1"></i>
-                <i v-else class="fas fa-save mr-1"></i>
+                <i v-else class="fas fa-check-circle mr-1"></i>
                 <span>{{ saving ? '儲存中...' : '確定送出' }}</span>
             </button>
         </div>
@@ -870,10 +939,11 @@
         </div>
     </div>
 
-    <!-- 本地端核心前端腳本庫 -->
+    <!-- 本地端核心前端腳本庫 (依序引入 jQuery -> Bootstrap Bundle -> Vue 3 -> Axios) -->
+    <script src="../Scripts/jquery-3.6.4.min.js"></script>
+    <script src="../Scripts/bootstrap.bundle.min.js"></script>
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
-    <script src="../Scripts/bootstrap.bundle.min.js"></script>
 
     <script>
         const { createApp } = Vue;
@@ -1059,11 +1129,9 @@
                     const file = event.target.files[0];
                     if (!file) return;
 
-                    // 檔名與副檔名
                     const fileName = file.name;
                     const ext = fileName.split('.').pop().toLowerCase();
 
-                    // 使用 FileReader 與 Canvas 進行前端自動等比縮圖
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const img = new Image();
@@ -1101,7 +1169,6 @@
                     };
                     reader.readAsDataURL(file);
 
-                    // 清空 file input 讓同檔名可重複觸發
                     event.target.value = '';
                 },
 
@@ -1174,7 +1241,6 @@
                                 this.alertMessage = res.Message || '儲存成功！';
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                                // 若為新增成功，更新當前序號與模式
                                 if (this.mode === 'new') {
                                     this.mode = 'edit';
                                     this.form.pIndex = res.PIndex;

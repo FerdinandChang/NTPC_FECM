@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Text.RegularExpressions;
@@ -139,6 +139,8 @@ namespace NTPC_FEC.Services
                 lastPwdDate = (DateTime?)Convert.ToDateTime(row["LastPwdChangeDate"]);
             }
 
+            string userEmail = (row.Table.Columns.Contains("Email") && row["Email"] != DBNull.Value) ? row["Email"].ToString() : "";
+
             var user = new UserAccount
             {
                 UID = uid,
@@ -149,6 +151,7 @@ namespace NTPC_FEC.Services
                 Lic = lic,
                 Lic2 = lic2,
                 FacID = ((row["FAC_ID"] != null && row["FAC_ID"] != DBNull.Value) ? row["FAC_ID"].ToString() : ""),
+                Email = userEmail,
                 LastLogin = row["LastLogin"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(row["LastLogin"]) : null,
                 LastPwdChangeDate = lastPwdDate
             };
@@ -362,6 +365,133 @@ namespace NTPC_FEC.Services
             {
                 result.Success = false;
                 result.Message = "更新失敗，系統資料庫異常：" + ex.Message;
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// 產生符合強密碼原則之高熵臨時密碼 (排除易混淆字元如 0, O, 1, l, I)
+        /// </summary>
+        public static string GenerateSecureTempPassword(int length)
+        {
+            if (length < 8) length = 10;
+
+            const string upperChars = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // 排除 I, O
+            const string lowerChars = "abcdefghijkmnopqrstuvwxyz"; // 排除 l
+            const string digitChars = "23456789";                  // 排除 0, 1
+            const string specialChars = "!@#$%*-_+";
+
+            var rng = new System.Security.Cryptography.RNGCryptoServiceProvider();
+            var bytes = new byte[4];
+
+            // 確保四類字元各至少出現 1 個
+            var pwdChars = new System.Collections.Generic.List<char>();
+            pwdChars.Add(GetRandomChar(upperChars, rng));
+            pwdChars.Add(GetRandomChar(lowerChars, rng));
+            pwdChars.Add(GetRandomChar(digitChars, rng));
+            pwdChars.Add(GetRandomChar(specialChars, rng));
+
+            string allChars = upperChars + lowerChars + digitChars + specialChars;
+            for (int i = 4; i < length; i++)
+            {
+                pwdChars.Add(GetRandomChar(allChars, rng));
+            }
+
+            // Fisher-Yates 洗牌
+            for (int i = pwdChars.Count - 1; i > 0; i--)
+            {
+                rng.GetBytes(bytes);
+                uint randVal = BitConverter.ToUInt32(bytes, 0);
+                int j = (int)(randVal % (uint)(i + 1));
+                char temp = pwdChars[i];
+                pwdChars[i] = pwdChars[j];
+                pwdChars[j] = temp;
+            }
+
+            return new string(pwdChars.ToArray());
+        }
+
+        private static char GetRandomChar(string charSet, System.Security.Cryptography.RNGCryptoServiceProvider rng)
+        {
+            var buf = new byte[4];
+            rng.GetBytes(buf);
+            uint rand = BitConverter.ToUInt32(buf, 0);
+            return charSet[(int)(rand % (uint)charSet.Length)];
+        }
+
+        /// <summary>
+        /// 管理員重設臨時密碼並發送通知信
+        /// (先寄信成功才更新資料庫，舊密碼存入歷史表記錄，最後變更日設為 NULL 以觸發強制換密碼)
+        /// </summary>
+        public static OperationResult ResetUserTempPasswordAndSendEmail(string targetUserId, string targetEmail)
+        {
+            var result = new OperationResult();
+
+            if (string.IsNullOrEmpty(targetUserId) || string.IsNullOrEmpty(targetEmail))
+            {
+                result.Success = false;
+                result.Message = "目標帳號與收件信箱均不可為空！";
+                return result;
+            }
+
+            try
+            {
+                // 1. 查詢目標帳號
+                string qSql = "SELECT Name, Password FROM UserAcc WHERE UserID = @UserID";
+                var qParams = new SqlParameter[] { new SqlParameter("@UserID", SqlDbType.VarChar) { Value = targetUserId } };
+                DataTable dt = DbHelper.ExecuteDataTable(qSql, qParams);
+                if (dt == null || dt.Rows.Count == 0)
+                {
+                    result.Success = false;
+                    result.Message = "找不到該使用者帳號！";
+                    return result;
+                }
+
+                string currentPwd = dt.Rows[0]["Password"] != null ? dt.Rows[0]["Password"].ToString() : "";
+                string userName = dt.Rows[0]["Name"] != null ? dt.Rows[0]["Name"].ToString() : targetUserId;
+
+                // 2. 產生 10 碼高強度臨時密碼
+                string tempPwd = GenerateSecureTempPassword(10);
+
+                // 3. 先寄出通知信件 (若郵件發送失敗則立即中止，維持原密碼)
+                OperationResult mailRes = MailService.SendTempPasswordEmail(targetEmail, targetUserId, userName, tempPwd);
+                if (!mailRes.Success)
+                {
+                    result.Success = false;
+                    result.Message = "郵件發送失敗，密碼未更新：" + mailRes.Message;
+                    return result;
+                }
+
+                // 4. 舊密碼寫入歷史記錄表
+                if (!string.IsNullOrEmpty(currentPwd))
+                {
+                    string histSql = "INSERT INTO UserPwdHistory (UserID, Password, ChangeDate) VALUES (@UserID, @Password, GETDATE())";
+                    var histParams = new SqlParameter[]
+                    {
+                        new SqlParameter("@UserID", SqlDbType.VarChar) { Value = targetUserId },
+                        new SqlParameter("@Password", SqlDbType.VarChar) { Value = currentPwd }
+                    };
+                    DbHelper.ExecuteNonQuery(histSql, histParams);
+                }
+
+                // 5. 更新 UserAcc：更換為臨時密碼、更新 Email、LastPwdChangeDate 設為 NULL
+                string updateSql = "UPDATE UserAcc SET Password = @NewPwd, Email = @Email, LastPwdChangeDate = NULL WHERE UserID = @UserID";
+                var updateParams = new SqlParameter[]
+                {
+                    new SqlParameter("@NewPwd", SqlDbType.VarChar) { Value = tempPwd },
+                    new SqlParameter("@Email", SqlDbType.VarChar) { Value = targetEmail.Trim() },
+                    new SqlParameter("@UserID", SqlDbType.VarChar) { Value = targetUserId }
+                };
+                DbHelper.ExecuteNonQuery(updateSql, updateParams);
+
+                result.Success = true;
+                result.Message = string.Format("臨時密碼已成功發行並寄送至信箱 [{0}]！該使用者登入後將強制修改密碼。", targetEmail);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = "處理失敗，資料庫異常：" + ex.Message;
                 return result;
             }
         }

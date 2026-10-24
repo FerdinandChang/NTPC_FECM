@@ -48,8 +48,19 @@
             box-shadow: 0 2px 10px rgba(0, 153, 229, 0.25);
             position: sticky; top: 0; z-index: 1020;
         }
-        .top-navbar .title { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .top-navbar a { color: #fff; text-decoration: none; font-size: .9rem; }
+        .top-navbar .brand-title {
+            font-size: 1.15rem; font-weight: 700; letter-spacing: 0.5px; margin: 0;
+            display: flex; align-items: center; color: #ffffff;
+        }
+        .nav-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            height: 36px; padding: 0 14px; border-radius: 8px;
+            background: rgba(255, 255, 255, 0.18); color: #ffffff !important;
+            font-size: 0.9rem; font-weight: 600; text-decoration: none !important;
+            border: 1px solid rgba(255, 255, 255, 0.35); transition: all 0.2s ease;
+            white-space: nowrap; cursor: pointer;
+        }
+        .nav-btn:hover { background: rgba(255, 255, 255, 0.28); transform: translateY(-1px); }
 
         .layout { display: flex; height: calc(100vh - 56px); }
         .side { width: 410px; flex: none; overflow-y: auto; padding: 12px; }
@@ -121,13 +132,22 @@
 </head>
 <body>
     <div id="ndviApp" v-cloak>
-        <div class="top-navbar">
-            <div class="title"><i class="fas fa-satellite"></i> 新北市 NDVI 植被監測</div>
-            <div>
-                <button type="button" class="btn btn-sm btn-light map-toggle mr-2" v-on:click="toggleMap">{{ mapCollapsed ? '展開地圖' : '收合地圖' }}</button>
-                <a href="../MainPage.aspx"><i class="fas fa-home"></i> 回首頁</a>
+        <header class="top-navbar">
+            <div class="d-flex align-items-center">
+                <a href="../MainPage.aspx" class="nav-btn mr-3" title="返回系統首頁">
+                    <i class="fas fa-home mr-1"></i> <span>返回首頁</span>
+                </a>
+                <h1 class="brand-title">
+                    <i class="fas fa-satellite text-warning mr-2"></i>
+                    <span class="d-none d-md-inline">新北市固定溢散源管理平台 - </span>NDVI 植被監測
+                </h1>
             </div>
-        </div>
+            <div class="d-flex align-items-center">
+                <button type="button" class="btn btn-sm btn-light map-toggle" v-on:click="toggleMap">
+                    <i class="fas fa-map mr-1"></i>{{ mapCollapsed ? '展開地圖' : '收合地圖' }}
+                </button>
+            </div>
+        </header>
 
         <div class="layout">
             <aside class="side">
@@ -146,8 +166,14 @@
 
                         <span class="lbl">檢視模式</span>
                         <div class="seg">
-                            <button type="button" v-bind:class="{on: !cmpMode}" v-on:click="cmpMode=false">單期</button>
-                            <button type="button" v-bind:class="{on: cmpMode}" v-bind:disabled="periods.length < 2" v-on:click="cmpMode=true">卷簾比對</button>
+                            <button type="button" v-bind:class="{on: !cmpMode}" v-on:click="cmpMode=false">單期檢視</button>
+                            <button type="button" v-bind:class="{on: cmpMode}" v-bind:disabled="periods.length < 2" v-on:click="cmpMode=true" v-bind:title="periods.length < 2 ? '需累積至少 2 個月資料方可啟用雙期卷簾' : '雙期時序卷簾比對'">
+                                卷簾比對
+                                <span v-if="periods.length < 2" class="badge badge-light ml-1" style="font-size:.65rem; opacity:.85;">(需2期)</span>
+                            </button>
+                        </div>
+                        <div v-if="periods.length < 2" class="text-muted mt-1" style="font-size:.72rem">
+                            <i class="fas fa-info-circle text-info"></i> 目前僅有單期資料（{{ curLabel || '2026年9月' }}）。累積至 2 期以上時將自動解鎖雙期卷簾比對與增減排行。
                         </div>
 
                         <template v-if="!cmpMode">
@@ -542,9 +568,16 @@
 
                     /* ---------- NDVI 圖層 / 卷簾 ---------- */
                     makeLayer: function (pid) {
+                        var bounds = (this.idx && this.idx.bounds) ? L.latLngBounds(this.idx.bounds) : null;
+                        var zmin = (this.idx && this.idx.zmin) ? this.idx.zmin : 10;
+                        var zmax = (this.idx && this.idx.zmax) ? this.idx.zmax : 14;
                         return L.tileLayer(TILE_BASE + pid + '/{z}/{x}/{y}.png', {
-                            pane: 'ndvi', className: 'ndvi-tile', opacity: this.opacity / 100, minZoom: 8, maxZoom: 19,
-                            maxNativeZoom: this.idx ? this.idx.zmax : 14, errorTileUrl: BLANK,
+                            pane: 'ndvi', className: 'ndvi-tile', opacity: this.opacity / 100,
+                            minZoom: 8, maxZoom: 19,
+                            minNativeZoom: zmin,
+                            maxNativeZoom: zmax,
+                            bounds: bounds,
+                            errorTileUrl: BLANK,
                             attribution: 'Sentinel-2 (ESA/Copernicus) via Microsoft Planetary Computer'
                         });
                     },

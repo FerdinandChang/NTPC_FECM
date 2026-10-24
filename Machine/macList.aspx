@@ -37,6 +37,10 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", "微軟正黑體", sans-serif;
             background-color: var(--bg-canvas);
@@ -323,11 +327,14 @@
         .badge-status {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 5px;
             padding: 4px 10px;
             border-radius: 6px;
             font-size: 0.82rem;
             font-weight: 600;
+            white-space: nowrap !important;
+            text-align: center;
         }
         .badge-draft { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
         .badge-submitted { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
@@ -399,22 +406,22 @@
             display: none;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(15, 23, 42, 0.6);
-            z-index: 1060;
+            background: rgba(15, 23, 42, 0.65);
+            z-index: 9999;
             align-items: center;
             justify-content: center;
             padding: 16px;
             overflow-y: auto;
         }
         .modal-custom.show {
-            display: flex;
+            display: flex !important;
         }
         .modal-dialog-custom {
             background: #ffffff;
             border-radius: 16px;
-            width: 100%;
-            max-width: 980px;
-            max-height: 90vh;
+            width: 95vw;
+            max-width: 1240px;
+            max-height: 92vh;
             display: flex;
             flex-direction: column;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
@@ -446,52 +453,140 @@
             gap: 10px;
         }
 
-        /* 分頁列 */
-        .pagination-bar {
+                /* ========================================================
+           自適應現代化底部分頁列 (Responsive Pagination Footer)
+           解決小尺寸螢幕 (手機) 壅擠與按鈕折行難以點擊問題
+           ======================================================== */
+        .pagination-footer {
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+                gap: 16px;
+            }
+        }
+
+        .pagination-footer-info {
+            font-size: 0.88rem;
+            color: #64748b;
+            text-align: center;
+            white-space: nowrap !important;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer-info {
+                text-align: left;
+            }
+        }
+
+        .pagination-action-group {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 16px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border-color);
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            max-width: 100%;
         }
-        .page-pill {
-            border: 1px solid var(--border-color);
+        @media (min-width: 768px) {
+            .pagination-action-group {
+                width: auto;
+                justify-content: flex-end;
+            }
+        }
+
+        .btn-page-ctrl {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #334155;
             background: #ffffff;
-            color: var(--brand-navy);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.15s ease-in-out;
+            white-space: nowrap !important;
+            text-decoration: none !important;
+            user-select: none;
+            touch-action: manipulation;
         }
-        .page-pill:hover:not(:disabled) {
+        .btn-page-ctrl:hover:not(:disabled) {
             background: #f1f5f9;
-            border-color: #cbd5e1;
+            color: #0f172a;
+            border-color: #94a3b8;
         }
-        .page-pill.active {
-            background: var(--brand-blue);
-            color: #ffffff;
-            border-color: var(--brand-blue);
+        .btn-page-ctrl:active:not(:disabled) {
+            background: #e2e8f0;
+            transform: translateY(1px);
         }
-        .page-pill:disabled {
-            opacity: 0.5;
+        .btn-page-ctrl:disabled,
+        .btn-page-ctrl.disabled {
+            background: #f8fafc;
+            color: #94a3b8;
+            border-color: #e2e8f0;
             cursor: not-allowed;
+            opacity: 0.55;
+            box-shadow: none;
+        }
+
+        /* 頁碼指示膠囊 */
+        .page-indicator-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #166534;
+            white-space: nowrap !important;
+        }
+
+        /* 手機端大按鈕排版 (Mobile Touch Optimized) */
+        @media (max-width: 767.98px) {
+            .btn-page-ctrl.btn-step {
+                flex: 1;
+                min-width: 0;
+                padding: 0 8px;
+            }
+            .btn-page-ctrl.btn-edge {
+                width: 40px;
+                min-width: 40px;
+                padding: 0;
+                flex-shrink: 0;
+            }
+            .page-indicator-pill {
+                flex-shrink: 0;
+                padding: 0 10px;
+                font-size: 0.84rem;
+            }
         }
 
         /* 資訊清單鍵值展示格 */
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
             background: #f8fafc;
-            padding: 16px;
+            padding: 12px 16px;
             border-radius: 10px;
             border: 1px solid var(--border-color);
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         .info-item {
             font-size: 0.88rem;
@@ -511,7 +606,6 @@
 <body>
     <div id="macListApp" v-cloak>
         <!-- 頂部品牌導覽列 -->
-                <!-- 頂部品牌導覽列 (全站標準左側導航、右側主操作) -->
         <header class="top-navbar">
             <div class="d-flex align-items-center">
                 <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
@@ -524,14 +618,10 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <a href="NewMac.aspx?mode=new" class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2">
+                <a href="NewMac.aspx?mode=new" class="btn btn-success btn-sm font-weight-bold shadow-sm">
                     <i class="fas fa-plus-circle mr-1"></i>
                     <span class="d-none d-sm-inline">新增車輛機具</span>
                 </a>
-                <button type="button" class="btn btn-sm btn-outline-light font-weight-bold" v-on:click="refreshData" title="重新整理">
-                    <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
-                    <span class="d-none d-md-inline ml-1">重新整理</span>
-                </button>
             </div>
         </header>
 
@@ -682,10 +772,7 @@
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 pt-3 border-top">
-                        <div class="text-muted" style="font-size: 0.88rem;">
-                            <i class="fas fa-info-circle mr-1"></i> 提示：支援雙向查詢，輸入任何機具特徵可直接篩選所屬場所。
-                        </div>
+                    <div class="d-flex justify-content-end align-items-center flex-wrap gap-2 mt-3 pt-3 border-top">
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-secondary px-3" v-on:click="resetFilter">
                                 <i class="fas fa-undo mr-1"></i> 重設
@@ -870,38 +957,33 @@
                         </table>
                     </div>
 
-                    <!-- 分頁控制項 -->
-                    <div class="p-3" v-if="totalPages > 1 || totalRows > 0">
-                        <div class="pagination-bar">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="text-muted" style="font-size: 0.88rem;">每頁筆數：</span>
-                                <select class="form-control form-control-sm" style="width: auto; height: 32px;" v-model.number="filter.PageSize" v-on:change="handlePageSizeChange">
-                                    <option :value="10">10 筆</option>
-                                    <option :value="20">20 筆</option>
-                                    <option :value="50">50 筆</option>
-                                </select>
-                                <span class="text-muted ml-2" style="font-size: 0.88rem;">
-                                    第 {{ filter.PageIndex }} / {{ totalPages }} 頁
-                                </span>
+                    <!-- 自適應底部分頁導覽列 (Responsive Pagination Footer) -->
+                    <div v-if="!isLoading && totalRows > 0" class="pagination-footer">
+                        <div class="pagination-footer-info">
+                            顯示第 <strong class="text-dark">{{ (filter.PageIndex - 1) * filter.PageSize + 1 }}</strong> 至 <strong class="text-dark">{{ Math.min(filter.PageIndex * filter.PageSize, totalRows) }}</strong> 筆，共 <strong class="text-dark">{{ totalRows }}</strong> 筆
+                        </div>
+                        <div class="pagination-action-group">
+                            <button type="button" class="btn-page-ctrl btn-edge" :disabled="filter.PageIndex <= 1" v-on:click="goToPage(1)" title="第一頁">
+                                <i class="fas fa-angle-double-left"></i>
+                                <span class="d-none d-md-inline ml-1">首頁</span>
+                            </button>
+                            <button type="button" class="btn-page-ctrl btn-step" :disabled="filter.PageIndex <= 1" v-on:click="goToPage(filter.PageIndex - 1)" title="上一頁">
+                                <i class="fas fa-chevron-left mr-1"></i>
+                                <span>上一頁</span>
+                            </button>
+                            <div class="page-indicator-pill" title="目前頁次 / 總頁數">
+                                <span>{{ filter.PageIndex }}</span>
+                                <span class="mx-1 text-muted" style="opacity: 0.5; font-weight: normal;">/</span>
+                                <span>{{ totalPages }}</span>
                             </div>
-
-                            <div class="d-flex gap-1">
-                                <button type="button" class="page-pill" :disabled="filter.PageIndex <= 1" v-on:click="goToPage(1)" title="第一頁">
-                                    <i class="fas fa-angle-double-left"></i>
-                                </button>
-                                <button type="button" class="page-pill" :disabled="filter.PageIndex <= 1" v-on:click="goToPage(filter.PageIndex - 1)">
-                                    <i class="fas fa-chevron-left"></i> 上一頁
-                                </button>
-                                <button v-for="p in visiblePages" :key="p" type="button" class="page-pill" :class="{ 'active': p === filter.PageIndex }" v-on:click="goToPage(p)">
-                                    {{ p }}
-                                </button>
-                                <button type="button" class="page-pill" :disabled="filter.PageIndex >= totalPages" v-on:click="goToPage(filter.PageIndex + 1)">
-                                    下一頁 <i class="fas fa-chevron-right"></i>
-                                </button>
-                                <button type="button" class="page-pill" :disabled="filter.PageIndex >= totalPages" v-on:click="goToPage(totalPages)" title="最後一頁">
-                                    <i class="fas fa-angle-double-right"></i>
-                                </button>
-                            </div>
+                            <button type="button" class="btn-page-ctrl btn-step" :disabled="filter.PageIndex >= totalPages" v-on:click="goToPage(filter.PageIndex + 1)" title="下一頁">
+                                <span>下一頁</span>
+                                <i class="fas fa-chevron-right ml-1"></i>
+                            </button>
+                            <button type="button" class="btn-page-ctrl btn-edge" :disabled="filter.PageIndex >= totalPages" v-on:click="goToPage(totalPages)" title="最後一頁">
+                                <span class="d-none d-md-inline ml-1">末頁</span>
+                                <i class="fas fa-angle-double-right"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -909,19 +991,24 @@
         </main>
 
         <!-- 場所詳細資料與所屬機具抽屜/彈窗 (Modal) -->
-        <div class="modal-custom" :class="{ 'show': showDetailModal }">
+        <div class="modal-custom" :class="{ 'show': showDetailModal }" v-on:click.self="showDetailModal = false">
             <div class="modal-dialog-custom">
                 <div class="modal-header-custom">
                     <div class="d-flex align-items-center gap-2">
                         <i class="fas fa-building text-primary" style="font-size: 1.2rem;"></i>
-                        <h5 class="mb-0 font-weight-bold">{{ selectedFac ? selectedFac.FAC_NAME : '場所資料' }}</h5>
-                        <span v-if="selectedFac" class="badge badge-secondary ml-2 font-monospace">[{{ selectedFac.C_NO }}]</span>
+                        <h5 class="mb-0 font-weight-bold">{{ selectedFac ? selectedFac.FAC_NAME : (isModalLoading ? '載入場所資訊中...' : '場所資料') }}</h5>
+                        <span v-if="selectedFac && selectedFac.C_NO && selectedFac.C_NO !== '-'" class="badge badge-secondary ml-2 font-monospace">[{{ selectedFac.C_NO }}]</span>
                     </div>
                     <button type="button" class="close" v-on:click="showDetailModal = false">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body-custom">
+                    <div v-if="isModalLoading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="text-muted mt-2 font-weight-bold">正在讀取場所與機具明細中...</div>
+                    </div>
+                    <template v-else>
                     <!-- 基本資料網格 -->
                     <div v-if="selectedFac" class="info-grid">
                         <div class="info-item">
@@ -972,60 +1059,74 @@
                         </a>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table-modern">
+                    <div class="table-responsive" style="overflow-x: auto;">
+                        <table class="table-modern" style="table-layout: auto;">
                             <thead>
                                 <tr>
-                                    <th>巡查時間</th>
-                                    <th>機具種類</th>
-                                    <th>廠牌 / 型號</th>
-                                    <th style="text-align: center;">出廠年份</th>
-                                    <th>機身號碼</th>
-                                    <th>引擎編號</th>
-                                    <th style="text-align: center;">平均不透光率</th>
-                                    <th style="text-align: center;">狀態</th>
-                                    <th style="text-align: right;">操作</th>
+                                    <th style="width: 105px; white-space: nowrap;">巡查時間</th>
+                                    <th style="min-width: 200px;">機具種類 / 廠牌型號</th>
+                                    <th style="width: 160px; white-space: nowrap;">機身 / 引擎編號</th>
+                                    <th style="width: 85px; text-align: center; white-space: nowrap;">出廠年份</th>
+                                    <th style="width: 110px; text-align: center; white-space: nowrap;">平均不透光率</th>
+                                    <th style="width: 115px; text-align: center; white-space: nowrap;">審核狀態</th>
+                                    <th style="width: 145px; text-align: right; white-space: nowrap;">操作管理</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="m in facMachines" :key="m.mac_ID">
-                                    <td>{{ m.Check_date }}</td>
-                                    <td><span class="badge badge-info">{{ m.mac_Type }}</span></td>
-                                    <td><strong>{{ m.Brand }}</strong> <small class="text-muted">{{ m.model }}</small></td>
-                                    <td style="text-align: center;">{{ m.OUT_YEAR }}</td>
-                                    <td><small class="font-monospace">{{ m.PIN }}</small></td>
-                                    <td><small class="font-monospace">{{ m.Engine_NO }}</small></td>
-                                    <td style="text-align: center;">
+                                    <td style="white-space: nowrap;">
+                                        <span class="font-weight-bold text-dark">{{ m.Check_date }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center flex-wrap gap-1">
+                                            <span class="badge badge-info mr-1">{{ m.mac_Type }}</span>
+                                            <strong class="text-dark">{{ m.Brand }}</strong>
+                                            <span class="text-muted ml-1" v-if="m.model">{{ m.model }}</span>
+                                        </div>
+                                    </td>
+                                    <td style="white-space: nowrap;">
+                                        <div style="font-size: 0.83rem; line-height: 1.35;">
+                                            <span class="text-muted">機身:</span> <span class="font-monospace text-dark font-weight-bold">{{ m.PIN || '-' }}</span>
+                                        </div>
+                                        <div style="font-size: 0.83rem; line-height: 1.35;">
+                                            <span class="text-muted">引擎:</span> <span class="font-monospace text-dark">{{ m.Engine_NO || '-' }}</span>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: center; white-space: nowrap;">
+                                        <span class="text-secondary font-weight-bold">{{ m.OUT_YEAR || '-' }}</span>
+                                    </td>
+                                    <td style="text-align: center; white-space: nowrap;">
                                         <span class="opaque-val" :class="getOpaqueClass(m.opaque_Run_AVG)">{{ m.opaque_Run_AVG }} %</span>
                                     </td>
-                                    <td style="text-align: center;">
+                                    <td style="text-align: center; white-space: nowrap;">
                                         <span class="badge-status" :class="getStatusBadgeClass(m.Mac_State)">{{ m.Mac_State_Text }}</span>
                                     </td>
-                                    <td style="text-align: right;">
+                                    <td style="text-align: right; white-space: nowrap;">
                                         <div class="btn-group btn-group-sm">
-                                            <a v-if="canEdit(m.Mac_State)" :href="'NewMac.aspx?mode=edit&id=' + selectedFac.FAC_ID + '&id2=' + m.mac_ID" class="btn btn-outline-primary" title="修改">
+                                            <a v-if="canEdit(m.Mac_State)" :href="'NewMac.aspx?mode=edit&id=' + selectedFac.FAC_ID + '&id2=' + m.mac_ID" class="btn btn-outline-primary" title="修改機具申報">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             <button v-if="canEdit(m.Mac_State)" type="button" class="btn btn-outline-success" v-on:click="submitCheckInModal(selectedFac.FAC_ID, m.mac_ID)" title="送出審核">
                                                 <i class="fas fa-paper-plane"></i>
                                             </button>
-                                            <button v-if="canEdit(m.Mac_State)" type="button" class="btn btn-outline-danger" v-on:click="deleteMacInModal(selectedFac.FAC_ID, m.mac_ID)" title="刪除">
+                                            <button v-if="canEdit(m.Mac_State)" type="button" class="btn btn-outline-danger" v-on:click="deleteMacInModal(selectedFac.FAC_ID, m.mac_ID)" title="刪除機具">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
-                                            <a :href="'NewMac.aspx?mode=view&id=' + selectedFac.FAC_ID + '&id2=' + m.mac_ID" class="btn btn-outline-secondary" title="檢視詳細">
+                                            <a :href="'NewMac.aspx?mode=view&id=' + selectedFac.FAC_ID + '&id2=' + m.mac_ID" class="btn btn-outline-secondary" title="檢視詳細資料">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr v-if="facMachines.length === 0">
-                                    <td colspan="9" class="text-center py-4 text-muted">
+                                    <td colspan="7" class="text-center py-4 text-muted">
                                         此場所目前尚無施工機具申報資料
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                    </template>
                 </div>
                 <div class="modal-footer-custom">
                     <button type="button" class="btn btn-secondary" v-on:click="showDetailModal = false">關閉</button>
@@ -1045,6 +1146,7 @@
             data() {
                 return {
                     isLoading: false,
+                    isModalLoading: false,
                     isFilterCollapsed: false,
                     alertMessage: '',
                     alertType: 'info',
@@ -1253,18 +1355,27 @@
                 },
 
                 openFacDetail(facId) {
-                    axios.get('macList.aspx?action=getfacdetail&facId=' + encodeURIComponent(facId))
+                    const self = this;
+                    self.selectedFac = null;
+                    self.facMachines = [];
+                    self.isModalLoading = true;
+                    self.showDetailModal = true;
+
+                    axios.get('macList.aspx?action=getfacdetail&facId=' + encodeURIComponent(facId != null ? facId : ''))
                         .then(res => {
+                            self.isModalLoading = false;
                             if (res.data && res.data.Success) {
-                                this.selectedFac = res.data.Data.Fac;
-                                this.facMachines = res.data.Data.Machines || [];
-                                this.showDetailModal = true;
+                                self.selectedFac = res.data.Data.Fac;
+                                self.facMachines = res.data.Data.Machines || [];
                             } else {
-                                this.showAlert(res.data ? res.data.Message : '讀取場所資訊失敗', 'danger');
+                                alert(res.data ? res.data.Message : '讀取場所資訊失敗');
+                                self.showDetailModal = false;
                             }
                         })
                         .catch(err => {
-                            this.showAlert('連線異常：' + err.message, 'danger');
+                            self.isModalLoading = false;
+                            alert('連線異常：' + (err.response && err.response.data && err.response.data.Message ? err.response.data.Message : err.message));
+                            self.showDetailModal = false;
                         });
                 },
 

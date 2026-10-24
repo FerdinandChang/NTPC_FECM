@@ -49,8 +49,13 @@
             position: sticky; top: 0; z-index: 1020;
         }
         .top-navbar .brand-title {
-            font-size: 1.08rem; font-weight: 700; margin: 0;
-            display: flex; align-items: center; gap: 8px;
+            font-size: 1.05rem; font-weight: 700; margin: 0;
+            display: flex; align-items: center; gap: 6px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        @media screen and (max-width: 576px) {
+            .top-navbar { padding: 0 10px; height: 50px; }
+            .top-navbar .brand-title { font-size: 0.95rem; }
         }
 
         .nav-btn {
@@ -81,14 +86,38 @@
             overflow: hidden;
         }
         .card-modern-header {
-            padding: 12px 16px;
+            padding: 10px 16px;
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
             display: flex; align-items: center; justify-content: space-between;
+            gap: 8px;
+            flex-wrap: nowrap;
         }
         .card-modern-title {
             font-size: 1rem; font-weight: 700; color: var(--brand-navy); margin: 0;
             display: flex; align-items: center; gap: 8px;
+            white-space: nowrap;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+        .card-modern-title span {
+            white-space: nowrap;
+        }
+        .header-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .header-actions .btn {
+            white-space: nowrap;
+        }
+        @media screen and (max-width: 576px) {
+            .card-modern-header { padding: 8px 12px; }
+            .card-modern-title { font-size: 0.95rem; }
+            .header-actions .btn { padding: 4px 8px; min-height: 32px; font-size: 12px; }
+            .segment-btn { padding: 4px 10px; font-size: 12px; min-height: 32px; white-space: nowrap; }
         }
         .card-modern-body { padding: 16px; }
 
@@ -408,18 +437,18 @@
                                     <span>現場智慧定位地圖</span>
                                 </h2>
                                 <!-- 地圖快捷操作按鈕 (零遮擋 Header 配置) -->
-                                <div class="d-flex align-items-center gap-1">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary d-md-none" v-on:click="toggleMapCollapse">
+                                <div class="header-actions">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary d-md-none text-nowrap" v-on:click="toggleMapCollapse" :title="isMapCollapsed ? '展開地圖' : '收合地圖'">
                                         <i :class="isMapCollapsed ? 'fas fa-expand-alt' : 'fas fa-compress-alt'"></i>
-                                        <span>{{ isMapCollapsed ? '展開地圖' : '收合地圖' }}</span>
+                                        <span class="d-none d-sm-inline ml-1">{{ isMapCollapsed ? '展開地圖' : '收合地圖' }}</span>
                                     </button>
-                                    <button v-if="mode !== 'read'" type="button" class="btn btn-sm btn-outline-primary" v-on:click="getCurrentLocation" title="取得當前手機GPS位置">
+                                    <button v-if="mode !== 'read'" type="button" class="btn btn-sm btn-outline-primary text-nowrap" v-on:click="getCurrentLocation" title="取得當前手機GPS位置">
                                         <i class="fas fa-crosshairs text-success"></i>
-                                        <span>GPS 定位</span>
+                                        <span class="d-none d-sm-inline ml-1">GPS 定位</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="resetMapView" title="重設視圖中心">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" v-on:click="resetMapView" title="重設視圖中心">
                                         <i class="fas fa-sync-alt"></i>
-                                        <span>重設</span>
+                                        <span class="d-none d-sm-inline ml-1">重設</span>
                                     </button>
                                 </div>
                             </div>

@@ -385,52 +385,128 @@
             color: var(--text-main);
         }
 
-        /* 分頁控制項 */
-        .pagination-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
+                /* ========================================================
+           自適應現代化底部分頁列 (Responsive Pagination Footer)
+           解決小尺寸螢幕 (手機) 壅擠與按鈕折行難以點擊問題
+           ======================================================== */
+        .pagination-footer {
             background: #ffffff;
-            border-top: 1px solid var(--border-color);
-            flex-wrap: wrap;
-            gap: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+                gap: 16px;
+            }
         }
 
-        .page-pill {
+        .pagination-footer-info {
+            font-size: 0.88rem;
+            color: #64748b;
+            text-align: center;
+            white-space: nowrap !important;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer-info {
+                text-align: left;
+            }
+        }
+
+        .pagination-action-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            max-width: 100%;
+        }
+        @media (min-width: 768px) {
+            .pagination-action-group {
+                width: auto;
+                justify-content: flex-end;
+            }
+        }
+
+        .btn-page-ctrl {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 36px;
-            height: 36px;
-            padding: 0 10px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
+            height: 38px;
+            padding: 0 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
             color: #334155;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s ease;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.15s ease-in-out;
+            white-space: nowrap !important;
+            text-decoration: none !important;
             user-select: none;
+            touch-action: manipulation;
         }
-
-        .page-pill:hover:not(.disabled) {
+        .btn-page-ctrl:hover:not(:disabled) {
             background: #f1f5f9;
+            color: #0f172a;
             border-color: #94a3b8;
         }
-
-        .page-pill.active {
-            background: var(--brand-blue);
-            color: #ffffff;
-            border-color: var(--brand-blue);
-            font-weight: 700;
+        .btn-page-ctrl:active:not(:disabled) {
+            background: #e2e8f0;
+            transform: translateY(1px);
+        }
+        .btn-page-ctrl:disabled,
+        .btn-page-ctrl.disabled {
+            background: #f8fafc;
+            color: #94a3b8;
+            border-color: #e2e8f0;
+            cursor: not-allowed;
+            opacity: 0.55;
+            box-shadow: none;
         }
 
-        .page-pill.disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-            background: #f8fafc;
+        /* 頁碼指示膠囊 */
+        .page-indicator-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #166534;
+            white-space: nowrap !important;
+        }
+
+        /* 手機端大按鈕排版 (Mobile Touch Optimized) */
+        @media (max-width: 767.98px) {
+            .btn-page-ctrl.btn-step {
+                flex: 1;
+                min-width: 0;
+                padding: 0 8px;
+            }
+            .btn-page-ctrl.btn-edge {
+                width: 40px;
+                min-width: 40px;
+                padding: 0;
+                flex-shrink: 0;
+            }
+            .page-indicator-pill {
+                flex-shrink: 0;
+                padding: 0 10px;
+                font-size: 0.84rem;
+            }
         }
 
         /* 模態視窗自定義樣式 */
@@ -798,36 +874,31 @@
                     </button>
                 </div>
 
-                <!-- D. 分頁控制項 -->
-                <div class="pagination-container" v-if="totalCount > 0">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="small text-muted">每頁顯示</span>
-                        <select class="form-control form-control-sm" style="width: 75px;" v-model="pageSize" v-on:change="onPageSizeChange">
-                            <option :value="10">10</option>
-                            <option :value="20">20</option>
-                            <option :value="50">50</option>
-                            <option :value="100">100</option>
-                        </select>
-                        <span class="small text-muted">筆，第 {{ pageIndex }} / {{ totalPages }} 頁</span>
+                <!-- 自適應底部分頁導覽列 (Responsive Pagination Footer) -->
+                <div v-if="!loading && totalCount > 0" class="pagination-footer">
+                    <div class="pagination-footer-info">
+                        顯示第 <strong class="text-dark">{{ (pageIndex - 1) * pageSize + 1 }}</strong> 至 <strong class="text-dark">{{ Math.min(pageIndex * pageSize, totalCount) }}</strong> 筆，共 <strong class="text-dark">{{ totalCount }}</strong> 筆
                     </div>
-
-                    <div class="d-flex align-items-center gap-1">
-                        <button type="button" class="page-pill" :class="{ 'disabled': pageIndex <= 1 }" v-on:click="changePage(1)" title="第一頁">
+                    <div class="pagination-action-group">
+                        <button type="button" class="btn-page-ctrl btn-edge" :disabled="pageIndex <= 1" v-on:click="changePage(1)" title="第一頁">
                             <i class="fas fa-angle-double-left"></i>
+                            <span class="d-none d-md-inline ml-1">首頁</span>
                         </button>
-                        <button type="button" class="page-pill" :class="{ 'disabled': pageIndex <= 1 }" v-on:click="changePage(pageIndex - 1)" title="上一頁">
-                            <i class="fas fa-angle-left"></i>
+                        <button type="button" class="btn-page-ctrl btn-step" :disabled="pageIndex <= 1" v-on:click="changePage(pageIndex - 1)" title="上一頁">
+                            <i class="fas fa-chevron-left mr-1"></i>
+                            <span>上一頁</span>
                         </button>
-
-                        <button v-for="p in visiblePages" :key="p" type="button" class="page-pill" 
-                                :class="{ 'active': p === pageIndex }" v-on:click="changePage(p)">
-                            {{ p }}
+                        <div class="page-indicator-pill" title="目前頁次 / 總頁數">
+                            <span>{{ pageIndex }}</span>
+                            <span class="mx-1 text-muted" style="opacity: 0.5; font-weight: normal;">/</span>
+                            <span>{{ totalPages }}</span>
+                        </div>
+                        <button type="button" class="btn-page-ctrl btn-step" :disabled="pageIndex >= totalPages" v-on:click="changePage(pageIndex + 1)" title="下一頁">
+                            <span>下一頁</span>
+                            <i class="fas fa-chevron-right ml-1"></i>
                         </button>
-
-                        <button type="button" class="page-pill" :class="{ 'disabled': pageIndex >= totalPages }" v-on:click="changePage(pageIndex + 1)" title="下一頁">
-                            <i class="fas fa-angle-right"></i>
-                        </button>
-                        <button type="button" class="page-pill" :class="{ 'disabled': pageIndex >= totalPages }" v-on:click="changePage(totalPages)" title="最末頁">
+                        <button type="button" class="btn-page-ctrl btn-edge" :disabled="pageIndex >= totalPages" v-on:click="changePage(totalPages)" title="最後一頁">
+                            <span class="d-none d-md-inline ml-1">末頁</span>
                             <i class="fas fa-angle-double-right"></i>
                         </button>
                     </div>
@@ -939,7 +1010,7 @@
                         WrongCount: 0,
                         MonthCount: 0
                     },
-                    activeDateRange: 'month',
+                    activeDateRange: 'all',
                     filter: {
                         FacId: 'ALL',
                         DateS: '',
@@ -974,7 +1045,7 @@
             methods: {
                 // 初始化預設為當月日期
                 initDefaultDateRange() {
-                    this.setDateRange('month');
+                    this.setDateRange('all');
                 },
 
                 // 設定日期快捷區間

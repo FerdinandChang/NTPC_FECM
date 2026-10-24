@@ -281,41 +281,40 @@
             background-color: #f8fafc;
         }
 
-        /* 狀態徽章 */
+        /* 狀態徽章 (防擠壓與防跳行規範) */
+        .badge-status-inv1,
+        .badge-status-inv2,
+        .badge-status-inv3,
+        .badge-status-other {
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 9px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            line-height: 1.35;
+        }
+
         .badge-status-inv1 {
             background-color: #ecfdf5;
             color: #047857;
             border: 1px solid #a7f3d0;
-            font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
         }
 
         .badge-status-inv2 {
             background-color: #eff6ff;
             color: #0369a1;
             border: 1px solid #bfdbfe;
-            font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
         }
 
         .badge-status-inv3 {
             background-color: #fef3c7;
             color: #b45309;
             border: 1px solid #fde68a;
-            font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
         }
 
         .badge-status-other {
@@ -323,11 +322,6 @@
             color: #475569;
             border: 1px solid #cbd5e1;
             font-weight: 600;
-            padding: 4px 8px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
         }
 
         /* 側邊抽屜式面板 (Drawer / Offcanvas) */
@@ -507,9 +501,6 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <span class="badge badge-pill badge-light mr-2 d-none d-sm-inline-block py-2 px-3 text-secondary" style="font-size: 13px;">
-                    <i class="fas fa-user-shield mr-1 text-primary"></i> {{ currentUser }}
-                </span>
                 <button type="button" class="nav-btn" v-on:click="fetchList" :disabled="loading" title="重新整理資料">
                     <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
                     <span class="d-none d-sm-inline">重新整理</span>
@@ -522,19 +513,19 @@
             <div class="nav-mode-item" :class="{ 'active': currentMode === 'INV1' }" v-on:click="switchMode('INV1')">
                 <i class="fas fa-bolt text-success"></i>
                 <span>待初審</span>
-                <span class="tab-badge badge-success ml-1">{{ stats.CountInv1 }}</span>
+                <span class="tab-badge badge-success ml-1">{{ stats.CountInv1Cases }} 案 / {{ stats.CountInv1 }} 場</span>
             </div>
 
             <div class="nav-mode-item" :class="{ 'active': currentMode === 'INV2' }" v-on:click="switchMode('INV2')">
                 <i class="fas fa-search text-primary"></i>
                 <span>待複審</span>
-                <span class="tab-badge badge-primary ml-1">{{ stats.CountInv2 }}</span>
+                <span class="tab-badge badge-primary ml-1">{{ stats.CountInv2Cases }} 案 / {{ stats.CountInv2 }} 場</span>
             </div>
 
             <div class="nav-mode-item" :class="{ 'active': currentMode === 'INV3' }" v-on:click="switchMode('INV3')">
                 <i class="fas fa-balance-scale text-warning"></i>
                 <span>待三審</span>
-                <span class="tab-badge badge-warning ml-1">{{ stats.CountInv3 }}</span>
+                <span class="tab-badge badge-warning ml-1">{{ stats.CountInv3Cases }} 案 / {{ stats.CountInv3 }} 場</span>
             </div>
 
             <div class="nav-mode-item" :class="{ 'active': currentMode === 'ALL' }" v-on:click="switchMode('ALL')">
@@ -553,8 +544,8 @@
                         <i class="fas fa-clipboard-check"></i>
                     </div>
                     <div>
-                        <div class="stat-val">{{ stats.CountInv1 }}</div>
-                        <div class="stat-lbl">待初審場址數</div>
+                        <div class="stat-val">{{ stats.CountInv1Cases }} <span style="font-size: 0.95rem; font-weight: normal; color: #64748b;">案 ({{ stats.CountInv1 }} 場址)</span></div>
+                        <div class="stat-lbl">待初審查核總量</div>
                     </div>
                 </div>
 
@@ -563,8 +554,8 @@
                         <i class="fas fa-search-plus"></i>
                     </div>
                     <div>
-                        <div class="stat-val">{{ stats.CountInv2 }}</div>
-                        <div class="stat-lbl">待複審場址數</div>
+                        <div class="stat-val">{{ stats.CountInv2Cases }} <span style="font-size: 0.95rem; font-weight: normal; color: #64748b;">案 ({{ stats.CountInv2 }} 場址)</span></div>
+                        <div class="stat-lbl">待複審查核總量</div>
                     </div>
                 </div>
 
@@ -573,8 +564,8 @@
                         <i class="fas fa-gavel"></i>
                     </div>
                     <div>
-                        <div class="stat-val">{{ stats.CountInv3 }}</div>
-                        <div class="stat-lbl">待三審場址數</div>
+                        <div class="stat-val">{{ stats.CountInv3Cases }} <span style="font-size: 0.95rem; font-weight: normal; color: #64748b;">案 ({{ stats.CountInv3 }} 場址)</span></div>
+                        <div class="stat-lbl">待三審查核總量</div>
                     </div>
                 </div>
 
@@ -762,9 +753,9 @@
                     <div class="mobile-card-list p-3" v-if="!loading && items.length > 0">
                         <div v-for="item in items" :key="item.Bare_ID" class="mobile-fac-card">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
+                                <div class="mr-2" style="min-width: 0; flex: 1;">
                                     <div class="font-weight-bold text-dark" style="font-size: 1.05rem;">{{ item.BareGroundNo }}</div>
-                                    <small class="text-muted">ID: {{ item.Bare_ID }} | 地目: {{ item.LAND_USE }}</small>
+                                    <small class="text-muted d-block text-break">ID: {{ item.Bare_ID }} | 地目: {{ item.LAND_USE }}</small>
                                 </div>
                                 <span :class="getStatusBadgeClass(item.Last_INV_State)">
                                     {{ item.Last_State_Name }}
@@ -1077,6 +1068,9 @@
                             CountInv1: 0,
                             CountInv2: 0,
                             CountInv3: 0,
+                            CountInv1Cases: 0,
+                            CountInv2Cases: 0,
+                            CountInv3Cases: 0,
                             CountTotal: 0
                         },
                         filter: {

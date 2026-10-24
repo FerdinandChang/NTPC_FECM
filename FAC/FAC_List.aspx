@@ -476,50 +476,223 @@
                 font-size: 0.84rem;
             }
         }
+
+        /* 行動端與小尺寸 RWD 精準優化：按鈕純圖示化、KPI卡片防折行 */
+        @media (max-width: 767.98px) {
+            .top-navbar {
+                padding: 0 10px;
+                height: 52px;
+            }
+            .navbar-brand-title {
+                font-size: 0.98rem !important;
+                gap: 6px;
+            }
+            .nav-mode-bar {
+                padding: 0 8px;
+                gap: 4px;
+            }
+            .nav-mode-item {
+                padding: 10px 10px;
+                font-size: 13px;
+                gap: 5px;
+            }
+            .stat-card {
+                padding: 8px 10px !important;
+                gap: 8px !important;
+                border-radius: 10px !important;
+            }
+            .stat-icon {
+                width: 34px !important;
+                height: 34px !important;
+                font-size: 15px !important;
+                border-radius: 8px !important;
+                flex-shrink: 0 !important;
+            }
+            .stat-card .small {
+                font-size: 0.74rem !important;
+                white-space: nowrap !important;
+                letter-spacing: -0.3px;
+            }
+            .stat-card .h4 {
+                font-size: 1.2rem !important;
+            }
+            .card-modern-header {
+                padding: 10px 12px !important;
+            }
+            .card-modern-title {
+                font-size: 0.92rem !important;
+            }
+        }
+
+        /* 通用行動端圖示/文字切換按鈕 (RWD Anti-collapse & Icon-only) */
+        .btn-icon-mobile {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            height: 34px !important;
+            min-width: 34px !important;
+            padding: 0 10px;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            border-radius: 8px !important;
+            user-select: none;
+        }
+        @media (max-width: 767.98px) {
+            .btn-icon-mobile {
+                width: 34px !important;
+                padding: 0 !important;
+            }
+        }
+
+        /* 頂部導覽列按鈕尺寸統一標準 (高度 36px，小尺寸一律 36px x 36px 正方形) */
+        .nav-top-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 36px !important;
+            min-height: 36px !important;
+            border-radius: 8px !important;
+            font-size: 0.88rem !important;
+            font-weight: 600 !important;
+            transition: all 0.15s ease-in-out;
+            user-select: none;
+            text-decoration: none !important;
+            box-sizing: border-box !important;
+            flex-shrink: 0 !important;
+            border: 1px solid transparent;
+        }
+
+        /* 小尺寸螢幕 (< 768px)：導覽列所有按鈕一律精確為 36px x 36px 正方形圖示按鈕 */
+        @media (max-width: 767.98px) {
+            .nav-top-btn,
+            .nav-btn {
+                width: 36px !important;
+                height: 36px !important;
+                min-width: 36px !important;
+                max-width: 36px !important;
+                padding: 0 !important;
+                margin-right: 4px !important;
+            }
+            .nav-top-btn i,
+            .nav-btn i {
+                margin: 0 !important;
+                font-size: 15px !important;
+            }
+        }
+
+        /* 桌面端 (>= 768px)：按鈕自適應展開文字與間距 */
+        @media (min-width: 768px) {
+            .nav-top-btn {
+                padding: 0 12px !important;
+                min-width: 36px !important;
+            }
+        }
+
+        /* ----------------------------------------------------
+           稽查派遣模式 (Mode: Mission) 行動端 RWD 專屬優化
+           ---------------------------------------------------- */
+        @media (max-width: 767.98px) {
+            .top-navbar {
+                padding: 0 10px !important;
+                gap: 6px !important;
+            }
+            .top-navbar-left {
+                min-width: 0 !important;
+                flex: 1 1 auto !important;
+                overflow: hidden !important;
+            }
+            .navbar-brand-title {
+                min-width: 0 !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+                font-size: 0.95rem !important;
+            }
+            .top-navbar-actions {
+                flex: 0 0 auto !important;
+                gap: 4px !important;
+            }
+        }
+
+        /* 派遣核取方塊加大觸控熱區 */
+        .mission-checkbox {
+            width: 20px !important;
+            height: 20px !important;
+            cursor: pointer;
+            accent-color: #0284c7;
+            flex-shrink: 0;
+            vertical-align: middle;
+        }
+
+        /* 行動端底部懸浮派遣列 (Floating Mission Action Bar) */
+        .mission-floating-bottom {
+            position: fixed;
+            bottom: 16px;
+            left: 12px;
+            right: 12px;
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(8px);
+            border-radius: 14px;
+            padding: 10px 14px;
+            z-index: 1040;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            animation: slideUpFloating 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUpFloating {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
     <div id="app" v-cloak>
         <!-- 1. 頂部深青藍導覽列 (Sticky Top Navbar) -->
         <header class="top-navbar">
-            <div class="d-flex align-items-center">
-                <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+            <div class="d-flex align-items-center top-navbar-left">
+                <a href="../MainPage.aspx" class="nav-btn mr-1 mr-sm-2 flex-shrink-0" title="返回主選單">
                     <i class="fas fa-home"></i>
-                    <span class="d-none d-sm-inline">回首頁</span>
+                    <span class="d-none d-md-inline ml-1">回首頁</span>
                 </a>
-                <a href="FAC_List.aspx" class="navbar-brand-title">
-                    <i class="fas fa-industry text-white"></i>
-                    <span class="text-nowrap" style="white-space: nowrap; font-size: clamp(0.92rem, 3.6vw, 1.12rem);">公私場所固定污染源管理</span>
-                    <span class="badge badge-light text-dark font-weight-bold ml-1 d-none d-lg-inline" style="font-size: 0.8rem; white-space: nowrap;">
+                <a href="FAC_List.aspx" class="navbar-brand-title d-flex align-items-center">
+                    <i class="fas fa-industry text-white flex-shrink-0 mr-1"></i>
+                    <span class="text-nowrap text-truncate">
+                        <span class="d-none d-sm-inline">公私場所</span>固定污染源管理
+                    </span>
+                    <span class="badge badge-light text-dark font-weight-bold ml-1 d-none d-lg-inline flex-shrink-0" style="font-size: 0.8rem;">
                         {{ stats.Total }} 處場所
                     </span>
                 </a>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <!-- 派遣模式下的確定派遣快捷鈕 -->
-                <button v-if="currentMode === 'mission'" type="button" class="btn btn-warning btn-sm font-weight-bold shadow-sm mr-2"
-                        :disabled="selectedFacIds.length === 0" v-on:click="openDispatchModal">
-                    <i class="fas fa-paper-plane mr-1"></i>
-                    確定派遣 ({{ selectedFacIds.length }})
+            <div class="d-flex align-items-center top-navbar-actions flex-shrink-0">
+                <!-- 派遣模式下的確定派遣快捷鈕 (小螢幕顯示圖示與數字徽章) -->
+                <button v-if="currentMode === 'mission'" type="button" class="btn btn-warning nav-top-btn font-weight-bold shadow-sm"
+                        style="width: auto !important; min-width: 36px; padding: 0 8px !important;"
+                        :disabled="selectedFacIds.length === 0" v-on:click="openDispatchModal" :title="'確定派遣 (' + selectedFacIds.length + ')'">
+                    <i class="fas fa-paper-plane"></i>
+                    <span class="badge badge-dark ml-1" style="font-size: 11px; padding: 2px 5px; border-radius: 6px;">{{ selectedFacIds.length }}</span>
+                    <span class="d-none d-md-inline ml-1">確定派遣</span>
                 </button>
 
                 <!-- 異動模式下的新增場所按鈕 -->
-                <button v-if="currentMode === 'edit'" type="button" class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2"
-                        v-on:click="addNewFac">
-                    <i class="fas fa-plus-circle mr-1"></i>
-                    新增場所
+                <button v-if="currentMode === 'edit'" type="button" class="btn btn-success nav-top-btn font-weight-bold shadow-sm"
+                        v-on:click="addNewFac" title="新增公私場所資料">
+                    <i class="fas fa-plus"></i>
+                    <span class="d-none d-md-inline ml-1">新增場所</span>
                 </button>
 
-                <!-- 外勤 GPS 定位搜尋周邊場所按鈕 -->
-                <button type="button" class="btn btn-sm btn-light font-weight-bold text-dark shadow-sm mr-2 d-inline-flex align-items-center" style="height: 36px; gap: 6px;" v-on:click="locateNearby" :disabled="locatingNearby">
+                <!-- 外勤 GPS 定位搜尋周邊場所按鈕 (尺寸與其他導覽按鈕嚴格一致 36x36) -->
+                <button type="button" class="btn btn-light nav-top-btn font-weight-bold text-dark shadow-sm"
+                        v-on:click="locateNearby" :disabled="locatingNearby"
+                        :title="locatingNearby ? '定位搜尋中...' : '外勤 GPS 定位周邊場所'">
                     <i class="fas fa-crosshairs text-primary" :class="{ 'fa-spin': locatingNearby }"></i>
-                    <span class="text-dark font-weight-bold ml-1">{{ locatingNearby ? '定位中...' : '附近場所' }}</span>
+                    <span class="d-none d-md-inline text-dark font-weight-bold ml-1">{{ locatingNearby ? '定位中...' : '附近場所' }}</span>
                 </button>
 
                 <!-- 地圖收合/展開開關 -->
-                <button type="button" class="nav-btn" v-on:click="toggleMapCollapse" :title="isMapCollapsed ? '展開地圖' : '收合地圖'">
+                <button type="button" class="nav-btn nav-top-btn" v-on:click="toggleMapCollapse" :title="isMapCollapsed ? '展開地圖' : '收合地圖'">
                     <i class="fas" :class="isMapCollapsed ? 'fa-map-marked-alt' : 'fa-compress-arrows-alt'"></i>
-                    <span class="d-none d-lg-inline">{{ isMapCollapsed ? '展開地圖' : '收合地圖' }}</span>
+                    <span class="d-none d-lg-inline ml-1">{{ isMapCollapsed ? '展開地圖' : '收合地圖' }}</span>
                 </button>
             </div>
         </header>
@@ -599,20 +772,22 @@
 
             <!-- 4. 智慧現場地圖卡片 (Leaflet.js) -->
             <div class="card-modern mb-3" v-show="!isMapCollapsed">
-                <div class="card-modern-header">
-                    <h2 class="card-modern-title">
-                        <i class="fas fa-map-marked-alt text-primary"></i>
-                        <span>場所空間地理分佈 (Leaflet)</span>
-                        <small class="text-muted font-weight-normal ml-2" v-if="mapMarkerCount > 0">
-                            已標記 {{ mapMarkerCount }} 處座標場所
-                        </small>
+                <div class="card-modern-header d-flex align-items-center justify-content-between">
+                    <h2 class="card-modern-title text-nowrap d-flex align-items-center mb-0" style="white-space: nowrap; overflow: hidden; min-width: 0;">
+                        <i class="fas fa-map-marked-alt text-primary flex-shrink-0"></i>
+                        <span class="ml-1" style="white-space: nowrap;">空間地理分佈</span>
+                        <span class="badge badge-light border text-muted font-weight-normal ml-2 flex-shrink-0" v-if="mapMarkerCount > 0" style="white-space: nowrap;">
+                            <span class="d-none d-md-inline">已標記 </span>{{ mapMarkerCount }} 處<span class="d-none d-md-inline">座標場所</span>
+                        </span>
                     </h2>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="resetMapView" title="重設地圖全景">
-                            <i class="fas fa-globe-asia mr-1"></i> 新北全景
+                    <div class="d-flex align-items-center gap-1 flex-shrink-0 ml-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-icon-mobile" v-on:click="resetMapView" title="重設地圖全景">
+                            <i class="fas fa-globe-asia"></i>
+                            <span class="d-none d-md-inline ml-1">新北全景</span>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-primary" v-on:click="locateNearby" title="定位當前位置">
-                            <i class="fas fa-location-arrow mr-1"></i> 定位當前
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-icon-mobile" v-on:click="locateNearby" :disabled="locatingNearby" title="外勤 GPS 定位當前位置">
+                            <i class="fas fa-location-arrow" :class="{ 'fa-spin': locatingNearby }"></i>
+                            <span class="d-none d-md-inline ml-1">定位當前</span>
                         </button>
                     </div>
                 </div>
@@ -674,16 +849,17 @@
                             </div>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                        <div class="small text-muted">
-                            共查詢到 <strong class="text-primary">{{ totalCount }}</strong> 筆場所資料
+                    <!-- 篩選操作列：手機小尺寸分兩行顯示 (上方資訊，下方全寬大觸控按鈕) -->
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <div class="small text-muted text-center text-md-left w-100 w-md-auto mb-2 mb-md-0" style="white-space: nowrap !important;">
+                            <i class="fas fa-info-circle text-primary mr-1"></i>共查詢到 <strong class="text-primary">{{ totalCount }}</strong> 筆場所資料
                         </div>
-                        <div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm mr-2" v-on:click="resetFilter">
-                                <i class="fas fa-undo mr-1"></i> 重設條件
+                        <div class="d-flex align-items-center w-100 w-md-auto" style="gap: 8px;">
+                            <button type="button" class="btn btn-outline-secondary btn-sm flex-fill flex-md-grow-0" style="height: 38px; white-space: nowrap !important;" v-on:click="resetFilter">
+                                <i class="fas fa-undo mr-1"></i>重設條件
                             </button>
-                            <button type="button" class="btn btn-primary btn-sm px-3" v-on:click="doSearch">
-                                <i class="fas fa-search mr-1"></i> 立即查詢
+                            <button type="button" class="btn btn-primary btn-sm font-weight-bold flex-fill flex-md-grow-0 px-4" style="height: 38px; white-space: nowrap !important;" v-on:click="doSearch">
+                                <i class="fas fa-search mr-1"></i>立即查詢
                             </button>
                         </div>
                     </div>
@@ -692,36 +868,36 @@
 
             <!-- 6. 資料列表清單卡片 (標準大四元操作工具列) -->
             <div class="card-modern">
-                <div class="card-modern-header">
-                    <div class="d-flex align-items-center gap-2">
-                        <h2 class="card-modern-title">
-                            <i class="fas fa-list-alt text-primary"></i>
-                            <span>場所清單列表</span>
+                <div class="card-modern-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center text-nowrap" style="white-space: nowrap; overflow: hidden; min-width: 0;">
+                        <h2 class="card-modern-title mb-0 d-inline-flex align-items-center text-nowrap" style="white-space: nowrap;">
+                            <i class="fas fa-list-alt text-primary flex-shrink-0"></i>
+                            <span class="ml-1">場所清單列表</span>
                         </h2>
-                        <span class="badge badge-light border text-dark font-weight-bold ml-1">
+                        <span class="badge badge-light border text-dark font-weight-bold ml-2 flex-shrink-0" style="white-space: nowrap;">
                             共 {{ totalCount }} 筆
                         </span>
-                        <span class="badge badge-secondary ml-1 d-none d-sm-inline">
+                        <span class="badge badge-secondary ml-1 d-none d-md-inline flex-shrink-0" style="white-space: nowrap;">
                             頁次 {{ pageIndex }} / {{ totalPages }}
                         </span>
                     </div>
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center flex-shrink-0 ml-2">
                         <!-- 1. 重新整理 -->
-                        <button type="button" class="btn btn-sm btn-outline-secondary mr-2" v-on:click="doSearch" :disabled="loading" title="重新整理場所列表">
-                            <i class="fas fa-sync-alt mr-1" :class="{ 'fa-spin': loading }"></i>
-                            <span class="d-none d-md-inline">重新整理</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-icon-mobile mr-1" v-on:click="doSearch" :disabled="loading" title="重新整理場所列表">
+                            <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+                            <span class="d-none d-md-inline ml-1">重新整理</span>
                         </button>
 
                         <!-- 2. 匯出 EXCEL -->
-                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold mr-2" v-on:click="exportExcel" :disabled="exporting || totalCount === 0" title="匯出篩選結果為 EXCEL 報表">
-                            <i class="fas fa-file-excel mr-1"></i>
-                            <span class="d-none d-md-inline">{{ exporting ? '匯出中...' : '匯出 EXCEL' }}</span>
+                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold btn-icon-mobile mr-1" v-on:click="exportExcel" :disabled="exporting || totalCount === 0" title="匯出篩選結果為 EXCEL 報表">
+                            <i class="fas fa-file-excel"></i>
+                            <span class="d-none d-md-inline ml-1">{{ exporting ? '匯出中...' : '匯出 EXCEL' }}</span>
                         </button>
 
                         <!-- 3. 每頁筆數選擇器 -->
-                        <div class="d-inline-flex align-items-center">
+                        <div class="d-inline-flex align-items-center flex-shrink-0">
                             <span class="small text-muted mr-1 d-none d-lg-inline">每頁：</span>
-                            <select class="form-control form-control-sm d-inline-block w-auto" v-model="pageSize" v-on:change="changePageSize">
+                            <select class="form-control form-control-sm d-inline-block w-auto" style="height: 34px;" v-model="pageSize" v-on:change="changePageSize">
                                 <option :value="10">10 筆</option>
                                 <option :value="15">15 筆</option>
                                 <option :value="30">30 筆</option>
@@ -843,16 +1019,28 @@
 
                 <!-- 手機與平板卡片清單 (Mobile Cards) -->
                 <div v-if="!loading && items.length > 0" class="d-lg-none p-3">
-                    <div v-for="item in items" :key="item.FAC_ID" class="mobile-item-card">
+                    <!-- 派遣模式專屬：手機端全選工具列 -->
+                    <div v-if="currentMode === 'mission'" class="bg-light p-2 rounded mb-2 d-flex justify-content-between align-items-center border">
+                        <label class="d-inline-flex align-items-center mb-0" style="cursor: pointer; user-select: none;">
+                            <input type="checkbox" class="mission-checkbox mr-2" v-on:change="toggleSelectAll" :checked="isAllSelected" />
+                            <span class="font-weight-bold text-dark small">全選本頁場所</span>
+                        </label>
+                        <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 12px;">
+                            已選取 {{ selectedFacIds.length }} 處
+                        </span>
+                    </div>
+
+                    <div v-for="item in items" :key="item.FAC_ID" class="mobile-item-card"
+                         :class="{ 'border-warning shadow-sm': currentMode === 'mission' && selectedFacIds.includes(item.FAC_ID) }">
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div class="d-flex align-items-center">
-                                <input v-if="currentMode === 'mission'" type="checkbox" :value="item.FAC_ID" v-model="selectedFacIds" class="mr-2" />
-                                <div>
-                                    <div class="font-weight-bold text-dark" style="font-size: 15px;">{{ item.FAC_NAME }}</div>
+                            <label class="d-flex align-items-center mb-0" style="cursor: pointer; min-width: 0; flex: 1;">
+                                <input v-if="currentMode === 'mission'" type="checkbox" :value="item.FAC_ID" v-model="selectedFacIds" class="mission-checkbox mr-2" />
+                                <div class="text-truncate">
+                                    <div class="font-weight-bold text-dark text-truncate" style="font-size: 15px;">{{ item.FAC_NAME }}</div>
                                     <span class="small font-weight-bold text-primary">{{ item.C_NO || item.FAC_ID }}</span>
                                 </div>
-                            </div>
-                            <span class="badge" :class="item.FAC_Type === '列管' ? 'badge-success' : 'badge-secondary'">
+                            </label>
+                            <span class="badge flex-shrink-0 ml-2" :class="item.FAC_Type === '列管' ? 'badge-success' : 'badge-secondary'">
                                 {{ item.FAC_Type || '非列管' }}
                             </span>
                         </div>
@@ -873,19 +1061,22 @@
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                            <div>
-                                <button v-if="item.Lat && item.Lng" type="button" class="btn btn-outline-primary btn-sm py-1 px-2 mr-1" v-on:click="panToMap(item)">
-                                    <i class="fas fa-map-marked-alt mr-1"></i>地圖
+                            <div class="btn-group btn-group-sm">
+                                <button v-if="item.Lat && item.Lng" type="button" class="btn btn-outline-primary py-1 px-2" v-on:click="panToMap(item)" title="在地圖中查看">
+                                    <i class="fas fa-map-marked-alt"></i>
+                                    <span class="d-none d-sm-inline ml-1">地圖</span>
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 mr-1" v-on:click="openFilesModal(item)">
-                                    <i class="fas fa-image mr-1"></i>圖資
+                                <button type="button" class="btn btn-outline-secondary py-1 px-2" v-on:click="openFilesModal(item)" title="圖資檔案管理">
+                                    <i class="fas fa-images"></i>
+                                    <span class="d-none d-sm-inline ml-1">圖資</span>
                                 </button>
-                                <button type="button" class="btn btn-outline-warning btn-sm py-1 px-2" v-on:click="openEditModal(item)">
-                                    <i class="fas fa-edit mr-1"></i>異動
+                                <button type="button" class="btn btn-outline-warning py-1 px-2" v-on:click="openEditModal(item)" title="資料異動修改">
+                                    <i class="fas fa-edit"></i>
+                                    <span class="d-none d-sm-inline ml-1">異動</span>
                                 </button>
                             </div>
                             <div>
-                                <a :href="item.DetailUrl" class="btn btn-primary btn-sm py-1 px-3 font-weight-bold">
+                                <a :href="item.DetailUrl" class="btn btn-primary btn-sm py-1 px-3 font-weight-bold" style="white-space: nowrap;">
                                     詳細 <i class="fas fa-chevron-right ml-1"></i>
                                 </a>
                             </div>
@@ -1148,6 +1339,22 @@
                         <i class="fas fa-check mr-1"></i> {{ dispatching ? '指派中...' : '確定送出派遣' }}
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- 行動端底部懸浮派遣列 (當在派遣模式且有選取場所時自動浮現) -->
+        <div class="mission-floating-bottom d-lg-none" v-if="currentMode === 'mission' && selectedFacIds.length > 0">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-paper-plane text-warning mr-2 fa-lg"></i>
+                    <div>
+                        <div class="font-weight-bold text-white small">已選取 {{ selectedFacIds.length }} 處場所</div>
+                        <div class="text-white-50" style="font-size: 11px;">點擊右側送出指派任務</div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-warning btn-sm font-weight-bold px-3 py-2 shadow" v-on:click="openDispatchModal">
+                    確定派遣 <i class="fas fa-chevron-right ml-1"></i>
+                </button>
             </div>
         </div>
     </div>

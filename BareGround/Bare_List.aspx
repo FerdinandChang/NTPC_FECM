@@ -1,20 +1,16 @@
 ﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Bare_List.aspx.cs" Inherits="NTPC_FEC.BareGround.Bare_List" %>
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
     <title>新北市固定溢散源管理平台 - 裸露地調查管理清單</title>
-
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
-
     <!-- 本地化依賴：Bootstrap 4, FontAwesome 5, Leaflet 1.9.4 -->
     <link rel="stylesheet" href="../Content/bootstrap.min.css" />
     <link rel="stylesheet" href="../Content/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="../Content/leaflet/leaflet.css" />
-
     <style>
         :root {
             --brand-primary: #0099e5;     /* 新北青藍 */
@@ -29,12 +25,10 @@
             --text-main: #0f172a;         /* 內文主色 */
             --text-muted: #64748b;        /* 次要說明 */
         }
-
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", "微軟正黑體", sans-serif;
             background-color: var(--bg-canvas);
@@ -44,11 +38,9 @@
             overflow-x: hidden;
             min-height: 100vh;
         }
-
         [v-cloak] {
             display: none !important;
         }
-
         /* 頂部品牌導覽列 */
         .top-navbar {
             background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
@@ -63,7 +55,6 @@
             top: 0;
             z-index: 1020;
         }
-
 .nav-btn {
             background: rgba(255, 255, 255, 0.18);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -86,8 +77,6 @@
             color: #ffffff !important;
             text-decoration: none !important;
         }
-
-
         .navbar-brand-title {
             font-size: 1.15rem;
             font-weight: 700;
@@ -98,12 +87,10 @@
             text-decoration: none;
             letter-spacing: 0.5px;
         }
-
         .navbar-brand-title:hover {
             color: #ffffff;
             text-decoration: none;
         }
-
         /* 業務模式分頁切換列 */
         .nav-mode-bar {
             background: #ffffff;
@@ -119,7 +106,6 @@
         .nav-mode-bar::-webkit-scrollbar {
             display: none;
         }
-
         .nav-mode-item {
             display: inline-flex;
             align-items: center;
@@ -133,26 +119,22 @@
             transition: all 0.2s ease;
             user-select: none;
         }
-
         .nav-mode-item:hover {
             color: var(--brand-blue);
             background: #f8fafc;
         }
-
         .nav-mode-item.active {
             color: var(--brand-blue);
             border-bottom-color: var(--brand-blue);
             font-weight: 700;
             background: rgba(2, 132, 199, 0.04);
         }
-
         .tab-badge {
             font-size: 11px;
             padding: 2px 8px;
             border-radius: 12px;
             font-weight: 700;
         }
-
         /* 現代卡片 */
         .card-modern {
             background: var(--surface);
@@ -162,7 +144,6 @@
             margin-bottom: 20px;
             overflow: hidden;
         }
-
         .card-modern-header {
             padding: 14px 20px;
             background: #ffffff;
@@ -171,7 +152,6 @@
             align-items: center;
             justify-content: space-between;
         }
-
         .card-modern-title {
             font-size: 1.05rem;
             font-weight: 700;
@@ -181,11 +161,9 @@
             align-items: center;
             gap: 10px;
         }
-
         .card-modern-body {
             padding: 20px;
         }
-
         /* 統計卡片 */
         .stat-card {
             background: #ffffff;
@@ -200,12 +178,10 @@
             cursor: pointer;
             height: 100%;
         }
-
         .stat-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
-
         .stat-icon {
             width: 44px;
             height: 44px;
@@ -216,20 +192,17 @@
             font-size: 1.3rem;
             flex-shrink: 0;
         }
-
         .stat-val {
             font-size: 1.45rem;
             font-weight: 800;
             line-height: 1.2;
             color: var(--brand-navy);
         }
-
         .stat-label {
             font-size: 12px;
             font-weight: 600;
             color: #64748b;
         }
-
         /* 地圖容器與控制列 */
         #map {
             width: 100%;
@@ -241,7 +214,6 @@
         #map.map-collapsed {
             height: 120px !important;
         }
-
         /* 批次操作浮動列 */
         .batch-action-bar {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -255,12 +227,10 @@
             box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
             animation: slideDown 0.2s ease;
         }
-
         @keyframes slideDown {
             from { opacity: 0; transform: translateY(-8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         /* 現代化表格 */
         .table-modern {
             width: 100%;
@@ -268,7 +238,6 @@
             border-spacing: 0;
             margin: 0;
         }
-
         .table-modern th {
             background: #f8fafc;
             color: #475569;
@@ -279,7 +248,6 @@
             border-top: none;
             white-space: nowrap;
         }
-
         .table-modern td {
             padding: 14px 16px;
             vertical-align: middle;
@@ -288,11 +256,9 @@
             font-size: 14px;
             background: #ffffff;
         }
-
         .table-modern tbody tr:hover td {
             background: #f1f5f9;
         }
-
         /* 狀態徽章 (Status Chip) */
         .status-chip {
             display: inline-flex;
@@ -304,48 +270,45 @@
             font-weight: 700;
             white-space: nowrap;
         }
-
         .status-draft {
             background: #fef2f2;
             color: #dc2626;
             border: 1px solid #fecaca;
         }
-
         .status-back {
             background: #fffbeb;
             color: #b45309;
             border: 1px solid #fde68a;
         }
-
         .status-exam {
             background: #eff6ff;
             color: #1d4ed8;
             border: 1px solid #bfdbfe;
         }
-
         .status-done {
             background: #ecfdf5;
             color: #047857;
             border: 1px solid #a7f3d0;
         }
-
         .status-none {
             background: #f1f5f9;
             color: #64748b;
             border: 1px solid #cbd5e1;
         }
-
         /* 地目标籤 */
         .land-chip {
             background: #fef9c3;
             color: #854d0e;
-            padding: 3px 8px;
+            padding: 3px 10px;
             border-radius: 6px;
             font-size: 12px;
             font-weight: 700;
             border: 1px solid #fef08a;
+            white-space: nowrap !important;
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1.4;
         }
-
         /* 操作按鈕群組 - 嚴格單行不換行 */
         .action-btn-group {
             display: inline-flex;
@@ -355,7 +318,6 @@
             flex-wrap: nowrap !important;
             white-space: nowrap !important;
         }
-
         .btn-action {
             padding: 5px 11px;
             font-size: 13px;
@@ -371,7 +333,6 @@
             flex-shrink: 0;
             text-decoration: none !important;
         }
-
         /* 手機卡片清單 (Mobile Card View) */
         .mobile-card {
             background: #ffffff;
@@ -381,7 +342,6 @@
             margin-bottom: 12px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
-
         .mobile-card-header {
             display: flex;
             align-items: center;
@@ -390,14 +350,12 @@
             padding-bottom: 8px;
             border-bottom: 1px dashed var(--border-color);
         }
-
         .mobile-card-title {
             font-size: 1rem;
             font-weight: 700;
             color: var(--brand-navy);
             margin: 0;
         }
-
         @media (max-width: 767.98px) {
             .btn-action {
                 flex: 1;
@@ -406,55 +364,124 @@
                 font-size: 14px;
             }
         }
-
-        /* 分頁列樣式 */
-        .pagination-container {
-            padding: 14px 20px;
+                /* ========================================================
+           自適應現代化底部分頁列 (Responsive Pagination Footer)
+           解決小尺寸螢幕 (手機) 壅擠與按鈕折行難以點擊問題
+           ======================================================== */
+        .pagination-footer {
             background: #ffffff;
-            border-top: 1px solid var(--border-color);
+            border-top: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+                gap: 16px;
+            }
+        }
+        .pagination-footer-info {
+            font-size: 0.88rem;
+            color: #64748b;
+            text-align: center;
+            white-space: nowrap !important;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer-info {
+                text-align: left;
+            }
+        }
+        .pagination-action-group {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            max-width: 100%;
         }
-
-        .page-link-custom {
-            min-width: 36px;
-            height: 36px;
-            padding: 0 10px;
+        @media (min-width: 768px) {
+            .pagination-action-group {
+                width: auto;
+                justify-content: flex-end;
+            }
+        }
+        .btn-page-ctrl {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
+            height: 38px;
+            padding: 0 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #334155;
             background: #ffffff;
-            color: var(--text-main);
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.15s ease;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.15s ease-in-out;
+            white-space: nowrap !important;
+            text-decoration: none !important;
             user-select: none;
+            touch-action: manipulation;
         }
-
-        .page-link-custom:hover:not(.disabled) {
+        .btn-page-ctrl:hover:not(:disabled) {
             background: #f1f5f9;
-            color: var(--brand-blue);
-            border-color: var(--brand-blue);
+            color: #0f172a;
+            border-color: #94a3b8;
         }
-
-        .page-link-custom.active {
-            background: var(--brand-blue);
-            color: #ffffff;
-            border-color: var(--brand-blue);
-            font-weight: 700;
+        .btn-page-ctrl:active:not(:disabled) {
+            background: #e2e8f0;
+            transform: translateY(1px);
         }
-
-        .page-link-custom.disabled {
-            opacity: 0.45;
+        .btn-page-ctrl:disabled,
+        .btn-page-ctrl.disabled {
+            background: #f8fafc;
+            color: #94a3b8;
+            border-color: #e2e8f0;
             cursor: not-allowed;
+            opacity: 0.55;
+            box-shadow: none;
         }
-
+        /* 頁碼指示膠囊 */
+        .page-indicator-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #166534;
+            white-space: nowrap !important;
+        }
+        /* 手機端大按鈕排版 (Mobile Touch Optimized) */
+        @media (max-width: 767.98px) {
+            .btn-page-ctrl.btn-step {
+                flex: 1;
+                min-width: 0;
+                padding: 0 8px;
+            }
+            .btn-page-ctrl.btn-edge {
+                width: 40px;
+                min-width: 40px;
+                padding: 0;
+                flex-shrink: 0;
+            }
+            .page-indicator-pill {
+                flex-shrink: 0;
+                padding: 0 10px;
+                font-size: 0.84rem;
+            }
+        }
         /* 查核紀錄抽屜/彈窗 Modal */
         .inv-history-item {
             background: #f8fafc;
@@ -469,7 +496,6 @@
             background: #ffffff;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
-
         /* 智慧標記 Marker Pin */
         .marker-pin-custom {
             width: 32px;
@@ -523,7 +549,6 @@
                 </button>
             </div>
         </header>
-
         <!-- 業務模式分頁切換列 -->
         <nav class="nav-mode-bar">
             <div class="nav-mode-item" :class="{ 'active': currentMode === 'reject' }" v-on:click="switchMode('reject')">
@@ -552,7 +577,6 @@
                 <span class="tab-badge badge badge-dark">{{ counts.Sites }}</span>
             </div>
         </nav>
-
         <main class="container-fluid py-4 px-lg-4">
             <!-- 頂部統計指標卡片 -->
             <div class="row mb-3">
@@ -601,7 +625,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- 複合多條件篩選卡片 (標準折疊與操作列) -->
             <div class="card-modern">
                 <div class="card-modern-header" style="cursor: pointer;" v-on:click="filterCollapsed = !filterCollapsed">
@@ -623,19 +646,16 @@
                             <label class="font-weight-bold text-muted small mb-1">裸露地編號</label>
                             <input type="text" class="form-control form-control-sm" v-model="filter.bareGroundNo" placeholder="請輸入編號關鍵字..." v-on:keyup.enter="handleSearch" />
                         </div>
-
                         <!-- 地址關鍵字 -->
                         <div class="col-12 col-md-3 mb-2">
                             <label class="font-weight-bold text-muted small mb-1">場址地址</label>
                             <input type="text" class="form-control form-control-sm" v-model="filter.addr" placeholder="請輸入地址關鍵字..." v-on:keyup.enter="handleSearch" />
                         </div>
-
                         <!-- 地目 -->
                         <div class="col-12 col-md-2 mb-2">
                             <label class="font-weight-bold text-muted small mb-1">地目</label>
                             <input type="text" class="form-control form-control-sm" v-model="filter.landUse" placeholder="例如：林、田、建..." v-on:keyup.enter="handleSearch" />
                         </div>
-
                         <!-- 查核日期區間 -->
                         <div class="col-12 col-md-4 mb-2">
                             <label class="font-weight-bold text-muted small mb-1">最近查核日期區間</label>
@@ -646,12 +666,11 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                        <div class="small text-muted">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mt-2 pt-2 border-top">
+                        <div class="small text-muted mb-2 mb-sm-0">
                             共查詢到 <strong class="text-primary">{{ pagination.totalCount }}</strong> 筆場址資料
                         </div>
-                        <div>
+                        <div class="d-flex align-items-center justify-content-end">
                             <button type="button" class="btn btn-outline-secondary btn-sm mr-2" v-on:click="resetFilter">
                                 <i class="fas fa-undo mr-1"></i> 重設條件
                             </button>
@@ -662,21 +681,22 @@
                     </div>
                 </div>
             </div>
-
             <!-- 智慧現場地圖卡片 (Leaflet) -->
             <div class="card-modern" v-show="showMap">
                 <div class="card-modern-header">
                     <h2 class="card-modern-title">
                         <i class="fas fa-globe-asia text-info"></i>
                         <span>裸露地空間點位分布圖</span>
-                        <small class="text-muted font-weight-normal" style="font-size: 0.85rem;">(展示已標定座標之裸露地場址)</small>
+                        <small class="text-muted font-weight-normal d-none d-md-inline" style="font-size: 0.85rem;">(展示已標定座標之裸露地場址)</small>
                     </h2>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" v-on:click="locateUser">
-                            <i class="fas fa-crosshairs mr-1"></i> GPS 定位
+                        <button type="button" class="btn btn-sm btn-outline-primary" v-on:click="locateUser" title="GPS 定位">
+                            <i class="fas fa-crosshairs"></i>
+                            <span class="d-none d-sm-inline ml-1">GPS 定位</span>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary ml-1" v-on:click="fitMapBounds">
-                            <i class="fas fa-compress-arrows-alt mr-1"></i> 重設全景
+                        <button type="button" class="btn btn-sm btn-outline-secondary ml-1" v-on:click="fitMapBounds" title="重設全景">
+                            <i class="fas fa-compress-arrows-alt"></i>
+                            <span class="d-none d-sm-inline ml-1">重設全景</span>
                         </button>
                     </div>
                 </div>
@@ -684,7 +704,6 @@
                     <div id="map"></div>
                 </div>
             </div>
-
             <!-- 批次送審浮動列 -->
             <div v-if="selectedInvNos.length > 0" class="batch-action-bar">
                 <div class="d-flex align-items-center gap-2">
@@ -700,7 +719,6 @@
                     </button>
                 </div>
             </div>
-
             <!-- 裸露地主清單卡片 (標準清單大四元操作工具列) -->
             <div class="card-modern">
                 <div class="card-modern-header">
@@ -716,20 +734,17 @@
                             頁次 {{ pagination.pageIndex }} / {{ totalPages }}
                         </span>
                     </div>
-
                     <div class="d-flex align-items-center">
                         <!-- 1. 重新整理 -->
                         <button type="button" class="btn btn-sm btn-outline-secondary mr-2" v-on:click="fetchList" :disabled="loading" title="重新整理資料">
                             <i class="fas fa-sync-alt mr-1" :class="{ 'fa-spin': loading }"></i>
                             <span class="d-none d-md-inline">重新整理</span>
                         </button>
-
                         <!-- 2. 匯出 EXCEL -->
                         <button type="button" class="btn btn-sm btn-outline-success font-weight-bold mr-2" v-on:click="exportExcel" :disabled="exporting || pagination.totalCount === 0" title="匯出篩選結果為 EXCEL 報表">
                             <i class="fas fa-file-excel mr-1"></i>
                             <span class="d-none d-md-inline">{{ exporting ? '匯出中...' : '匯出 EXCEL' }}</span>
                         </button>
-
                         <!-- 3. 每頁筆數選擇器 -->
                         <div class="d-inline-flex align-items-center">
                             <span class="small text-muted mr-1 d-none d-lg-inline">每頁：</span>
@@ -742,7 +757,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="card-modern-body p-0">
                     <!-- 載入中遮罩 -->
                     <div v-if="loading" class="text-center py-5">
@@ -751,7 +765,6 @@
                         </div>
                         <p class="text-muted small mt-2">正在載入裸露地資料，請稍候...</p>
                     </div>
-
                     <!-- 無資料提示 -->
                     <div v-else-if="list.length === 0" class="text-center py-5">
                         <i class="fas fa-inbox text-muted" style="font-size: 3rem; opacity: 0.4;"></i>
@@ -760,7 +773,6 @@
                             重設篩選條件
                         </button>
                     </div>
-
                     <!-- 表格與卡片內容區 (以 template v-else 包覆，避免多個 v-else 導致渲染衝突) -->
                     <template v-else>
                         <!-- 桌面端表格 (Desktop Table) -->
@@ -774,7 +786,7 @@
                                         <th style="width: 100px;">案號</th>
                                         <th style="width: 130px;">場址編號</th>
                                         <th>場址地址</th>
-                                        <th style="width: 90px;">地目</th>
+                                        <th style="width: 140px; min-width: 120px; white-space: nowrap;">地目</th>
                                         <th style="width: 150px;">查核時間</th>
                                         <th style="width: 180px;">堆置概況</th>
                                         <th style="width: 130px; text-align: center;">案件狀態</th>
@@ -800,7 +812,7 @@
                                                 </a>
                                             </div>
                                         </td>
-                                        <td>
+                                        <td style="white-space: nowrap;">
                                             <span v-if="item.LAND_USE && item.LAND_USE !== '--'" class="land-chip">
                                                 {{ item.LAND_USE }}
                                             </span>
@@ -831,25 +843,21 @@
                                                     <i class="fas fa-paper-plane"></i>
                                                     <span>送審</span>
                                                 </button>
-
                                                 <!-- 修改資料 (草稿/待補正) -->
                                                 <a v-if="item.CanEdit" :href="'NewBare.aspx?mode=edit&id=' + item.Bare_ID + '&id1=' + item.Token + '&id2=' + item.INV_NO + '&back=' + currentMode" class="btn btn-warning btn-action text-dark" title="修改案件資料">
                                                     <i class="fas fa-edit"></i>
                                                     <span>修改</span>
                                                 </a>
-
                                                 <!-- 簽名 -->
                                                 <a :href="'BareResult.aspx?id=' + item.Bare_ID + '&id1=' + item.Token + '&id2=' + item.INV_NO + '&mode=sig'" class="btn btn-outline-primary btn-action" title="檢視/簽名">
                                                     <i class="fas fa-signature"></i>
                                                     <span>簽名</span>
                                                 </a>
-
                                                 <!-- 詳細成果檢視 -->
                                                 <a :href="'BareResult.aspx?id=' + item.Bare_ID + '&id1=' + item.Token + '&id2=' + item.INV_NO + '&mode=read'" class="btn btn-outline-secondary btn-action" title="檢視案件詳細資料">
                                                     <i class="fas fa-eye"></i>
                                                     <span>詳細</span>
                                                 </a>
-
                                                 <!-- 查核紀錄 (歷次清單) -->
                                                 <button type="button" class="btn btn-outline-info btn-action" v-on:click="openHistoryModal(item)" title="檢視此場址歷次查核">
                                                     <i class="fas fa-history"></i>
@@ -861,7 +869,6 @@
                                 </tbody>
                             </table>
                         </div>
-
                         <!-- 行動端卡片佈局 (Mobile Card View) -->
                         <div class="d-lg-none p-3">
                             <div v-for="item in list" :key="item.INV_NO" class="mobile-card">
@@ -875,7 +882,6 @@
                                         {{ item.State_Name }}
                                     </span>
                                 </div>
-
                                 <div class="small mb-2">
                                     <div class="mb-1">
                                         <strong class="text-muted"><i class="fas fa-map-pin mr-1"></i> 地址：</strong>
@@ -901,7 +907,6 @@
                                         </a>
                                     </div>
                                 </div>
-
                                 <div class="d-flex gap-2 mt-3 pt-2 border-top">
                                     <button v-if="item.CanUpload" type="button" class="btn btn-success btn-action flex-fill" v-on:click="uploadCheck(item.Bare_ID, item.INV_NO)">
                                         <i class="fas fa-paper-plane mr-1"></i> 送審
@@ -919,27 +924,31 @@
                             </div>
                         </div>
                     </template>
-
-                    <!-- 分頁列 -->
-                    <div v-if="pagination.totalCount > 0" class="pagination-container">
-                        <div class="text-muted small">
-                            第 <strong>{{ pagination.pageIndex }}</strong> / <strong>{{ pagination.totalPages }}</strong> 頁 (共 {{ pagination.totalCount }} 筆)
+                    <!-- 自適應底部分頁導覽列 (Responsive Pagination Footer) -->
+                    <div v-if="!loading && pagination.totalCount > 0" class="pagination-footer">
+                        <div class="pagination-footer-info">
+                            顯示第 <strong class="text-dark">{{ (pagination.pageIndex - 1) * pagination.pageSize + 1 }}</strong> 至 <strong class="text-dark">{{ Math.min(pagination.pageIndex * pagination.pageSize, pagination.totalCount) }}</strong> 筆，共 <strong class="text-dark">{{ pagination.totalCount }}</strong> 筆
                         </div>
-
-                        <div class="d-flex align-items-center gap-1">
-                            <button type="button" class="page-link-custom" :class="{ 'disabled': pagination.pageIndex <= 1 }" v-on:click="goToPage(1)" title="第一頁">
+                        <div class="pagination-action-group">
+                            <button type="button" class="btn-page-ctrl btn-edge" :disabled="pagination.pageIndex <= 1" v-on:click="goToPage(1)" title="第一頁">
                                 <i class="fas fa-angle-double-left"></i>
+                                <span class="d-none d-md-inline ml-1">首頁</span>
                             </button>
-                            <button type="button" class="page-link-custom" :class="{ 'disabled': pagination.pageIndex <= 1 }" v-on:click="goToPage(pagination.pageIndex - 1)" title="上一頁">
-                                <i class="fas fa-angle-left"></i>
+                            <button type="button" class="btn-page-ctrl btn-step" :disabled="pagination.pageIndex <= 1" v-on:click="goToPage(pagination.pageIndex - 1)" title="上一頁">
+                                <i class="fas fa-chevron-left mr-1"></i>
+                                <span>上一頁</span>
                             </button>
-
-                            <span class="mx-2 font-weight-bold text-primary">{{ pagination.pageIndex }}</span>
-
-                            <button type="button" class="page-link-custom" :class="{ 'disabled': pagination.pageIndex >= pagination.totalPages }" v-on:click="goToPage(pagination.pageIndex + 1)" title="下一頁">
-                                <i class="fas fa-angle-right"></i>
+                            <div class="page-indicator-pill" title="目前頁次 / 總頁數">
+                                <span>{{ pagination.pageIndex }}</span>
+                                <span class="mx-1 text-muted" style="opacity: 0.5; font-weight: normal;">/</span>
+                                <span>{{ pagination.totalPages }}</span>
+                            </div>
+                            <button type="button" class="btn-page-ctrl btn-step" :disabled="pagination.pageIndex >= pagination.totalPages" v-on:click="goToPage(pagination.pageIndex + 1)" title="下一頁">
+                                <span>下一頁</span>
+                                <i class="fas fa-chevron-right ml-1"></i>
                             </button>
-                            <button type="button" class="page-link-custom" :class="{ 'disabled': pagination.pageIndex >= pagination.totalPages }" v-on:click="goToPage(pagination.totalPages)" title="最後一頁">
+                            <button type="button" class="btn-page-ctrl btn-edge" :disabled="pagination.pageIndex >= pagination.totalPages" v-on:click="goToPage(pagination.totalPages)" title="最後一頁">
+                                <span class="d-none d-md-inline ml-1">末頁</span>
                                 <i class="fas fa-angle-double-right"></i>
                             </button>
                         </div>
@@ -947,7 +956,6 @@
                 </div>
             </div>
         </main>
-
         <!-- 歷次查核紀錄彈窗 (Inspection History Modal) -->
         <div class="modal fade" id="historyModal" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
@@ -962,7 +970,6 @@
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
-
                     <div class="modal-body p-3">
                         <div v-if="currentSite" class="mb-3 p-3 bg-white border rounded">
                             <div class="row small">
@@ -977,13 +984,11 @@
                                 </div>
                             </div>
                         </div>
-
                         <!-- 歷史紀錄載入遮罩 -->
                         <div v-if="historyLoading" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm text-primary"></div>
                             <span class="ml-2 text-muted small">載入歷次查核資料中...</span>
                         </div>
-
                         <!-- 無查核紀錄 -->
                         <div v-else-if="historyList.length === 0" class="text-center py-4 text-muted">
                             <i class="fas fa-clipboard-list" style="font-size: 2rem; opacity: 0.3;"></i>
@@ -992,7 +997,6 @@
                                 <i class="fas fa-plus mr-1"></i> 新增查核
                             </a>
                         </div>
-
                         <!-- 歷次查核紀錄清單卡片 -->
                         <div v-else>
                             <div v-for="inv in historyList" :key="inv.INV_NO" class="inv-history-item">
@@ -1006,7 +1010,6 @@
                                         {{ inv.State_Name }}
                                     </span>
                                 </div>
-
                                 <div class="small text-muted mb-2">
                                     <div v-if="inv.Around_Memo" class="mb-1">
                                         <strong class="text-dark">場址周界概況：</strong>{{ inv.Around_Memo }}
@@ -1021,28 +1024,23 @@
                                         <strong class="text-dark">環境概況說明：</strong>{{ inv.surroundings }}
                                     </div>
                                 </div>
-
                                 <div class="d-flex justify-content-end align-items-center gap-2 pt-2 border-top">
                                     <!-- 修改資料 -->
                                     <a v-if="inv.CanEdit" :href="'NewBare.aspx?mode=edit&id=' + inv.Bare_ID + '&id1=' + inv.Token + '&id2=' + inv.INV_NO + '&back=' + currentMode" class="btn btn-sm btn-warning font-weight-bold text-dark">
                                         <i class="fas fa-edit mr-1"></i> 修改資料
                                     </a>
-
                                     <!-- 送出審核 -->
                                     <button v-if="inv.CanUpload" type="button" class="btn btn-sm btn-success font-weight-bold" v-on:click="uploadCheck(inv.Bare_ID, inv.INV_NO)">
                                         <i class="fas fa-paper-plane mr-1"></i> 送審
                                     </button>
-
                                     <!-- 簽名 -->
                                     <a :href="'BareResult.aspx?id=' + inv.Bare_ID + '&id1=' + inv.Token + '&id2=' + inv.INV_NO + '&mode=sig'" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-signature mr-1"></i> 簽名
                                     </a>
-
                                     <!-- 詳細資料 -->
                                     <a :href="'BareResult.aspx?id=' + inv.Bare_ID + '&id1=' + inv.Token + '&id2=' + inv.INV_NO + '&mode=read'" class="btn btn-sm btn-outline-secondary">
                                         <i class="fas fa-eye mr-1"></i> 詳細
                                     </a>
-
                                     <!-- 刪除案件 -->
                                     <button v-if="inv.CanDelete" type="button" class="btn btn-sm btn-outline-danger" v-on:click="deleteInv(inv.Bare_ID, inv.INV_NO)">
                                         <i class="fas fa-trash-alt mr-1"></i> 刪除
@@ -1051,7 +1049,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="modal-footer bg-light">
                         <button type="button" class="btn btn-secondary font-weight-bold" data-dismiss="modal">
                             關閉視窗
@@ -1061,23 +1058,19 @@
             </div>
         </div>
     </div>
-
     <!-- 本地腳本依賴 -->
     <script src="../Scripts/jquery-3.6.4.min.js"></script>
     <script src="../Scripts/bootstrap.bundle.min.js"></script>
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
     <script src="../Scripts/leaflet/leaflet.js"></script>
-
     <script>
         const { createApp, markRaw } = Vue;
-
         createApp({
             data() {
                 // 從 URL QueryString 讀取模式
                 const urlParams = new URLSearchParams(window.location.search);
                 const initMode = urlParams.get('mode') || 'all';
-
                 return {
                     currentMode: initMode,
                     loading: false,
@@ -1105,6 +1098,7 @@
                         totalPages: 0
                     },
                     showMap: true,
+                    exporting: false,
                     selectAll: false,
                     selectedInvNos: [],
                     currentSite: null,
@@ -1128,7 +1122,6 @@
                 initMap() {
                     const mapEl = document.getElementById('map');
                     if (!mapEl) return;
-
                     // 新北市中心點
                     const defaultCenter = [25.012, 121.465];
                     const mapInstance = L.map('map', {
@@ -1136,42 +1129,33 @@
                         zoom: 11,
                         zoomControl: false // 自行擺放控制項，防止遮擋
                     });
-
                     L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
-
                     // 臺灣通用電子地圖與開源底圖圖層切換
                     const emapLayer = L.tileLayer('https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}', {
                         maxZoom: 19,
                         attribution: '&copy; 內政部國土測繪中心'
                     });
-
                     const photoLayer = L.tileLayer('https://wmts.nlsc.gov.tw/wmts/PHOTO2/default/GoogleMapsCompatible/{z}/{y}/{x}', {
                         maxZoom: 19,
                         attribution: '&copy; 內政部國土測繪中心'
                     });
-
                     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         maxZoom: 19,
                         attribution: '&copy; OpenStreetMap'
                     });
-
                     emapLayer.addTo(mapInstance);
-
                     const baseMaps = {
                         "臺灣通用電子地圖": emapLayer,
                         "正射影像圖": photoLayer,
                         "OpenStreetMap": osmLayer
                     };
                     L.control.layers(baseMaps, null, { position: 'topright' }).addTo(mapInstance);
-
                     // 建立 Marker 圖層群組
                     const markerGroup = L.layerGroup().addTo(mapInstance);
-
                     // 原生隔離屬性保存，嚴禁放在 Vue data 響應式中
                     this.leafletMap = markRaw(mapInstance);
                     this.leafletMarkerGroup = markRaw(markerGroup);
                 },
-
                 // 2. 取得案件狀態 KPI 數量
                 fetchCounts() {
                     axios.get('Bare_List.aspx?action=getcounts')
@@ -1184,13 +1168,11 @@
                             console.error('取得計數失敗', err);
                         });
                 },
-
                 // 3. 取得裸露地場址與最新查核清單
                 fetchList() {
                     this.loading = true;
                     this.selectAll = false;
                     this.selectedInvNos = [];
-
                     const payload = {
                         Mode: this.currentMode,
                         BareGroundNo: this.filter.bareGroundNo,
@@ -1202,7 +1184,6 @@
                         PageIndex: this.pagination.pageIndex,
                         PageSize: this.pagination.pageSize
                     };
-
                     axios.post('Bare_List.aspx?action=getlist', payload)
                         .then(res => {
                             this.loading = false;
@@ -1220,7 +1201,32 @@
                             console.error('查詢清單失敗', err);
                         });
                 },
-
+                // 匯出 Excel
+                exportExcel() {
+                    if (this.exporting) return;
+                    this.exporting = true;
+                    const params = new URLSearchParams();
+                    params.append('action', 'exportexcel');
+                    params.append('mode', this.currentMode || 'all');
+                    if (this.filter.bareGroundNo) params.append('bareGroundNo', this.filter.bareGroundNo.trim());
+                    if (this.filter.addr) params.append('addr', this.filter.addr.trim());
+                    if (this.filter.landUse) params.append('landUse', this.filter.landUse.trim());
+                    if (this.filter.dateS) params.append('dateS', this.filter.dateS);
+                    if (this.filter.dateE) params.append('dateE', this.filter.dateE);
+                    if (this.filter.stateFilter) params.append('stateFilter', this.filter.stateFilter);
+                    const downloadUrl = 'Bare_List.aspx?' + params.toString();
+                    let iframe = document.getElementById('exportIframe');
+                    if (!iframe) {
+                        iframe = document.createElement('iframe');
+                        iframe.id = 'exportIframe';
+                        iframe.style.display = 'none';
+                        document.body.appendChild(iframe);
+                    }
+                    iframe.src = downloadUrl;
+                    setTimeout(() => {
+                        this.exporting = false;
+                    }, 2500);
+                },
                 // 4. 取得智慧地圖點位並渲染
                 fetchMapData() {
                     axios.get('Bare_List.aspx?action=getmapdata')
@@ -1229,12 +1235,10 @@
                                 this.leafletMarkerGroup.clearLayers();
                                 const markers = res.data.Markers || [];
                                 const bounds = [];
-
                                 markers.forEach(m => {
                                     if (m.Lat > 0 && m.Lng > 0) {
                                         const latLng = [m.Lat, m.Lng];
                                         bounds.push(latLng);
-
                                         // 自訂 HTML Marker Pin
                                         const customIcon = L.divIcon({
                                             className: 'custom-map-marker',
@@ -1243,7 +1247,6 @@
                                             iconAnchor: [16, 32],
                                             popupAnchor: [0, -32]
                                         });
-
                                         const popupContent = `
                                             <div style="min-width: 220px; font-size: 13px;">
                                                 <div style="font-weight: 700; color: #0284c7; font-size: 14px; margin-bottom: 4px;">
@@ -1258,12 +1261,10 @@
                                                 </a>
                                             </div>
                                         `;
-
                                         const marker = L.marker(latLng, { icon: customIcon }).bindPopup(popupContent);
                                         this.leafletMarkerGroup.addLayer(marker);
                                     }
                                 });
-
                                 if (bounds.length > 0 && this.leafletMap) {
                                     this.mapBounds = bounds;
                                     this.fitMapBounds();
@@ -1275,14 +1276,12 @@
                             console.error('取得地圖點位失敗', err);
                         });
                 },
-
                 // 地圖重設全景
                 fitMapBounds() {
                     if (this.leafletMap && this.mapBounds && this.mapBounds.length > 0) {
                         this.leafletMap.fitBounds(this.mapBounds, { padding: [30, 30] });
                     }
                 },
-
                 // 定位使用者 GPS
                 locateUser() {
                     if (!navigator.geolocation) {
@@ -1307,7 +1306,6 @@
                         alert('無法取得定位資訊：' + err.message);
                     });
                 },
-
                 // 聚焦於指定場址座標
                 focusOnMap(item) {
                     if (!this.showMap) {
@@ -1324,7 +1322,6 @@
                         }
                     });
                 },
-
                 // 切換地圖顯示/收合
                 toggleMap() {
                     this.showMap = !this.showMap;
@@ -1334,18 +1331,15 @@
                         });
                     }
                 },
-
                 // 切換業務模式
                 switchMode(mode) {
                     this.currentMode = mode;
                     this.pagination.pageIndex = 1;
                     this.fetchList();
-
                     // 更新網址 QueryString (不刷新頁面)
                     const newUrl = window.location.pathname + '?mode=' + mode;
                     window.history.replaceState({ path: newUrl }, '', newUrl);
                 },
-
                 // 搜尋與重設
                 handleSearch() {
                     this.pagination.pageIndex = 1;
@@ -1363,14 +1357,12 @@
                     this.pagination.pageIndex = 1;
                     this.fetchList();
                 },
-
                 // 分頁切換
                 goToPage(p) {
                     if (p < 1 || p > this.pagination.totalPages || p === this.pagination.pageIndex) return;
                     this.pagination.pageIndex = p;
                     this.fetchList();
                 },
-
                 // 全選與勾選切換
                 toggleSelectAll() {
                     const checked = this.selectAll;
@@ -1395,11 +1387,9 @@
                     this.list.forEach(i => i.Selected = false);
                     this.selectedInvNos = [];
                 },
-
                 // 單筆送審
                 uploadCheck(bareId, invNo) {
                     if (!confirm('是否確定將案件 (案號 #' + invNo + ') 送出審查？')) return;
-
                     axios.post('Bare_List.aspx?action=uploadcheck&bareId=' + bareId + '&invNo=' + invNo)
                         .then(res => {
                             if (res.data && res.data.Success) {
@@ -1417,12 +1407,10 @@
                             alert('送審作業發生異常');
                         });
                 },
-
                 // 批次送審
                 batchUploadCheck() {
                     if (this.selectedInvNos.length === 0) return;
                     if (!confirm('是否確定將已勾選的 ' + this.selectedInvNos.length + ' 筆暫存案件批次送出審查？')) return;
-
                     axios.post('Bare_List.aspx?action=batchuploadcheck', { InvNos: this.selectedInvNos })
                         .then(res => {
                             if (res.data && res.data.Success) {
@@ -1438,11 +1426,9 @@
                             alert('批次送審作業發生異常');
                         });
                 },
-
                 // 刪除查核紀錄
                 deleteInv(bareId, invNo) {
                     if (!confirm('是否確定刪除此筆查核紀錄 (案號 #' + invNo + ')？刪除後將無法還原！')) return;
-
                     axios.post('Bare_List.aspx?action=delinv&bareId=' + bareId + '&invNo=' + invNo)
                         .then(res => {
                             if (res.data && res.data.Success) {
@@ -1460,7 +1446,6 @@
                             alert('刪除作業發生異常');
                         });
                 },
-
                 // 開啟歷次查核紀錄 Modal
                 openHistoryModal(site) {
                     this.currentSite = site;
@@ -1469,7 +1454,6 @@
                     $('#historyModal').modal('show');
                     this.fetchInvHistory(site.Bare_ID);
                 },
-
                 // 載入場址查核歷史
                 fetchInvHistory(bareId) {
                     this.historyLoading = true;
@@ -1487,7 +1471,6 @@
                             console.error('載入查核歷史異常', err);
                         });
                 },
-
                 // 標題切換
                 getModeTitle() {
                     switch (this.currentMode) {
@@ -1503,7 +1486,6 @@
                             return '全部裸露地場址清單';
                     }
                 },
-
                 // 狀態樣式對應
                 getStatusClass(state) {
                     if (!state) return 'status-chip status-none';

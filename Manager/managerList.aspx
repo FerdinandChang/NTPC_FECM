@@ -318,15 +318,15 @@
         }
 
         /* 欄位寬度與對齊控制 (防止場所名稱過度佔位，釋放操作區寬度) */
-        .col-batch { width: 50px; min-width: 50px; text-align: center; }
-        .col-cno { width: 120px; min-width: 120px; text-align: center; }
-        .col-facname { max-width: 320px; min-width: 180px; word-break: break-word; line-height: 1.45; }
-        .col-town { width: 100px; min-width: 100px; text-align: center; }
-        .col-scid { width: 130px; min-width: 130px; text-align: center; }
-        .col-count { width: 110px; min-width: 110px; text-align: center; }
-        .col-point { width: 120px; min-width: 120px; text-align: center; }
+        .col-batch { width: 48px; min-width: 48px; text-align: center; }
+        .col-cno { width: 115px; min-width: 115px; text-align: center; }
+        .col-facname { max-width: 280px; min-width: 180px; word-break: break-word; line-height: 1.45; }
+        .col-town { width: 95px; min-width: 95px; text-align: center; }
+        .col-scid { width: 125px; min-width: 125px; text-align: center; }
+        .col-count { width: 100px; min-width: 100px; text-align: center; }
+        .col-point { width: 140px; min-width: 140px; text-align: center; padding-left: 6px !important; padding-right: 6px !important; }
         .col-detail { min-width: 220px; word-break: break-word; }
-        .col-actions { width: 230px; min-width: 230px; text-align: center; white-space: nowrap; }
+        .col-actions { width: 225px; min-width: 225px; text-align: center; white-space: nowrap; }
 
         /* 審查功能按鈕群組 (防折行、維持舒適間距) */
         .action-btn-group {
@@ -384,16 +384,17 @@
         }
 
         /* 缺失標籤 */
+        .badge-loss-zero, .badge-loss-minor, .badge-loss-major { width: 108px; height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap !important; font-size: 12.5px; font-weight: 700; border-radius: 6px; padding: 0 6px; line-height: 1; text-align: center; }
         .badge-loss-zero {
             background-color: #ecfdf5;
             color: #047857;
             border: 1px solid #a7f3d0;
             font-weight: 700;
-            padding: 4px 8px;
+
             border-radius: 6px;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+
         }
 
         .badge-loss-minor {
@@ -401,11 +402,11 @@
             color: #b45309;
             border: 1px solid #fde68a;
             font-weight: 700;
-            padding: 4px 8px;
+
             border-radius: 6px;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+
         }
 
         .badge-loss-major {
@@ -413,11 +414,11 @@
             color: #b91c1c;
             border: 1px solid #fecaca;
             font-weight: 700;
-            padding: 4px 8px;
+
             border-radius: 6px;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+
         }
 
         /* 側邊抽屜式面板 (Drawer / Offcanvas) */
@@ -547,13 +548,14 @@
                     <span class="badge badge-light text-dark font-weight-bold ml-1">
                         {{ stats.TotalCases }} 筆待審
                     </span>
+    
                 </a>
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <span class="badge badge-pill badge-light py-2 px-3 text-secondary" style="font-size: 13px;">
-                    <i class="fas fa-user-shield mr-1 text-primary"></i> {{ currentUser }}
-                </span>
+
+
+
             </div>
         </header>
 
@@ -563,17 +565,17 @@
             <div class="nav-mode-item" :class="{ active: currentMode === 'INV1' }" v-on:click="switchMode('INV1')">
                 <i class="fas fa-file-signature"></i>
                 <span>巡查初審</span>
-                <span v-if="currentMode === 'INV1'" class="tab-badge badge badge-primary">{{ stats.TotalFac }}</span>
+                <span v-if="currentMode === 'INV1'" class="tab-badge badge badge-primary">{{ stats.TotalCases }} 案 / {{ stats.TotalFac }} 場</span>
             </div>
             <div class="nav-mode-item" :class="{ active: currentMode === 'INV2' }" v-on:click="switchMode('INV2')">
                 <i class="fas fa-check-double"></i>
                 <span>巡查複審</span>
-                <span v-if="currentMode === 'INV2'" class="tab-badge badge badge-primary">{{ stats.TotalFac }}</span>
+                <span v-if="currentMode === 'INV2'" class="tab-badge badge badge-primary">{{ stats.TotalCases }} 案 / {{ stats.TotalFac }} 場</span>
             </div>
             <div class="nav-mode-item" :class="{ active: currentMode === 'INV3' }" v-on:click="switchMode('INV3')">
                 <i class="fas fa-stamp"></i>
                 <span>巡查三審</span>
-                <span v-if="currentMode === 'INV3'" class="tab-badge badge badge-primary">{{ stats.TotalFac }}</span>
+                <span v-if="currentMode === 'INV3'" class="tab-badge badge badge-primary">{{ stats.TotalCases }} 案 / {{ stats.TotalFac }} 場</span>
             </div>
             <div class="nav-mode-item" :class="{ active: currentMode === 'INVSM1' }" v-on:click="switchMode('INVSM1')">
                 <i class="fas fa-exclamation-triangle text-danger"></i>
@@ -587,17 +589,17 @@
             <div class="nav-mode-item" :class="{ active: currentMode === 'MAC1' }" v-on:click="switchMode('MAC1')">
                 <i class="fas fa-truck-monster"></i>
                 <span>機具初審</span>
-                <span v-if="currentMode === 'MAC1'" class="tab-badge badge badge-info">{{ stats.TotalFac }}</span>
+                <span v-if="currentMode === 'MAC1'" class="tab-badge badge badge-info">{{ stats.TotalCases }} 案 / {{ stats.TotalFac }} 場</span>
             </div>
             <div class="nav-mode-item" :class="{ active: currentMode === 'MAC2' }" v-on:click="switchMode('MAC2')">
                 <i class="fas fa-truck-pickup"></i>
                 <span>機具複審</span>
-                <span v-if="currentMode === 'MAC2'" class="tab-badge badge badge-info">{{ stats.TotalFac }}</span>
+                <span v-if="currentMode === 'MAC2'" class="tab-badge badge badge-info">{{ stats.TotalCases }} 案 / {{ stats.TotalFac }} 場</span>
             </div>
             <div class="nav-mode-item" :class="{ active: currentMode === 'MAC3' }" v-on:click="switchMode('MAC3')">
                 <i class="fas fa-tools"></i>
                 <span>機具三審</span>
-                <span v-if="currentMode === 'MAC3'" class="tab-badge badge badge-info">{{ stats.TotalFac }}</span>
+                <span v-if="currentMode === 'MAC3'" class="tab-badge badge badge-info">{{ stats.TotalCases }} 案 / {{ stats.TotalFac }} 場</span>
             </div>
         </nav>
 
@@ -725,12 +727,12 @@
                         </div>
                     </div>
 
-                    <!-- 底部標準操作列 (左側統計、右側重設與查詢) -->
-                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                        <div class="small text-muted">
+                    <!-- 底部標準操作列 (小尺寸分兩行呈現，避免硬擠跳行) -->
+                    <div class="d-flex flex-column flex-sm-row justify-content-sm-between align-items-sm-center mt-2 pt-2 border-top">
+                        <div class="small text-muted mb-2 mb-sm-0">
                             共查詢到 <strong class="text-primary">{{ items.length }}</strong> 家待審查場所
                         </div>
-                        <div>
+                        <div class="d-flex justify-content-end align-items-center">
                             <button type="button" class="btn btn-outline-secondary btn-sm mr-2" v-on:click="resetFilter">
                                 <i class="fas fa-undo mr-1"></i> 重設條件
                             </button>
@@ -749,6 +751,7 @@
                     <span class="text-primary font-weight-bold mr-3">
                         已選取 {{ batchSelectedFacIds.length }} 筆合格場所
                     </span>
+    
                     <small class="text-muted d-none d-md-inline">
                         ※ 僅零缺失 (合格) 案件支援一鍵批次審核通過並自動推進至下一審查階段
                     </small>
@@ -779,12 +782,14 @@
                         <span class="badge badge-light border text-dark font-weight-bold ml-1">
                             共 {{ items.length }} 家場所
                         </span>
+        
                     </div>
 
                     <div class="d-flex align-items-center">
                         <span v-if="loading" class="text-primary small mr-3">
                             <span class="spinner-border spinner-border-sm mr-1"></span> 資料載入中...
                         </span>
+        
 
                         <!-- 1. 重新整理 -->
                         <button type="button" class="btn btn-sm btn-outline-secondary mr-2" v-on:click="fetchList" :disabled="loading" title="重新整理待審清單">
@@ -861,6 +866,7 @@
                                         <span class="badge badge-pill badge-primary px-2 py-1 font-weight-bold" style="font-size: 13px;">
                                             {{ item.Case_Count }} 筆
                                         </span>
+                        
                                     </td>
 
                                     <!-- 缺失記點 (INV 專用) -->
@@ -868,12 +874,15 @@
                                         <span v-if="item.Loss_Point === 0" class="badge-loss-zero">
                                             <i class="fas fa-check"></i> 0 點 (合格)
                                         </span>
+                        
                                         <span v-else-if="item.Loss_Point > 0 && item.Loss_Point < 10" class="badge-loss-minor">
                                             <i class="fas fa-exclamation"></i> {{ item.Loss_Point }} 點
                                         </span>
+                        
                                         <span v-else class="badge-loss-major">
                                             <i class="fas fa-radiation"></i> {{ item.Loss_Point }} 點
                                         </span>
+                        
                                     </td>
 
                                     <!-- 最新缺失詳細 (INV 專用) -->
@@ -999,6 +1008,7 @@
                                 <span class="font-weight-bold text-dark">
                                     <i class="far fa-calendar-alt text-primary mr-1"></i> {{ c.CaseDate || '查核時間未載' }}
                                 </span>
+                
                                 <span class="badge badge-light border text-secondary">{{ c.StateName }}</span>
                             </div>
 
@@ -1037,6 +1047,7 @@
                                 <span class="font-weight-bold text-dark">
                                     <i class="far fa-calendar-alt text-info mr-1"></i> {{ c.CaseDate || '調查時間未載' }}
                                 </span>
+                
                                 <span class="badge badge-light border text-secondary">{{ c.StateName }}</span>
                             </div>
 
@@ -1146,7 +1157,6 @@
             data() {
                 return {
                     loading: false,
-                    currentUser: '系統管理員',
                     currentMode: 'INV1',
                     isFilterCollapsed: false,
 
@@ -1173,6 +1183,7 @@
 
                     // 主列表
                     items: [],
+                    exporting: false,
 
                     // 批次審核
                     batchSelectedFacIds: [],
@@ -1191,7 +1202,7 @@
             },
             computed: {
                 isInvMode() {
-                    return this.currentMode.startsWith('INV');
+                    return this.currentMode.indexOf('INV') === 0;
                 },
                 canShowBatchBar() {
                     return this.isInvMode && (this.currentMode === 'INV2' || this.currentMode === 'INV3');
@@ -1218,7 +1229,6 @@
                     axios.get('managerList.aspx?action=get_init_data')
                         .then(resp => {
                             if (resp.data.Success) {
-                                this.currentUser = resp.data.CurrentUser || '系統管理員';
                                 this.townList = resp.data.TownList || [];
                                 this.selectedTowns = resp.data.SelectedTowns || [];
                                 this.fetchList();
@@ -1448,6 +1458,78 @@
                         .finally(() => {
                             this.companyModalLoading = false;
                         });
+                },
+
+                // 匯出當前待審清單 Excel / CSV (完整支援巡查與機具模式，含 UTF-8 BOM 防亂碼)
+                exportExcel() {
+                    if (!this.items || this.items.length === 0) {
+                        alert('目前清單無資料可匯出');
+                        return;
+                    }
+
+                    this.exporting = true;
+                    try {
+                        const modeNames = {
+                            'INV1': '巡查初審',
+                            'INV2': '巡查複審',
+                            'INV3': '巡查三審',
+                            'INVSM1': '二項缺失以上',
+                            'MAC1': '機具初審',
+                            'MAC2': '機具複審',
+                            'MAC3': '機具三審'
+                        };
+
+                        const currentModeText = modeNames[this.currentMode] || this.currentMode;
+                        const now = new Date();
+                        const y = now.getFullYear();
+                        const m = String(now.getMonth() + 1).padStart(2, '0');
+                        const d = String(now.getDate()).padStart(2, '0');
+                        const filename = currentModeText + '_待審場所清單_' + y + m + d + '.csv';
+
+                        let csv = '\uFEFF'; // UTF-8 BOM，確保 Excel 開啟不亂碼
+
+                        if (this.isInvMode) {
+                            // 巡查審核欄位
+                            csv += '管制編號,場所名稱,行政區,統一編號,' + (this.countColName || '待審件數') + ',缺失記點,最新缺失內容,審查階段\r\n';
+                            this.items.forEach(it => {
+                                const cno = it.C_NO || '';
+                                const name = (it.FAC_NAME || '').replace(/"/g, '""');
+                                const town = it.TOWN_Name || '';
+                                const scid = it.S_C_ID || '';
+                                const count = it.Case_Count || 0;
+                                const pt = it.Loss_Point !== undefined ? it.Loss_Point : 0;
+                                const detail = (it.Loss_Detail || '').replace(/"/g, '""').replace(/\r?\n/g, ' ');
+                                csv += '"' + cno + '","' + name + '","' + town + '","\t' + scid + '",' + count + ',"' + pt + '","' + detail + '","' + currentModeText + '"\r\n';
+                            });
+                        } else {
+                            // 機具審核欄位 (專門針對 MAC1, MAC2, MAC3)
+                            csv += '管制編號,場所名稱,行政區,統一編號,' + (this.countColName || '待審件數') + ',審查階段\r\n';
+                            this.items.forEach(it => {
+                                const cno = it.C_NO || '';
+                                const name = (it.FAC_NAME || '').replace(/"/g, '""');
+                                const town = it.TOWN_Name || '';
+                                const scid = it.S_C_ID || '';
+                                const count = it.Case_Count || 0;
+                                csv += '"' + cno + '","' + name + '","' + town + '","\t' + scid + '",' + count + ',"' + currentModeText + '"\r\n';
+                            });
+                        }
+
+                        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement('a');
+                        const url = URL.createObjectURL(blob);
+                        link.setAttribute('href', url);
+                        link.setAttribute('download', filename);
+                        link.style.visibility = 'hidden';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    } catch (e) {
+                        console.error(e);
+                        alert('匯出 Excel 失敗：' + e.message);
+                    } finally {
+                        this.exporting = false;
+                    }
                 }
             }
         }).mount('#managerApp');

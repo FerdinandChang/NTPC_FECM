@@ -835,7 +835,7 @@ namespace NTPC_FEC.RoadClean
             }
         }
 
-        private void WriteWorkbookToResponse(HSSFWorkbook workbook, string fileName)
+                private void WriteWorkbookToResponse(HSSFWorkbook workbook, string fileName)
         {
             using (MemoryStream ms = new MemoryStream())
             {
@@ -850,6 +850,9 @@ namespace NTPC_FEC.RoadClean
                 Response.AddHeader("Content-Disposition", "attachment; filename=" + encodedName);
                 Response.AddHeader("Content-Length", bytes.Length.ToString());
                 Response.BinaryWrite(bytes);
+                Response.Flush();
+                Response.SuppressContent = true;
+                HttpContext.Current.ApplicationInstance.CompleteRequest();
             }
         }
 
@@ -928,9 +931,9 @@ namespace NTPC_FEC.RoadClean
 
                 for (int mIdx = 0; mIdx < mCount; mIdx++)
                 {
-                    MonthGradeModel gClean = road.RoadScores[result.MonthCols[mIdx].Key];
+                    MonthGradeModel gClean = road.RoadScores.ContainsKey(result.MonthCols[mIdx].Key) ? road.RoadScores[result.MonthCols[mIdx].Key] : new MonthGradeModel();
                     ICell cellC = row.CreateCell(5 + mIdx);
-                    cellC.SetCellValue(gClean.ShowTxt);
+                    cellC.SetCellValue(gClean != null && gClean.ShowTxt != null ? gClean.ShowTxt : "");
                     if (gClean.Grade == "A") cellC.CellStyle = styleGradeA;
                     else if (gClean.Grade == "B") cellC.CellStyle = styleGradeB;
                     else if (gClean.Grade == "C") cellC.CellStyle = styleGradeC;
@@ -982,9 +985,9 @@ namespace NTPC_FEC.RoadClean
 
                 for (int mIdx = 0; mIdx < mCount; mIdx++)
                 {
-                    MonthGradeModel gFlood = road.FloodScores[result.MonthCols[mIdx].Key];
+                    MonthGradeModel gFlood = road.FloodScores.ContainsKey(result.MonthCols[mIdx].Key) ? road.FloodScores[result.MonthCols[mIdx].Key] : new MonthGradeModel();
                     ICell cellF = row.CreateCell(4 + mIdx);
-                    cellF.SetCellValue(gFlood.ShowTxt);
+                    cellF.SetCellValue(gFlood != null && gFlood.ShowTxt != null ? gFlood.ShowTxt : "");
                     if (gFlood.Grade == "A") cellF.CellStyle = styleGradeA;
                     else if (gFlood.Grade == "B") cellF.CellStyle = styleGradeB;
                     else if (gFlood.Grade == "C") cellF.CellStyle = styleGradeC;
@@ -1070,17 +1073,17 @@ namespace NTPC_FEC.RoadClean
                 for (int mIdx = 0; mIdx < mCount; mIdx++)
                 {
                     string mKey = result.MonthCols[mIdx].Key;
-                    MonthGradeModel gClean = road.RoadScores[mKey];
+                    MonthGradeModel gClean = road.RoadScores.ContainsKey(mKey) ? road.RoadScores[mKey] : new MonthGradeModel();
                     ICell cellC = row.CreateCell(4 + mIdx);
-                    cellC.SetCellValue(gClean.ShowTxt);
+                    cellC.SetCellValue(gClean != null && gClean.ShowTxt != null ? gClean.ShowTxt : "");
                     if (gClean.Grade == "A") cellC.CellStyle = styleGradeA;
                     else if (gClean.Grade == "B") cellC.CellStyle = styleGradeB;
                     else if (gClean.Grade == "C") cellC.CellStyle = styleGradeC;
                     else cellC.CellStyle = styleNormal;
 
-                    MonthGradeModel gFlood = road.FloodScores[mKey];
+                    MonthGradeModel gFlood = road.FloodScores.ContainsKey(mKey) ? road.FloodScores[mKey] : new MonthGradeModel();
                     ICell cellF = row.CreateCell(4 + mCount + mIdx);
-                    cellF.SetCellValue(gFlood.ShowTxt);
+                    cellF.SetCellValue(gFlood != null && gFlood.ShowTxt != null ? gFlood.ShowTxt : "");
                     if (gFlood.Grade == "A") cellF.CellStyle = styleGradeA;
                     else if (gFlood.Grade == "B") cellF.CellStyle = styleGradeB;
                     else if (gFlood.Grade == "C") cellF.CellStyle = styleGradeC;

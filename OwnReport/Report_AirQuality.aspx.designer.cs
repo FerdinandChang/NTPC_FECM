@@ -1,4 +1,4 @@
-﻿﻿﻿namespace NTPC_FEC.OwnReport
+﻿namespace NTPC_FEC.OwnReport
 {
     public partial class Report_AirQuality
     {

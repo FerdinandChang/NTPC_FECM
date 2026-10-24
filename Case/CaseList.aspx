@@ -202,7 +202,18 @@
             margin: 0;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            white-space: nowrap !important;
+        }
+
+        @media screen and (max-width: 576px) {
+            .card-modern-header {
+                padding: 10px 12px;
+            }
+            .card-modern-title {
+                font-size: 0.95rem;
+                gap: 6px;
+            }
         }
 
         .card-modern-body {
@@ -406,6 +417,33 @@
             font-weight: 700;
         }
 
+        /* 查詢篩選底部操作列 RWD */
+        .filter-footer-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-footer-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            width: 100%;
+        }
+
+        @media (min-width: 576px) {
+            .filter-footer-container {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0;
+            }
+            .filter-footer-actions {
+                width: auto;
+            }
+        }
+
         /* 動作按鈕群組 - 單行排版防折行 */
         .action-btn-group {
             display: inline-flex;
@@ -528,18 +566,7 @@
                     </span>
                 </a>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2" v-on:click="onPromptNewCase">
-                    <i class="fas fa-plus-circle mr-1"></i>
-                    <span class="d-none d-sm-inline">新增巡查</span>
-                </button>
-                <span class="d-none d-md-inline text-white small mr-2">
-                    <i class="fas fa-user-circle mr-1"></i>{{ currentUser }}
-                </span>
-                <a href="../FAC/FAC_List.aspx" class="btn btn-outline-light btn-sm font-weight-bold">
-                    <i class="fas fa-industry mr-1"></i>場所資料庫
-                </a>
-            </div>
+
         </header>
 
         <!-- 業務模式分頁切換列 -->
@@ -648,24 +675,23 @@
             <!-- 2. 智慧現場地圖卡片 (遵循 inspection-ui-standard) -->
             <div class="card-modern">
                 <div class="card-modern-header">
-                    <div class="card-modern-title">
+                    <div class="card-modern-title" style="white-space: nowrap !important; flex-shrink: 0;">
                         <i class="fas fa-map-marked-alt text-primary"></i>
-                        <span>現場智慧巡查地圖</span>
-                        <span class="badge badge-light border text-muted ml-2 font-weight-normal" style="font-size:12px;">
-                            標記點位數：{{ mapMarkerCount }}
+                        <span class="text-nowrap font-weight-bold" style="white-space: nowrap !important;">現場智慧巡查地圖</span>
+                        <span class="badge badge-light border text-muted ml-1 ml-sm-2 font-weight-normal text-nowrap" style="font-size:11px; white-space: nowrap !important;">
+                            <span class="d-none d-sm-inline">標記點位數：</span>{{ mapMarkerCount }}<span class="d-inline d-sm-none"> 點</span>
                         </span>
                     </div>
-                    <!-- 控制項零遮擋：定位與全景重設統一置於 Header 右側 -->
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" v-on:click="locateMyGps">
-                            <i class="fas fa-crosshairs mr-1"></i> GPS 我的位置
+                    <!-- 控制項零遮擋：定位與全景重設統一置於 Header 右側，支援極致 RWD (手機端純圖示無文字，確保小標不折行) -->
+                    <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0" style="white-space: nowrap !important;">
+                        <button type="button" class="btn btn-sm btn-outline-primary px-2" v-on:click="locateMyGps" title="GPS 我的位置">
+                            <i class="fas fa-crosshairs"></i><span class="d-none d-md-inline ml-1">GPS 我的位置</span>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="resetMapView">
-                            <i class="fas fa-compress-arrows-alt mr-1"></i> 全景
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-2" v-on:click="resetMapView" title="全景重設">
+                            <i class="fas fa-compress-arrows-alt"></i><span class="d-none d-md-inline ml-1">全景</span>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-dark" v-on:click="isMapCollapsed = !isMapCollapsed">
-                            <i :class="isMapCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up'"></i>
-                            <span class="d-none d-sm-inline">{{ isMapCollapsed ? '展開地圖' : '收合地圖' }}</span>
+                        <button type="button" class="btn btn-sm btn-outline-dark px-2" v-on:click="isMapCollapsed = !isMapCollapsed" :title="isMapCollapsed ? '展開地圖' : '收合地圖'">
+                            <i :class="isMapCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up'"></i><span class="d-none d-md-inline ml-1">{{ isMapCollapsed ? '展開地圖' : '收合地圖' }}</span>
                         </button>
                     </div>
                 </div>
@@ -733,12 +759,12 @@
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
-                        <div class="small text-muted">
-                            共查詢到 <strong class="text-primary">{{ totalCount }}</strong> 家巡查場所
+                    <div class="filter-footer-container mt-3 pt-2 border-top">
+                        <div class="small text-muted text-nowrap">
+                            共查詢到 <strong class="text-primary font-weight-bold">{{ totalCount }}</strong> 家巡查場所
                         </div>
-                        <div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm mr-2" v-on:click="resetFilter">
+                        <div class="filter-footer-actions">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" v-on:click="resetFilter">
                                 <i class="fas fa-undo mr-1"></i> 重設條件
                             </button>
                             <button type="button" class="btn btn-primary btn-sm px-3 font-weight-bold" v-on:click="loadData(1)">
@@ -1129,8 +1155,19 @@
                                         </a>
                                     </div>
                                     <div class="card-body p-2 text-center">
-                                        <iframe v-if="d.IsPdf === 'true'" :src="d.FileUrl" style="width:100%; height:450px; border:none;"></iframe>
-                                        <img v-else :src="d.FileUrl" class="img-fluid rounded" style="max-height:450px;" />
+                                        <div v-if="d.IsPdf === 'true'">
+                                            <div class="mb-2">
+                                                <a :href="d.FileUrl" target="_blank" class="btn btn-primary btn-sm px-3 shadow-sm font-weight-bold">
+                                                    <i class="fas fa-file-pdf mr-1"></i> 開啟 PDF 原檔檢視 (支援手勢縮放/翻頁)
+                                                </a>
+                                            </div>
+                                            <iframe :src="d.FileUrl" style="width:100%; height:450px; border:1px solid #e2e8f0; border-radius:6px;"></iframe>
+                                        </div>
+                                        <div v-else>
+                                            <a :href="d.FileUrl" target="_blank">
+                                                <img :src="d.FileUrl" class="img-fluid rounded border shadow-sm" style="max-height:450px;" />
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1256,6 +1293,7 @@
                     pageIndex: 1,
                     pageSize: 15,
                     loading: false,
+                    exporting: false,
                     isMapCollapsed: false,
                     mapMarkerCount: 0,
                     gpsDistanceMessage: '',
@@ -1754,6 +1792,55 @@
                         const input = document.getElementById('searchFacNameInput');
                         if (input) input.focus();
                     });
+                },
+
+                // 20. 匯出 Excel 報表
+                exportExcel() {
+                    if (this.totalCount === 0) {
+                        alert('目前無符合條件之場所資料可供匯出！');
+                        return;
+                    }
+                    this.exporting = true;
+                    const params = new URLSearchParams();
+                    params.append('action', 'exportExcel');
+                    params.append('Mode', this.filter.Mode || 'all');
+                    params.append('FacName', this.filter.FacName || '');
+                    params.append('CNo', this.filter.CNo || '');
+                    params.append('ScId', this.filter.ScId || '');
+                    params.append('SortBy', this.filter.SortBy || 'loss_desc');
+                    if (this.filter.Towns && this.filter.Towns.length > 0) {
+                        params.append('Towns', this.filter.Towns.join(','));
+                    }
+
+                    axios.post('CaseList.aspx', params, { responseType: 'blob' })
+                        .then(res => {
+                            const contentType = (res.headers && res.headers['content-type']) || '';
+                            if (contentType.indexOf('application/vnd.ms-excel') === -1) {
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                    alert(reader.result || '匯出 Excel 失敗');
+                                };
+                                reader.readAsText(res.data);
+                                return;
+                            }
+                            const blob = new Blob([res.data], { type: 'application/vnd.ms-excel' });
+                            const link = document.createElement('a');
+                            link.href = window.URL.createObjectURL(blob);
+                            const now = new Date();
+                            const timeStr = now.getFullYear() + ('0' + (now.getMonth() + 1)).slice(-2) + ('0' + now.getDate()).slice(-2) + ('0' + now.getHours()).slice(-2) + ('0' + now.getMinutes()).slice(-2);
+                            link.download = '固定源巡查場所清單_' + timeStr + '.xls';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(link.href);
+                        })
+                        .catch(err => {
+                            console.error('匯出 Excel 失敗:', err);
+                            alert('匯出 Excel 失敗，請稍後再試');
+                        })
+                        .finally(() => {
+                            this.exporting = false;
+                        });
                 }
             }
         }).mount('#caseListApp');

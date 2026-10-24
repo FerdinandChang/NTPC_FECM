@@ -1,4 +1,4 @@
-﻿﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="RoadClean_Sum.aspx.cs" Inherits="NTPC_FEC.RoadClean.RoadClean_Sum" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="RoadClean_Sum.aspx.cs" Inherits="NTPC_FEC.RoadClean.RoadClean_Sum" %>
 
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -729,8 +729,9 @@
                             </span>
                         </h2>
                         <div class="d-flex align-items-center flex-wrap gap-2">
-                            <button type="button" class="btn btn-sm btn-success font-weight-bold px-3 mr-2" v-on:click="exportData('exportroads')">
-                                <i class="fas fa-file-excel mr-1"></i> 匯出成果總表 Excel
+                            <button type="button" class="btn btn-sm btn-success font-weight-bold px-3 mr-2" v-on:click="exportData('exportroads')" :disabled="exporting">
+                                <i class="fas" :class="exporting ? 'fa-spinner fa-spin mr-1' : 'fa-file-excel mr-1'"></i>
+                                <span>{{ exporting ? '匯出中...' : '匯出成果總表 Excel' }}</span>
                             </button>
                             <button type="button" class="btn btn-sm btn-light border font-weight-bold" v-on:click="loadData" title="重新整理">
                                 <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
@@ -1024,8 +1025,9 @@
                             <span>道路潔淨度 道路數分析統計表</span>
                         </h2>
                         <div class="d-flex align-items-center gap-2">
-                            <button type="button" class="btn btn-sm btn-success font-weight-bold px-3" v-on:click="exportData('exportcounts')">
-                                <i class="fas fa-file-excel mr-1"></i> 匯出 Excel
+                            <button type="button" class="btn btn-sm btn-success font-weight-bold px-3" v-on:click="exportData('exportcounts')" :disabled="exporting">
+                                <i class="fas" :class="exporting ? 'fa-spinner fa-spin mr-1' : 'fa-file-excel mr-1'"></i>
+                                <span>{{ exporting ? '匯出中...' : '匯出 Excel' }}</span>
                             </button>
                         </div>
                     </div>
@@ -1157,8 +1159,9 @@
                             <span>道路潔淨度 道路長度分析統計表</span>
                         </h2>
                         <div class="d-flex align-items-center gap-2">
-                            <button type="button" class="btn btn-sm btn-success font-weight-bold px-3" v-on:click="exportData('exportlengths')">
-                                <i class="fas fa-file-excel mr-1"></i> 匯出 Excel
+                            <button type="button" class="btn btn-sm btn-success font-weight-bold px-3" v-on:click="exportData('exportlengths')" :disabled="exporting">
+                                <i class="fas" :class="exporting ? 'fa-spinner fa-spin mr-1' : 'fa-file-excel mr-1'"></i>
+                                <span>{{ exporting ? '匯出中...' : '匯出 Excel' }}</span>
                             </button>
                         </div>
                     </div>
@@ -1389,7 +1392,8 @@
                         AvgPassRate: 0
                     },
 
-                    chkDetail: null
+                    chkDetail: null,
+                    exporting: false
                 };
             },
             computed: {
@@ -1708,17 +1712,33 @@
                         });
                 },
                 exportData(actionName) {
+                    if (this.exporting) return;
+                    this.exporting = true;
+
                     const townsParam = this.selectedTowns.join(',');
                     const url = 'RoadClean_Sum.aspx?action=' + actionName +
                         '&towns=' + encodeURIComponent(townsParam) +
-                        '&roadName=' + encodeURIComponent(this.filter.roadName) +
-                        '&dateS=' + encodeURIComponent(this.filter.dateS) +
-                        '&dateE=' + encodeURIComponent(this.filter.dateE) +
-                        '&rdLv=' + encodeURIComponent(this.filter.rdLv) +
-                        '&disS=' + encodeURIComponent(this.filter.disS) +
-                        '&disE=' + encodeURIComponent(this.filter.disE) + '&onlyBc=' + (this.onlyShowBcRoads ? '1' : '0') + '&matrixMode=' + encodeURIComponent(this.matrixMode);
+                        '&roadName=' + encodeURIComponent(this.filter.roadName || '') +
+                        '&dateS=' + encodeURIComponent(this.filter.dateS || '') +
+                        '&dateE=' + encodeURIComponent(this.filter.dateE || '') +
+                        '&rdLv=' + encodeURIComponent(this.filter.rdLv || '') +
+                        '&disS=' + encodeURIComponent(this.filter.disS || '') +
+                        '&disE=' + encodeURIComponent(this.filter.disE || '') +
+                        '&onlyBc=' + (this.onlyShowBcRoads ? '1' : '0') +
+                        '&matrixMode=' + encodeURIComponent(this.matrixMode || 'clean');
 
-                    window.location.href = url;
+                    let downloadFrame = document.getElementById('sumDownloadFrame');
+                    if (!downloadFrame) {
+                        downloadFrame = document.createElement('iframe');
+                        downloadFrame.id = 'sumDownloadFrame';
+                        downloadFrame.style.display = 'none';
+                        document.body.appendChild(downloadFrame);
+                    }
+                    downloadFrame.src = url;
+
+                    setTimeout(() => {
+                        this.exporting = false;
+                    }, 3000);
                 }
             }
         }).mount('#sumApp');

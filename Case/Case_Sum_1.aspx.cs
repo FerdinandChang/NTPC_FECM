@@ -53,7 +53,7 @@ namespace NTPC_FEC.Case
 
         public class FacItemModel
         {
-            public int FAC_ID { get; set; }
+            public string FAC_ID { get; set; }
             public string C_NO { get; set; }
             public string FAC_NAME { get; set; }
             public string TOWN_CODE { get; set; }
@@ -67,6 +67,7 @@ namespace NTPC_FEC.Case
 
             public FacItemModel()
             {
+                FAC_ID = "";
                 C_NO = "";
                 FAC_NAME = "";
                 TOWN_CODE = "";
@@ -320,10 +321,10 @@ namespace NTPC_FEC.Case
             StringBuilder sqlBuilder = new StringBuilder();
             sqlBuilder.Append("SELECT TabA.*, INDUSTRIAL_Data.INDUSTRIAL_Name, C_TOWN.TOWN_NA FROM (");
             sqlBuilder.Append(" SELECT FAC_ID");
-            sqlBuilder.Append(" ,COALESCE((SELECT TOP 1 C_NO FROM FAC_EditHis WHERE C_NO IS NOT NULL AND FAC_EditHis.FAC_ID = FAC_Main.FAC_ID ORDER BY Edit_Date DESC), C_NO) AS C_NO");
-            sqlBuilder.Append(" ,COALESCE((SELECT TOP 1 TOWN_CODE FROM FAC_EditHis WHERE TOWN_CODE IS NOT NULL AND FAC_EditHis.FAC_ID = FAC_Main.FAC_ID ORDER BY Edit_Date DESC), TOWN_CODE) AS TOWN_CODE");
-            sqlBuilder.Append(" ,COALESCE((SELECT TOP 1 FAC_NAME FROM FAC_EditHis WHERE FAC_NAME IS NOT NULL AND FAC_EditHis.FAC_ID = FAC_Main.FAC_ID ORDER BY Edit_Date DESC), FAC_NAME) AS FAC_NAME");
-            sqlBuilder.Append(" ,COALESCE((SELECT TOP 1 INDUSTRIAL_Code1 FROM FAC_EditHis WHERE INDUSTRIAL_Code1 IS NOT NULL AND FAC_EditHis.FAC_ID = FAC_Main.FAC_ID ORDER BY Edit_Date DESC), INDUSTRIAL_Code1) AS INDUSTRIAL_Code1");
+            sqlBuilder.Append(" ,COALESCE((SELECT TOP 1 C_NO FROM FAC_EditHis WHERE C_NO IS NOT NULL AND CAST(FAC_EditHis.FAC_ID AS NVARCHAR(50)) = CAST(FAC_Main.FAC_ID AS NVARCHAR(50)) ORDER BY Edit_Date DESC), C_NO) AS C_NO");
+            sqlBuilder.Append(" ,COALESCE((SELECT TOP 1 TOWN_CODE FROM FAC_EditHis WHERE TOWN_CODE IS NOT NULL AND CAST(FAC_EditHis.FAC_ID AS NVARCHAR(50)) = CAST(FAC_Main.FAC_ID AS NVARCHAR(50)) ORDER BY Edit_Date DESC), TOWN_CODE) AS TOWN_CODE");
+            sqlBuilder.Append(" ,COALESCE((SELECT TOP 1 FAC_NAME FROM FAC_EditHis WHERE FAC_NAME IS NOT NULL AND CAST(FAC_EditHis.FAC_ID AS NVARCHAR(50)) = CAST(FAC_Main.FAC_ID AS NVARCHAR(50)) ORDER BY Edit_Date DESC), FAC_NAME) AS FAC_NAME");
+            sqlBuilder.Append(" ,COALESCE((SELECT TOP 1 INDUSTRIAL_Code1 FROM FAC_EditHis WHERE INDUSTRIAL_Code1 IS NOT NULL AND CAST(FAC_EditHis.FAC_ID AS NVARCHAR(50)) = CAST(FAC_Main.FAC_ID AS NVARCHAR(50)) ORDER BY Edit_Date DESC), INDUSTRIAL_Code1) AS INDUSTRIAL_Code1");
             sqlBuilder.Append(" ,CheckTime_LV");
             sqlBuilder.Append(" FROM FAC_Main");
             sqlBuilder.Append(") AS TabA ");
@@ -394,8 +395,11 @@ namespace NTPC_FEC.Case
             // 3. 逐一計算每家公私場所
             foreach (DataRow row in dtFac.Rows)
             {
-                int facId = 0;
-                int.TryParse(row["FAC_ID"] != null ? row["FAC_ID"].ToString() : "0", out facId);
+                string facId = row["FAC_ID"] != null ? row["FAC_ID"].ToString().Trim() : "";
+                if (string.IsNullOrEmpty(facId))
+                {
+                    continue;
+                }
                 string cNo = row["C_NO"] != null ? row["C_NO"].ToString() : "";
                 string facName = row["FAC_NAME"] != null ? row["FAC_NAME"].ToString() : "";
                 string townCode = row["TOWN_CODE"] != null ? row["TOWN_CODE"].ToString() : "";
@@ -597,7 +601,7 @@ namespace NTPC_FEC.Case
             // 依 FAC_ID 降冪排序
             facResults.Sort(delegate(FacItemModel a, FacItemModel b)
             {
-                return b.FAC_ID.CompareTo(a.FAC_ID);
+                return string.Compare(b.FAC_ID, a.FAC_ID, StringComparison.OrdinalIgnoreCase);
             });
 
             return facResults;

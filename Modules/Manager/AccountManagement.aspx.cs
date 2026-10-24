@@ -6,6 +6,7 @@ using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Models;
 using NTPC_FEC.Services;
 
 namespace NTPC_FEC.Modules.Manager
@@ -42,8 +43,18 @@ namespace NTPC_FEC.Modules.Manager
         protected TextBox txtNewPassword;
         protected TextBox txtNewName;
         protected TextBox txtNewPUnit;
+        protected TextBox txtNewEmail;
         protected Button btnCancelNewAcc;
         protected Button btnConfirmNewAcc;
+
+        // 重設並寄發臨時密碼 Modal 控制項
+        protected Panel pnlResetPwdModal;
+        protected LinkButton btnCloseResetModalX;
+        protected Literal litResetTargetInfo;
+        protected HiddenField hfResetTargetUserId;
+        protected TextBox txtResetTargetEmail;
+        protected Button btnCancelResetModal;
+        protected Button btnConfirmSendTempPwd;
 
         // Request 級別快取，避免列表渲染時產生 N+1 查詢
         private List<AuthItem> _cachedAuthItems;
@@ -135,11 +146,23 @@ namespace NTPC_FEC.Modules.Manager
             catch { }
         }
 
+        private static void EnsureUserAccEmailColumn()
+        {
+            try
+            {
+                string chkSql = "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('UserAcc') AND name = 'Email') ALTER TABLE UserAcc ADD Email VARCHAR(100) NULL;";
+                DbHelper.ExecuteNonQuery(chkSql);
+            }
+            catch { }
+        }
+
         // 載入使用者清單
         private void LoadUsers()
         {
+            EnsureUserAccEmailColumn();
+
             string keyword = txtKeyword.Text.Trim();
-            string sql = "SELECT UID, UserID, Name, PUnit, Acc_State, LIC, LIC2, FAC_ID, LastLogin FROM UserAcc WHERE 1=1 ";
+            string sql = "SELECT UID, UserID, Name, PUnit, Acc_State, LIC, LIC2, FAC_ID, LastLogin, Email FROM UserAcc WHERE 1=1 ";
             var parameters = new List<SqlParameter>();
 
             // 單位過濾
@@ -333,6 +356,53 @@ namespace NTPC_FEC.Modules.Manager
                 string targetUserId = e.CommandArgument.ToString();
                 OpenSetLicModal(targetUserId);
             }
+            else if (cmd == "OpenResetModal")
+            {
+                string[] parts = Convert.ToString(e.CommandArgument).Split('|');
+                string targetUserId = parts[0];
+                string targetName = parts.Length > 1 ? parts[1] : targetUserId;
+                string targetEmail = parts.Length > 2 ? parts[2] : "";
+
+                hfResetTargetUserId.Value = targetUserId;
+                litResetTargetInfo.Text = string.Format("{0} ({1})", targetName, targetUserId);
+                txtResetTargetEmail.Text = targetEmail;
+                pnlResetPwdModal.Visible = true;
+            }
+        }
+
+        protected void btnCloseResetModal_Click(object sender, EventArgs e)
+        {
+            pnlResetPwdModal.Visible = false;
+        }
+
+        protected void btnConfirmSendTempPwd_Click(object sender, EventArgs e)
+        {
+            string targetUserId = hfResetTargetUserId.Value != null ? hfResetTargetUserId.Value.Trim() : "";
+            string targetEmail = txtResetTargetEmail.Text != null ? txtResetTargetEmail.Text.Trim() : "";
+
+            if (string.IsNullOrEmpty(targetUserId))
+            {
+                ShowAlert("目標帳號異常，請重新點選！", "alert-danger");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(targetEmail))
+            {
+                ShowAlert("請輸入收件者電子信箱！", "alert-warning");
+                return;
+            }
+
+            OperationResult res = AuthService.ResetUserTempPasswordAndSendEmail(targetUserId, targetEmail);
+            if (res.Success)
+            {
+                pnlResetPwdModal.Visible = false;
+                ShowAlert(res.Message, "alert-success");
+                LoadUsers();
+            }
+            else
+            {
+                ShowAlert(res.Message, "alert-danger");
+            }
         }
 
         // 開啟權限設定 Modal
@@ -504,6 +574,7 @@ namespace NTPC_FEC.Modules.Manager
             txtNewUserId.Text = "";
             txtNewPassword.Text = "";
             txtNewName.Text = "";
+            if (txtNewEmail != null) txtNewEmail.Text = "";
             txtNewPUnit.Text = CurrentPUnit != "ALL" && CurrentPUnit != "未指定" ? CurrentPUnit : "康廷";
             pnlNewAccModal.Visible = true;
         }
@@ -515,6 +586,7 @@ namespace NTPC_FEC.Modules.Manager
             string newPwd = txtNewPassword.Text.Trim();
             string newName = txtNewName.Text.Trim();
             string newPUnit = txtNewPUnit.Text.Trim();
+            string newEmail = txtNewEmail != null ? txtNewEmail.Text.Trim() : "";
 
             if (string.IsNullOrEmpty(newId) || string.IsNullOrEmpty(newPwd) || string.IsNullOrEmpty(newName))
             {
@@ -540,13 +612,15 @@ namespace NTPC_FEC.Modules.Manager
                     return;
                 }
 
-                string insSql = "INSERT INTO UserAcc (UserID, Password, Name, PUnit, LIC, LIC2, Acc_State, LastPwdChangeDate) VALUES (@UserID, @Password, @Name, @PUnit, 0, 0, 'OK', GETDATE())";
+                EnsureUserAccEmailColumn();
+                string insSql = "INSERT INTO UserAcc (UserID, Password, Name, PUnit, Email, LIC, LIC2, Acc_State, LastPwdChangeDate) VALUES (@UserID, @Password, @Name, @PUnit, @Email, 0, 0, 'OK', GETDATE())";
                 var insParams = new SqlParameter[]
                 {
                     new SqlParameter("@UserID", SqlDbType.VarChar) { Value = newId },
                     new SqlParameter("@Password", SqlDbType.VarChar) { Value = newPwd },
                     new SqlParameter("@Name", SqlDbType.NVarChar) { Value = newName },
-                    new SqlParameter("@PUnit", SqlDbType.NVarChar) { Value = newPUnit }
+                    new SqlParameter("@PUnit", SqlDbType.NVarChar) { Value = newPUnit },
+                    new SqlParameter("@Email", SqlDbType.VarChar) { Value = (object)newEmail ?? DBNull.Value }
                 };
 
                 DbHelper.ExecuteNonQuery(insSql, insParams);

@@ -374,7 +374,8 @@ namespace NTPC_FEC.OwnReport
                         SELECT f.FAC_ID, f.C_NO, f.FAC_NAME, t.TOWN_NA 
                         FROM FAC_Main f 
                         LEFT JOIN C_TOWN t ON f.TOWN_CODE = t.TOWN_NO 
-                        WHERE f.FAC_ID IS NOT NULL AND f.FAC_NAME IS NOT NULL
+                        WHERE f.FAC_ID IN (SELECT DISTINCT FAC_ID FROM OverReport_TypeA_1 WHERE FAC_ID IS NOT NULL)
+                          AND f.FAC_NAME IS NOT NULL
                         ORDER BY f.FAC_NAME";
                     DataTable dt = DbHelper.ExecuteDataTable(sql);
                     if (dt != null)
@@ -505,18 +506,18 @@ namespace NTPC_FEC.OwnReport
                 if (DateTime.TryParse(c.DateStart, out dtStart))
                 {
                     sb.Append(" AND r.OverDate >= @DateStart ");
-                    paramList.Add(new SqlParameter("@DateStart", SqlDbType.Date) { Value = dtStart.Date });
+                    paramList.Add(new SqlParameter("@DateStart", SqlDbType.DateTime) { Value = dtStart.Date });
                 }
             }
 
-            // 應變日期訖
+            // 應變日期訖 (包含當天 23:59:59 完整時間)
             if (!string.IsNullOrEmpty(c.DateEnd))
             {
                 DateTime dtEnd;
                 if (DateTime.TryParse(c.DateEnd, out dtEnd))
                 {
-                    sb.Append(" AND r.OverDate <= @DateEnd ");
-                    paramList.Add(new SqlParameter("@DateEnd", SqlDbType.Date) { Value = dtEnd.Date });
+                    sb.Append(" AND r.OverDate < @DateEndNext ");
+                    paramList.Add(new SqlParameter("@DateEndNext", SqlDbType.DateTime) { Value = dtEnd.Date.AddDays(1) });
                 }
             }
 

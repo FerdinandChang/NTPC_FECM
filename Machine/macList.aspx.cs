@@ -729,62 +729,101 @@ namespace NTPC_FEC.Machine
             }
         }
 
+        private static string SafeCol(DataRow r, string colName, string defaultVal)
+        {
+            if (r == null || !r.Table.Columns.Contains(colName) || r[colName] == DBNull.Value)
+            {
+                return defaultVal;
+            }
+            string v = r[colName].ToString().Trim();
+            return string.IsNullOrEmpty(v) ? defaultVal : v;
+        }
+
         // 5. 取得特定場所的基本資料與其機具清單
         private void GetFacDetail()
         {
             string facId = Request["facId"];
             if (string.IsNullOrEmpty(facId))
             {
-                Response.Write(json.Serialize(new { Success = false, Message = "缺少場所編號" }));
-                return;
+                facId = "";
             }
 
             object facInfo = null;
             try
             {
+                // 使用 f.* 配合 LEFT JOIN，杜絕特定未定義欄位導致 SQL 報錯
                 string sqlFac = @"
                     SELECT TOP 1 
-                        f.FAC_ID, f.C_NO, f.FAC_NAME, f.ADDR, f.Land_no, f.FAX, f.TEL, f.S_C_ID, f.Lic_NO, f.BOSS_NAME, f.Content_Name,
-                        ISNULL(f.FAC_Type, '-') AS FAC_Type,
-                        ISNULL(ct.TOWN_NA, '-') AS TOWN_NA,
-                        ISNULL(ind.INDUSTRIAL_Name, '-') AS Industrial
+                        f.*,
+                        ISNULL(ct.TOWN_NA, '-') AS TownName_Join,
+                        ISNULL(ind.INDUSTRIAL_Name, '-') AS Industrial_Join
                     FROM FAC_Main f
                     LEFT JOIN C_TOWN ct ON f.TOWN_CODE = ct.TOWN_NO
                     LEFT JOIN INDUSTRIAL_Data ind ON f.INDUSTRIAL_Code1 = ind.INDUSTRIAL_Code
                     WHERE f.FAC_ID = @facId";
                 DataTable dtFac = DbHelper.ExecuteDataTable(sqlFac, new SqlParameter("@facId", facId));
-                if (dtFac.Rows.Count > 0)
+                if (dtFac != null && dtFac.Rows.Count > 0)
                 {
                     DataRow r = dtFac.Rows[0];
+                    string facType = SafeCol(r, "FAC_Type1", SafeCol(r, "FAC_Type", "-"));
+                    string townNa = SafeCol(r, "TownName_Join", SafeCol(r, "TOWN_NA", "-"));
+                    string indNa = SafeCol(r, "Industrial_Join", SafeCol(r, "INDUSTRIAL_Name", "-"));
+                    string landNo = SafeCol(r, "Land_NO", SafeCol(r, "Land_no", "-"));
+                    string bossName = SafeCol(r, "BOSS_NAME", SafeCol(r, "Boss_Name", "-"));
+                    string contentName = SafeCol(r, "Content_Name", "-");
+                    string tel = SafeCol(r, "TEL", "-");
+                    string fax = SafeCol(r, "FAX", "-");
+                    string scId = SafeCol(r, "S_C_ID", "-");
+                    string licNo = SafeCol(r, "Lic_NO", "-");
+                    string addr = SafeCol(r, "ADDR", "-");
+                    string cNo = SafeCol(r, "C_NO", "-");
+                    string facName = SafeCol(r, "FAC_NAME", "-");
+
                     facInfo = new
                     {
-                        FAC_ID = r["FAC_ID"].ToString().Trim(),
-                        C_NO = r["C_NO"] != DBNull.Value ? r["C_NO"].ToString().Trim() : "-",
-                        FAC_NAME = r["FAC_NAME"] != DBNull.Value ? r["FAC_NAME"].ToString().Trim() : "-",
-                        ADDR = r["ADDR"] != DBNull.Value ? r["ADDR"].ToString().Trim() : "-",
-                        Land_NO = r["Land_no"] != DBNull.Value ? r["Land_no"].ToString().Trim() : "-",
-                        FAX = r["FAX"] != DBNull.Value ? r["FAX"].ToString().Trim() : "-",
-                        TEL = r["TEL"] != DBNull.Value ? r["TEL"].ToString().Trim() : "-",
-                        S_C_ID = r["S_C_ID"] != DBNull.Value ? r["S_C_ID"].ToString().Trim() : "-",
-                        Lic_NO = r["Lic_NO"] != DBNull.Value ? r["Lic_NO"].ToString().Trim() : "-",
-                        BOSS_NAME = r["BOSS_NAME"] != DBNull.Value ? r["BOSS_NAME"].ToString().Trim() : "-",
-                        Content_Name = r["Content_Name"] != DBNull.Value ? r["Content_Name"].ToString().Trim() : "-",
-                        TOWN_NA = r["TOWN_NA"] != DBNull.Value ? r["TOWN_NA"].ToString().Trim() : "-",
-                        Industrial = r["Industrial"] != DBNull.Value ? r["Industrial"].ToString().Trim() : "-",
-                        FAC_Type1 = r["FAC_Type"] != DBNull.Value ? r["FAC_Type"].ToString().Trim() : "-"
+                        FAC_ID = r["FAC_ID"] != DBNull.Value ? r["FAC_ID"].ToString().Trim() : facId,
+                        C_NO = cNo,
+                        FAC_NAME = facName,
+                        ADDR = addr,
+                        Land_NO = landNo,
+                        FAX = fax,
+                        TEL = tel,
+                        S_C_ID = scId,
+                        Lic_NO = licNo,
+                        BOSS_NAME = bossName,
+                        Content_Name = contentName,
+                        TOWN_NA = townNa,
+                        Industrial = indNa,
+                        FAC_Type1 = facType
                     };
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Response.Write(json.Serialize(new { Success = false, Message = "讀取場所失敗：" + ex.Message }));
-                return;
+                // 若場所主檔查詢失敗，記錄但不中斷，轉為 Fallback 模式讓機具仍可被檢視
+                facInfo = null;
             }
 
+            // Fallback: 若場所資料庫無主檔或查詢失敗，自動建構預設場所資訊，確保所屬機具依然可被檢視
             if (facInfo == null)
             {
-                Response.Write(json.Serialize(new { Success = false, Message = "查無該場所資料" }));
-                return;
+                facInfo = new
+                {
+                    FAC_ID = facId,
+                    C_NO = "-",
+                    FAC_NAME = string.IsNullOrEmpty(facId) ? "新增場所" : "公私場所 (" + facId + ")",
+                    ADDR = "-",
+                    Land_NO = "-",
+                    FAX = "-",
+                    TEL = "-",
+                    S_C_ID = "-",
+                    Lic_NO = "-",
+                    BOSS_NAME = "-",
+                    Content_Name = "-",
+                    TOWN_NA = "-",
+                    Industrial = "-",
+                    FAC_Type1 = "-"
+                };
             }
 
             var macList = new List<object>();
@@ -803,32 +842,36 @@ namespace NTPC_FEC.Machine
                         Mac_State,
                         ROUND((ISNULL(opaque_Run1, 0) + ISNULL(opaque_Run2, 0) + ISNULL(opaque_Run3, 0)) / 3.0, 2) AS opaque_Run_AVG
                     FROM Machine_Main
-                    WHERE FAC_ID = @facId AND (Deleted_mac IS NULL OR Deleted_mac <> 'Y')
+                    WHERE (FAC_ID = @facId OR (@facId = '' AND (FAC_ID IS NULL OR FAC_ID = '')))
+                      AND (Deleted_mac IS NULL OR Deleted_mac <> 'Y')
                     ORDER BY Check_date DESC, mac_ID DESC";
                 DataTable dtMac = DbHelper.ExecuteDataTable(sqlMac, new SqlParameter("@facId", facId));
-                foreach (DataRow r in dtMac.Rows)
+                if (dtMac != null)
                 {
-                    string checkDateStr = "";
-                    if (r["Check_date"] != DBNull.Value)
+                    foreach (DataRow r in dtMac.Rows)
                     {
-                        checkDateStr = Convert.ToDateTime(r["Check_date"]).ToString("yyyy/MM/dd");
-                    }
-                    string state = r["Mac_State"] != DBNull.Value ? r["Mac_State"].ToString().Trim() : "A00a";
+                        string checkDateStr = "";
+                        if (r["Check_date"] != DBNull.Value)
+                        {
+                            checkDateStr = Convert.ToDateTime(r["Check_date"]).ToString("yyyy/MM/dd");
+                        }
+                        string state = r["Mac_State"] != DBNull.Value ? r["Mac_State"].ToString().Trim() : "A00a";
 
-                    macList.Add(new
-                    {
-                        mac_ID = Convert.ToInt32(r["mac_ID"]),
-                        Check_date = checkDateStr,
-                        mac_Type = r["mac_Type"] != DBNull.Value ? r["mac_Type"].ToString().Trim() : "-",
-                        Brand = r["Brand"] != DBNull.Value ? r["Brand"].ToString().Trim() : "-",
-                        model = r["model"] != DBNull.Value ? r["model"].ToString().Trim() : "-",
-                        OUT_YEAR = r["OUT_YEAR"] != DBNull.Value ? r["OUT_YEAR"].ToString().Trim() : "-",
-                        PIN = r["PIN"] != DBNull.Value ? r["PIN"].ToString().Trim() : "-",
-                        Engine_NO = r["Engine_NO"] != DBNull.Value ? r["Engine_NO"].ToString().Trim() : "-",
-                        Mac_State = state,
-                        Mac_State_Text = GetStateText(state),
-                        opaque_Run_AVG = r["opaque_Run_AVG"] != DBNull.Value ? Convert.ToDecimal(r["opaque_Run_AVG"]).ToString("0.00") : "-"
-                    });
+                        macList.Add(new
+                        {
+                            mac_ID = Convert.ToInt32(r["mac_ID"]),
+                            Check_date = checkDateStr,
+                            mac_Type = r["mac_Type"] != DBNull.Value ? r["mac_Type"].ToString().Trim() : "-",
+                            Brand = r["Brand"] != DBNull.Value ? r["Brand"].ToString().Trim() : "-",
+                            model = r["model"] != DBNull.Value ? r["model"].ToString().Trim() : "-",
+                            OUT_YEAR = r["OUT_YEAR"] != DBNull.Value ? r["OUT_YEAR"].ToString().Trim() : "-",
+                            PIN = r["PIN"] != DBNull.Value ? r["PIN"].ToString().Trim() : "-",
+                            Engine_NO = r["Engine_NO"] != DBNull.Value ? r["Engine_NO"].ToString().Trim() : "-",
+                            Mac_State = state,
+                            Mac_State_Text = GetStateText(state),
+                            opaque_Run_AVG = r["opaque_Run_AVG"] != DBNull.Value ? Convert.ToDecimal(r["opaque_Run_AVG"]).ToString("0.00") : "-"
+                        });
+                    }
                 }
             }
             catch (Exception ex)

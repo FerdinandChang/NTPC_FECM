@@ -782,12 +782,22 @@ namespace NTPC_FEC.Case
 
             try
             {
-                string relDir = "/Upload/FAC/" + cNo;
-                string absDir = Server.MapPath("~" + relDir);
+                string relDir = "~/Upload/FAC/" + cNo;
+                string absDir = Server.MapPath(relDir);
+                if (!Directory.Exists(absDir))
+                {
+                    string altDir = Server.MapPath("/NTPC_FEC/Upload/FAC/" + cNo);
+                    if (Directory.Exists(altDir)) absDir = altDir;
+                }
+
                 if (Directory.Exists(absDir))
                 {
                     DirectoryInfo di = new DirectoryInfo(absDir);
                     FileInfo[] files = di.GetFiles(cNo + "*.*");
+
+                    string appPath = Request.ApplicationPath;
+                    if (appPath == "/") appPath = "";
+
                     foreach (FileInfo fi in files)
                     {
                         string ext = fi.Extension.ToLower();
@@ -796,7 +806,7 @@ namespace NTPC_FEC.Case
                             var d = new Dictionary<string, string>();
                             d["FileName"] = fi.Name;
                             d["FileType"] = fi.Name.Contains("配置圖") ? "廠區配置圖" : (fi.Name.Contains("流程圖") ? "製程流程圖" : "相關圖檔");
-                            d["FileUrl"] = relDir + "/" + fi.Name;
+                            d["FileUrl"] = string.Format("{0}/Upload/FAC/{1}/{2}", appPath, cNo, HttpUtility.UrlPathEncode(fi.Name));
                             d["IsPdf"] = (ext == ".pdf") ? "true" : "false";
                             list.Add(d);
                         }
@@ -1248,50 +1258,101 @@ namespace NTPC_FEC.Case
             try
             {
                 string mode = Request["Mode"] != null ? Request["Mode"].Trim().ToLower() : "all";
-                string facName = Request["SearchFacName"] != null ? Request["SearchFacName"].Trim() : "";
-                string cNo = Request["SearchCNo"] != null ? Request["SearchCNo"].Trim() : "";
-                string addr = Request["SearchAddr"] != null ? Request["SearchAddr"].Trim() : "";
-                string scId = Request["SearchScId"] != null ? Request["SearchScId"].Trim() : "";
-                string town = Request["SearchTown"] != null ? Request["SearchTown"].Trim() : "";
+                string facName = Request["FacName"] != null ? Request["FacName"].Trim() : (Request["SearchFacName"] != null ? Request["SearchFacName"].Trim() : "");
+                string cNo = Request["CNo"] != null ? Request["CNo"].Trim() : (Request["SearchCNo"] != null ? Request["SearchCNo"].Trim() : "");
+                string scId = Request["ScId"] != null ? Request["ScId"].Trim() : (Request["SearchScId"] != null ? Request["SearchScId"].Trim() : "");
+                string townsParam = Request["Towns"] != null ? Request["Towns"].Trim() : (Request["SearchTown"] != null ? Request["SearchTown"].Trim() : "");
+                string sortBy = Request["SortBy"] != null ? Request["SortBy"].Trim() : "loss_desc";
 
-                StringBuilder sb = new StringBuilder();
-                sb.Append("SELECT m.FAC_ID, m.C_NO, m.FAC_NAME, m.S_C_ID, m.TOWN, m.ADDR, m.Industrial, m.FAC_Type, m.TEL, m.Lat, m.Lng ");
-                sb.Append("FROM FAC_Main m WHERE 1=1 ");
+                var sbSql = new StringBuilder();
+                var pList = new List<SqlParameter>();
 
-                List<SqlParameter> pList = new List<SqlParameter>();
+                sbSql.Append("SELECT f.* FROM FAC_Main f WHERE 1=1 ");
 
-                if (!string.IsNullOrEmpty(cNo))
+                // 模式過濾
+                if (mode == "reject")
                 {
-                    sb.Append(" AND m.C_NO LIKE @C_NO ");
-                    pList.Add(new SqlParameter("@C_NO", "%" + cNo + "%"));
+                    sbSql.Append(" AND EXISTS (SELECT 1 FROM INV_DATA d WHERE d.FAC_ID = f.FAC_ID AND d.INV_State = 'A00a') ");
                 }
+                else if (mode == "back")
+                {
+                    sbSql.Append(" AND EXISTS (SELECT 1 FROM INV_DATA d WHERE d.FAC_ID = f.FAC_ID AND d.INV_State = 'A00b') ");
+                }
+                else if (mode == "mission7day")
+                {
+                    sbSql.Append(" AND EXISTS (SELECT 1 FROM INV_Mission m WHERE m.FAC_ID = f.FAC_ID AND m.Cancel_Date IS NULL AND (m.pReason LIKE '%7天內未完成改善回報%' OR m.pReason LIKE '%7天%')) ");
+                }
+                else if (mode == "mission2times")
+                {
+                    sbSql.Append(" AND EXISTS (SELECT 1 FROM INV_Mission m WHERE m.FAC_ID = f.FAC_ID AND m.Cancel_Date IS NULL AND m.pReason LIKE '%稽查列管%') ");
+                }
+                else if (mode == "mission")
+                {
+                    sbSql.Append(" AND EXISTS (SELECT 1 FROM INV_Mission m WHERE m.FAC_ID = f.FAC_ID AND m.Cancel_Date IS NULL) ");
+                }
+                else if (mode == "project")
+                {
+                    sbSql.Append(" AND (f.TOWN LIKE '%八里%' OR f.ADDR LIKE '%八里%') ");
+                }
+
+                // 關鍵字搜尋
                 if (!string.IsNullOrEmpty(facName))
                 {
-                    sb.Append(" AND m.FAC_NAME LIKE @FAC_NAME ");
+                    sbSql.Append(" AND f.FAC_NAME LIKE @FAC_NAME ");
                     pList.Add(new SqlParameter("@FAC_NAME", "%" + facName + "%"));
+                }
+                if (!string.IsNullOrEmpty(cNo))
+                {
+                    sbSql.Append(" AND f.C_NO LIKE @C_NO ");
+                    pList.Add(new SqlParameter("@C_NO", "%" + cNo + "%"));
                 }
                 if (!string.IsNullOrEmpty(scId))
                 {
-                    sb.Append(" AND m.S_C_ID LIKE @S_C_ID ");
+                    sbSql.Append(" AND f.S_C_ID LIKE @S_C_ID ");
                     pList.Add(new SqlParameter("@S_C_ID", "%" + scId + "%"));
                 }
-                if (!string.IsNullOrEmpty(town))
+
+                // 行政區過濾
+                if (!string.IsNullOrEmpty(townsParam))
                 {
-                    sb.Append(" AND m.TOWN = @TOWN ");
-                    pList.Add(new SqlParameter("@TOWN", town));
-                }
-                if (!string.IsNullOrEmpty(addr))
-                {
-                    sb.Append(" AND m.ADDR LIKE @ADDR ");
-                    pList.Add(new SqlParameter("@ADDR", "%" + addr + "%"));
+                    string[] townArr = townsParam.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (townArr.Length > 0)
+                    {
+                        var townClause = new StringBuilder();
+                        townClause.Append(" AND (");
+                        for (int t = 0; t < townArr.Length; t++)
+                        {
+                            if (t > 0) townClause.Append(" OR ");
+                            string pName = "@Town_" + t.ToString();
+                            townClause.Append(string.Format("(f.TOWN LIKE {0} OR f.ADDR LIKE {0})", pName));
+                            pList.Add(new SqlParameter(pName, "%" + townArr[t].Trim() + "%"));
+                        }
+                        townClause.Append(") ");
+                        sbSql.Append(townClause.ToString());
+                    }
                 }
 
-                sb.Append(" ORDER BY m.C_NO ASC, m.FAC_ID ASC");
+                DataTable dt = DbHelper.ExecuteDataTable(sbSql.ToString(), pList.ToArray());
 
-                DataTable dt = DbHelper.ExecuteDataTable(sb.ToString(), pList.ToArray());
+                // 補充派遣與最新缺失記點
+                AttachMissionData(ref dt);
+                AttachLatestLossPoint(ref dt);
+
+                // 排序處理
+                if (dt != null && dt.Rows.Count > 1)
+                {
+                    DataView dv = dt.DefaultView;
+                    string sortExp = "FAC_ID DESC";
+                    if (sortBy == "loss_desc") sortExp = "Loss_Point DESC, FAC_ID DESC";
+                    else if (sortBy == "loss_asc") sortExp = "Loss_Point ASC, FAC_ID DESC";
+                    else if (sortBy == "name_asc") sortExp = "FAC_NAME ASC";
+                    else if (sortBy == "date_desc") sortExp = "LastInvDate DESC, FAC_ID DESC";
+                    dv.Sort = sortExp;
+                    dt = dv.ToTable();
+                }
 
                 HSSFWorkbook workbook = new HSSFWorkbook();
-                ISheet sheet = workbook.CreateSheet("巡查場所派遣清單");
+                ISheet sheet = workbook.CreateSheet("巡查場所清單");
 
                 // 標題樣式
                 ICellStyle headerStyle = workbook.CreateCellStyle();
@@ -1324,7 +1385,7 @@ namespace NTPC_FEC.Case
                 string[] headers = new string[]
                 {
                     "序號", "管制編號", "公私場所名稱", "統一編號",
-                    "行政區", "廠址地址", "行業別", "管制狀態", "聯絡電話", "緯度 (Lat)", "經度 (Lng)"
+                    "行政區", "廠址地址", "行業別", "派遣/列管警示", "缺失記點", "最新查核說明", "最新查核日", "緯度 (Lat)", "經度 (Lng)"
                 };
 
                 IRow rowHeader = sheet.CreateRow(0);
@@ -1350,16 +1411,18 @@ namespace NTPC_FEC.Case
                         string scIdVal = dr["S_C_ID"] != DBNull.Value ? dr["S_C_ID"].ToString().Trim() : "";
                         string townVal = dr["TOWN"] != DBNull.Value ? dr["TOWN"].ToString().Trim() : "";
                         string addrVal = dr["ADDR"] != DBNull.Value ? dr["ADDR"].ToString().Trim() : "";
-                        string indVal = dr["Industrial"] != DBNull.Value ? dr["Industrial"].ToString().Trim() : "";
-                        string typeVal = dr["FAC_Type"] != DBNull.Value ? dr["FAC_Type"].ToString().Trim() : "非列管";
-                        string telVal = dr["TEL"] != DBNull.Value ? dr["TEL"].ToString().Trim() : "";
-                        string latVal = dr["Lat"] != DBNull.Value ? dr["Lat"].ToString().Trim() : "";
-                        string lngVal = dr["Lng"] != DBNull.Value ? dr["Lng"].ToString().Trim() : "";
+                        string indVal = dr.Table.Columns.Contains("Industrial") && dr["Industrial"] != DBNull.Value ? dr["Industrial"].ToString().Trim() : "-";
+                        string missionVal = dr.Table.Columns.Contains("Mission") && dr["Mission"] != DBNull.Value ? dr["Mission"].ToString().Trim() : "";
+                        string lossPtVal = dr.Table.Columns.Contains("Loss_Point") && dr["Loss_Point"] != DBNull.Value ? dr["Loss_Point"].ToString().Trim() : "0";
+                        string lossDescVal = dr.Table.Columns.Contains("Loss_Desc") && dr["Loss_Desc"] != DBNull.Value ? dr["Loss_Desc"].ToString().Trim() : "無缺失";
+                        string lastDateVal = dr.Table.Columns.Contains("LastInvDate_Str") && dr["LastInvDate_Str"] != DBNull.Value ? dr["LastInvDate_Str"].ToString().Trim() : "";
+                        string latVal = dr.Table.Columns.Contains("Lat") && dr["Lat"] != DBNull.Value ? dr["Lat"].ToString().Trim() : "";
+                        string lngVal = dr.Table.Columns.Contains("Lng") && dr["Lng"] != DBNull.Value ? dr["Lng"].ToString().Trim() : "";
 
                         string[] vals = new string[]
                         {
                             seq, cNoVal, nameVal, scIdVal,
-                            townVal, addrVal, indVal, typeVal, telVal, latVal, lngVal
+                            townVal, addrVal, indVal, missionVal, lossPtVal, lossDescVal, lastDateVal, latVal, lngVal
                         };
 
                         for (int cIdx = 0; cIdx < vals.Length; cIdx++)
@@ -1376,8 +1439,9 @@ namespace NTPC_FEC.Case
                     sheet.SetColumnWidth(i, 16 * 256);
                 }
                 sheet.SetColumnWidth(0, 8 * 256);
-                sheet.SetColumnWidth(2, 30 * 256); // 名稱
-                sheet.SetColumnWidth(5, 34 * 256); // 地址
+                sheet.SetColumnWidth(2, 32 * 256); // 名稱
+                sheet.SetColumnWidth(5, 36 * 256); // 地址
+                sheet.SetColumnWidth(9, 36 * 256); // 缺失說明
 
                 Response.Clear();
                 Response.ContentType = "application/vnd.ms-excel";

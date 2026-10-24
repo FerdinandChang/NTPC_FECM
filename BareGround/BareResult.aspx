@@ -40,7 +40,7 @@
         }
         [v-cloak] { display: none !important; }
 
-        /* 頂部導覽列 (符合 inspection-ui-standard 規範) */
+        /* 頂部導覽列 (符合 inspection-ui-standard 全載具規範) */
         .top-navbar {
             background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
             color: #ffffff;
@@ -49,10 +49,30 @@
             padding: 0 16px;
             box-shadow: 0 2px 10px rgba(0, 153, 229, 0.25);
             position: sticky; top: 0; z-index: 1020;
+            gap: 8px;
         }
-        .top-navbar .brand-title {
-            font-size: 1.08rem; font-weight: 700; margin: 0;
+        .top-navbar-left {
             display: flex; align-items: center; gap: 8px;
+            min-width: 0; flex: 1; overflow: hidden;
+        }
+        .top-navbar-right {
+            display: flex; align-items: center; gap: 6px;
+            flex-shrink: 0;
+        }
+        .brand-title {
+            font-size: 1.08rem; font-weight: 700; margin: 0;
+            display: inline-flex; align-items: center; gap: 6px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            min-width: 0;
+        }
+        .nav-case-badge {
+            font-size: 0.82rem; font-weight: 700;
+            background: #ffffff; color: var(--brand-navy);
+            padding: 3px 8px; border-radius: 6px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            max-width: 160px; display: inline-block; vertical-align: middle;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            flex-shrink: 1;
         }
         .nav-btn {
             background: rgba(255, 255, 255, 0.18);
@@ -60,8 +80,9 @@
             font-size: 0.92rem; font-weight: 600; cursor: pointer;
             height: 36px; border-radius: 8px;
             display: inline-flex; align-items: center; justify-content: center;
-            padding: 0 14px; gap: 6px;
+            padding: 0 12px; gap: 6px;
             transition: all 0.2s; text-decoration: none;
+            white-space: nowrap; flex-shrink: 0;
         }
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.32); color: #ffffff; text-decoration: none; }
 
@@ -97,10 +118,12 @@
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
             display: flex; align-items: center; justify-content: space-between;
+            gap: 8px;
         }
         .card-modern-title {
             font-size: 1rem; font-weight: 700; color: var(--brand-navy); margin: 0;
             display: flex; align-items: center; gap: 8px;
+            min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .card-modern-body { padding: 16px; }
 
@@ -108,12 +131,14 @@
         .stepper-container {
             display: flex; align-items: center; justify-content: space-between;
             background: #ffffff; border-radius: 12px;
-            padding: 16px 24px; margin-bottom: 16px;
+            padding: 16px 20px; margin-bottom: 16px;
             border: 1px solid var(--border-color); position: relative;
+            overflow: hidden;
         }
         .step-item {
             display: flex; flex-direction: column; align-items: center;
             position: relative; z-index: 2; flex: 1; text-align: center;
+            min-width: 0; padding: 0 4px;
         }
         .step-circle {
             width: 36px; height: 36px; border-radius: 50%;
@@ -121,14 +146,20 @@
             display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 14px; margin-bottom: 6px;
             border: 3px solid #ffffff; box-shadow: 0 0 0 2px #cbd5e1;
-            transition: all 0.3s;
+            transition: all 0.3s; flex-shrink: 0;
         }
         .step-item.active .step-circle { background: var(--brand-blue); color: #ffffff; box-shadow: 0 0 0 2px var(--brand-blue); }
         .step-item.completed .step-circle { background: #10b981; color: #ffffff; box-shadow: 0 0 0 2px #10b981; }
-        .step-title { font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 2px; }
+        .step-title {
+            font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+        }
         .step-item.active .step-title { color: var(--brand-blue); }
         .step-item.completed .step-title { color: #047857; }
-        .step-time { font-size: 11px; color: #94a3b8; }
+        .step-time {
+            font-size: 11px; color: #94a3b8;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+        }
         .stepper-line { position: absolute; top: 34px; left: 16%; right: 16%; height: 3px; background: #e2e8f0; z-index: 1; }
         .stepper-line-fill { height: 100%; background: #10b981; transition: width 0.4s ease; }
 
@@ -136,8 +167,9 @@
         .stat-chip-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
         .stat-chip {
             background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
-            padding: 6px 12px; font-size: 13px; font-weight: 600; color: #475569;
+            padding: 6px 10px; font-size: 12.5px; font-weight: 600; color: #475569;
             display: inline-flex; align-items: center; gap: 6px;
+            max-width: 100%; word-break: break-all;
         }
         .stat-chip strong { color: var(--brand-navy); font-weight: 700; }
 
@@ -163,17 +195,21 @@
         }
         .marker-icon-inner { transform: rotate(45deg); color: #ffffff; font-size: 14px; }
 
-        /* 數值儀表卡片 (Stat Metric Grid) */
-        .metric-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 12px; margin-bottom: 16px;
+        /* 數值儀表卡片 (Stat Metric Grid) - 兩層自適應網格 */
+        .metric-grid-top {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 10px; margin-bottom: 10px;
+        }
+        .metric-grid-bottom {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 10px; margin-bottom: 16px;
         }
         .metric-card {
             background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
-            padding: 12px; text-align: center;
+            padding: 10px 8px; text-align: center; min-width: 0;
         }
-        .metric-label { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
-        .metric-value { font-size: 1.25rem; font-weight: 800; color: var(--brand-dark-blue); }
+        .metric-label { font-size: 11.5px; font-weight: 600; color: #64748b; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .metric-value { font-size: 1.25rem; font-weight: 800; color: var(--brand-dark-blue); line-height: 1.2; word-break: break-all; }
         .metric-unit { font-size: 11px; font-weight: 600; color: #94a3b8; margin-left: 2px; }
 
         /* 現場環境說明區塊 */
@@ -193,9 +229,6 @@
         .photo-grid {
             display: grid; grid-template-columns: repeat(2, 1fr);
             gap: 14px;
-        }
-        @media screen and (max-width: 576px) {
-            .photo-grid { grid-template-columns: 1fr; }
         }
         .photo-card {
             background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px;
@@ -280,11 +313,69 @@
             color: #ffffff; font-size: 15px; margin-top: 12px; font-weight: 600;
         }
 
+        /* 手機行動端底部常駐動作列 (符合 inspection-ui-standard 外勤規範) */
+        @media screen and (max-width: 991px) {
+            body { padding-bottom: 76px; }
+            .mobile-bottom-bar {
+                display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 1015;
+                background: #ffffff; border-top: 1px solid #e2e8f0;
+                box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+                padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+                gap: 10px;
+            }
+            .mobile-bottom-bar .btn {
+                flex: 1; font-weight: 700; padding: 10px; border-radius: 8px; font-size: 14px; min-height: 44px;
+                display: inline-flex; align-items: center; justify-content: center;
+            }
+        }
+        @media screen and (min-width: 992px) {
+            .mobile-bottom-bar { display: none !important; }
+        }
+
+        /* ---------------- 小尺寸 RWD 專屬強化排版樣式 ---------------- */
+        @media screen and (max-width: 768px) {
+            .container-fluid-custom { padding: 10px; }
+            .top-navbar { height: 50px; padding: 0 10px; }
+            .brand-title { font-size: 0.98rem; }
+            .nav-case-badge { max-width: 120px; font-size: 0.78rem; padding: 2px 6px; }
+            .nav-btn { height: 32px; padding: 0 8px; font-size: 0.85rem; }
+
+            /* 時間軸 RWD 緊湊縮小，杜絕重疊與裁切 */
+            .stepper-container { padding: 10px 8px; margin-bottom: 12px; }
+            .step-circle { width: 30px; height: 30px; font-size: 12px; margin-bottom: 4px; box-shadow: 0 0 0 1.5px #cbd5e1; }
+            .stepper-line { top: 25px; left: 14%; right: 14%; height: 2px; }
+            .step-title { font-size: 11.5px; }
+            .step-time { font-size: 10px; }
+
+            /* 卡片外距與內距緊湊化 */
+            .card-modern { margin-bottom: 12px; border-radius: 10px; }
+            .card-modern-header { padding: 10px 12px; }
+            .card-modern-body { padding: 12px; }
+            .card-modern-title { font-size: 0.95rem; }
+
+            /* 地圖自適應高度 */
+            #map { height: 260px; }
+            #map.map-collapsed { height: 80px !important; }
+
+            /* 數值儀表字體適度微調 */
+            .metric-value { font-size: 1.15rem; }
+        }
+
+        @media screen and (max-width: 480px) {
+            .top-navbar { padding: 0 8px; }
+            .brand-title { font-size: 0.92rem; }
+            .nav-case-badge { display: none; /* 極小螢幕下收起頂部徽章，改於基本資料卡呈現完整案號 */ }
+            .nav-btn { padding: 0 6px; }
+            .step-title { font-size: 11px; }
+            .step-time { font-size: 9.5px; }
+            .photo-grid { grid-template-columns: 1fr; gap: 10px; }
+        }
+
         /* 列印專用樣式 (@media print) */
         .print-only-header { display: none; }
         @media print {
-            .no-print { display: none !important; }
-            body { background: #ffffff !important; color: #000000 !important; }
+            .no-print, .mobile-bottom-bar { display: none !important; }
+            body { background: #ffffff !important; color: #000000 !important; padding-bottom: 0 !important; }
             .container-fluid-custom { max-width: 100% !important; padding: 0 !important; }
             .card-modern { box-shadow: none !important; border: 1px solid #000000 !important; margin-bottom: 12px !important; }
             .card-modern-header { background: #f0f0f0 !important; border-bottom: 1px solid #000000 !important; }
@@ -305,37 +396,38 @@
     <div id="app" v-cloak>
         <!-- 1. 置頂深青藍漸層導覽列 (Sticky Top Navbar) -->
         <header class="top-navbar no-print">
-            <div class="d-flex align-items-center">
-                <button type="button" class="nav-btn mr-2" v-on:click="goBack" title="返回上一頁">
+            <div class="top-navbar-left">
+                <button type="button" class="nav-btn mr-1" v-on:click="goBack" title="返回上一頁">
                     <i class="fas fa-arrow-left"></i>
                     <span class="d-none d-sm-inline">{{ backBtnText }}</span>
                 </button>
                 <h1 class="brand-title">
                     <i class="fas fa-layer-group text-white"></i>
-                    <span>裸露地現場巡查成果報告</span>
+                    <span class="d-none d-md-inline">裸露地現場巡查成果報告</span>
+                    <span class="d-inline d-md-none">巡查成果報告</span>
                 </h1>
-                <span v-if="detail && (detail.BareGroundNo || detail.Bare_ID)" class="badge badge-light text-dark font-weight-bold ml-2" style="font-size: 0.85rem;">
+                <span v-if="detail && (detail.BareGroundNo || detail.Bare_ID)" class="nav-case-badge" :title="detail.BareGroundNo || detail.Bare_ID">
                     {{ detail.BareGroundNo || detail.Bare_ID }}
                 </span>
             </div>
 
-            <div class="d-flex align-items-center">
-                <!-- 列印按鈕 (符合規範：白底黑字陰影膠囊) -->
-                <button type="button" class="nav-btn bg-white text-dark shadow-sm mr-2" v-on:click="printReport" title="列印或匯出成果單">
+            <div class="top-navbar-right">
+                <!-- 列印報告按鈕 (白底黑字膠囊) -->
+                <button type="button" class="nav-btn bg-white text-dark shadow-sm" v-on:click="printReport" title="列印或匯出成果單">
                     <i class="fas fa-print"></i>
-                    <span class="d-none d-md-inline">列印報告</span>
+                    <span class="d-none d-lg-inline">列印報告</span>
                 </button>
 
-                <!-- 路線導航按鈕 -->
-                <button v-if="detail && detail.Latitude && detail.Longtitude" type="button" class="nav-btn bg-white text-dark shadow-sm mr-2" v-on:click="openGoogleMaps" title="以 Google Maps 開啟導航">
+                <!-- 電腦端專用：路線導航按鈕 (手機端由常駐底部動作列提供) -->
+                <button v-if="detail && detail.Latitude && detail.Longtitude" type="button" class="nav-btn bg-white text-dark shadow-sm d-none d-lg-inline-flex" v-on:click="openGoogleMaps" title="以 Google Maps 開啟導航">
                     <i class="fas fa-location-arrow text-success"></i>
-                    <span class="d-none d-md-inline">路線導航</span>
+                    <span>路線導航</span>
                 </button>
 
-                <!-- 外勤簽名按鈕 -->
-                <button type="button" class="nav-btn btn-warning text-dark font-weight-bold shadow-sm" v-on:click="openSignatureModal" title="進行手寫電子簽章">
+                <!-- 電腦端專用：外勤簽名按鈕 (手機端由常駐底部動作列提供) -->
+                <button type="button" class="nav-btn btn-warning text-dark font-weight-bold shadow-sm d-none d-lg-inline-flex" v-on:click="openSignatureModal" title="進行手寫電子簽章">
                     <i class="fas fa-file-signature"></i>
-                    <span class="d-none d-sm-inline">{{ detail && detail.HasSig ? '重簽確認' : '手寫簽署' }}</span>
+                    <span>{{ detail && detail.HasSig ? '重簽確認' : '手寫簽署' }}</span>
                 </button>
             </div>
         </header>
@@ -377,7 +469,7 @@
                             <span v-else>1</span>
                         </div>
                         <div class="step-title">現場查核建檔</div>
-                        <div class="step-time">{{ detail.Check_Date || '查核完成' }}</div>
+                        <div class="step-time">{{ formatShortDate(detail.Check_Date) || '查核完成' }}</div>
                     </div>
 
                     <!-- 步驟 2: 巡查人員簽核 -->
@@ -387,7 +479,7 @@
                             <span v-else>2</span>
                         </div>
                         <div class="step-title">稽查人員簽署</div>
-                        <div class="step-time">{{ detail.HasSig ? (detail.SigUpdateTime || '已簽核') : '待簽核' }}</div>
+                        <div class="step-time">{{ detail.HasSig ? (formatShortDate(detail.SigUpdateTime) || '已簽核') : '待簽核' }}</div>
                     </div>
 
                     <!-- 步驟 3: 查核成果歸檔 -->
@@ -396,7 +488,7 @@
                             <i v-if="stepperStage >= 3" class="fas fa-check"></i>
                             <span v-else>3</span>
                         </div>
-                        <div class="step-title">{{ detail.INV_StateName || '成果歸檔核定' }}</div>
+                        <div class="step-title">{{ detail.INV_StateName || '成果歸檔' }}</div>
                         <div class="step-time">{{ detail.INV_State ? ('狀態: ' + detail.INV_State) : '已歸檔' }}</div>
                     </div>
                 </div>
@@ -404,7 +496,7 @@
                 <!-- 雙欄黃金自適應佈局 (寬螢幕左 40% 固頂、右 60% 主資料區) -->
                 <div class="row">
                     <!-- 左欄：基本資料、智慧地圖、簽名卡片 -->
-                    <div class="col-xl-5 col-lg-5 mb-4">
+                    <div class="col-xl-5 col-lg-5 mb-3">
                         <div class="sticky-sidebar">
                             <!-- 卡片 1: 裸露地基本資料 -->
                             <div class="card-modern">
@@ -431,7 +523,7 @@
                                         </span>
                                     </div>
 
-                                    <div class="detail-memo-box mb-2">
+                                    <div class="detail-memo-box mb-3">
                                         <div class="detail-memo-title">
                                             <i class="fas fa-map-marker-alt text-danger"></i> 場址地址 / 坐落位置
                                         </div>
@@ -440,14 +532,15 @@
                                         </div>
                                     </div>
 
-                                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size: 12.5px;">
-                                        <div>
+                                    <!-- 坐標與日期分行顯示，徹底杜絕小螢幕水平溢出與裁切 -->
+                                    <div class="row no-gutters text-muted" style="font-size: 12px; gap: 4px;">
+                                        <div class="col-12 text-truncate mb-1">
                                             <i class="fas fa-crosshairs text-secondary mr-1"></i>
-                                            GPS 坐標：{{ (detail.Latitude && detail.Longtitude) ? (detail.Latitude + ', ' + detail.Longtitude) : '未定位' }}
+                                            GPS 坐標：<strong>{{ (detail.Latitude && detail.Longtitude) ? (detail.Latitude + ', ' + detail.Longtitude) : '未定位' }}</strong>
                                         </div>
-                                        <div>
+                                        <div class="col-12 text-truncate">
                                             <i class="fas fa-calendar-alt text-secondary mr-1"></i>
-                                            查核：{{ detail.Check_Date || '未記錄' }}
+                                            查核時間：<strong>{{ detail.Check_Date || '未記錄' }}</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -461,10 +554,10 @@
                                         <span>智慧現場地圖</span>
                                     </h2>
                                     <div class="d-flex align-items-center gap-2">
-                                        <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2 mr-1" v-on:click="resetMapView" title="重設地圖全景" style="font-size: 11px;">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 mr-1" v-on:click="resetMapView" title="重設地圖全景" style="font-size: 12px;">
                                             <i class="fas fa-compress-arrows-alt"></i> 全景
                                         </button>
-                                        <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" v-on:click="toggleMapCollapse" style="font-size: 11px;">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" v-on:click="toggleMapCollapse" style="font-size: 12px;">
                                             <i :class="isMapCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up'"></i>
                                             {{ isMapCollapsed ? '展開' : '收合' }}
                                         </button>
@@ -483,7 +576,7 @@
                                         <span>巡查人員簽章</span>
                                     </h2>
                                     <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 font-weight-bold" v-on:click="openSignatureModal">
-                                        <i class="fas fa-pen-alt mr-1"></i> {{ detail.HasSig ? '更換簽名' : '立即手寫簽署' }}
+                                        <i class="fas fa-pen-alt mr-1"></i> {{ detail.HasSig ? '更換簽名' : '手寫簽署' }}
                                     </button>
                                 </div>
                                 <div class="card-modern-body">
@@ -492,12 +585,12 @@
                                         <div v-else class="text-center py-4 text-muted">
                                             <i class="fas fa-signature fa-2x mb-2 text-secondary"></i>
                                             <div class="font-weight-bold">目前尚未建立手寫簽名圖檔</div>
-                                            <small class="text-muted">請點選上方按鈕開啟平滑手寫板簽署</small>
+                                            <small class="text-muted">請點選下方或上方按鈕開啟平滑手寫板簽署</small>
                                         </div>
                                     </div>
                                     <div v-if="detail.HasSig" class="d-flex justify-content-between align-items-center mt-2 text-muted" style="font-size: 11.5px;">
                                         <span><i class="fas fa-check-circle text-success mr-1"></i> 已完成電子簽章認證</span>
-                                        <span>更新於：{{ detail.SigUpdateTime || '本次巡查' }}</span>
+                                        <span>簽署時間：{{ detail.SigUpdateTime || '本次巡查' }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -518,8 +611,8 @@
                                 </span>
                             </div>
                             <div class="card-modern-body">
-                                <!-- 規格儀表網格 -->
-                                <div class="metric-grid">
+                                <!-- 規格儀表網格：上層長寬高 3 欄並列、下層總量與面積 2 欄並列，全載具極致整齊 -->
+                                <div class="metric-grid-top">
                                     <div class="metric-card">
                                         <div class="metric-label">概估長度 (L)</div>
                                         <div class="metric-value">{{ detail.pLength || '0.0' }}<span class="metric-unit">m</span></div>
@@ -532,6 +625,8 @@
                                         <div class="metric-label">概估高度 (H)</div>
                                         <div class="metric-value">{{ detail.pHeight || '0.0' }}<span class="metric-unit">m</span></div>
                                     </div>
+                                </div>
+                                <div class="metric-grid-bottom">
                                     <div class="metric-card" style="background: #e0f2fe; border-color: #bae6fd;">
                                         <div class="metric-label" style="color: #0369a1;">堆置總量概估</div>
                                         <div class="metric-value" style="color: #0284c7;">{{ detail.pVolume || '0.0' }}<span class="metric-unit" style="color: #0369a1;">m³</span></div>
@@ -579,7 +674,7 @@
                                     <i class="fas fa-camera text-primary"></i>
                                     <span>現場查核照片成果 (4 張檢視)</span>
                                 </h2>
-                                <span class="text-muted" style="font-size: 12px;">點選照片可開啟全螢幕高解析燈箱檢視</span>
+                                <span class="text-muted d-none d-sm-inline" style="font-size: 12px;">點選照片可開啟全螢幕檢視</span>
                             </div>
                             <div class="card-modern-body">
                                 <div class="photo-grid">
@@ -597,7 +692,7 @@
                                             </div>
                                         </div>
                                         <div class="photo-footer">
-                                            <span>{{ photo.HasFile ? ('檔案大小: ' + photo.FileSize) : '無檔案' }}</span>
+                                            <span>{{ photo.HasFile ? ('大小: ' + photo.FileSize) : '無檔案' }}</span>
                                             <span>{{ photo.HasFile ? photo.UpdateTime : '--' }}</span>
                                         </div>
                                     </div>
@@ -609,7 +704,17 @@
             </div>
         </main>
 
-        <!-- 4. 全螢幕高解析平滑手寫簽名板 (符合標準元件 4 規範) -->
+        <!-- 4. 手機行動端底部常駐懸浮動作列 (符合 inspection-ui-standard 規範) -->
+        <div class="mobile-bottom-bar d-lg-none no-print">
+            <button type="button" class="btn btn-outline-secondary font-weight-bold" v-on:click="openGoogleMaps" :disabled="!detail || !detail.Latitude || !detail.Longtitude">
+                <i class="fas fa-location-arrow text-success mr-1"></i> 路線導航
+            </button>
+            <button type="button" class="btn btn-warning font-weight-bold text-dark" v-on:click="openSignatureModal">
+                <i class="fas fa-file-signature mr-1"></i> {{ detail && detail.HasSig ? '更換簽名' : '外勤手寫簽署' }}
+            </button>
+        </div>
+
+        <!-- 5. 全螢幕高解析平滑手寫簽名板 (符合標準元件 4 規範) -->
         <div v-if="showSigModal" class="sig-fullscreen-modal no-print">
             <div class="sig-modal-header">
                 <div class="d-flex align-items-center font-weight-bold" style="font-size: 1.05rem;">
@@ -644,7 +749,7 @@
             </div>
         </div>
 
-        <!-- 5. 高解析照片燈箱 Modal -->
+        <!-- 6. 高解析照片燈箱 Modal -->
         <div v-if="activeLightboxPhoto" class="lightbox-modal no-print" v-on:click.self="closeLightbox">
             <button type="button" class="lightbox-close-btn" v-on:click="closeLightbox" title="關閉">
                 <i class="fas fa-times"></i>
@@ -742,6 +847,18 @@
                     const h = String(now.getHours()).padStart(2, '0');
                     const mi = String(now.getMinutes()).padStart(2, '0');
                     this.printTimestamp = y + '-' + m + '-' + d + ' ' + h + ':' + mi;
+                },
+                formatShortDate(dtStr) {
+                    if (!dtStr) return '';
+                    // 若為 "2025-03-27 11:00"，在手機縮為 "03-27 11:00"
+                    const parts = dtStr.trim().split(' ');
+                    if (parts.length === 2 && parts[0].indexOf('-') > 0) {
+                        const dateParts = parts[0].split('-');
+                        if (dateParts.length === 3) {
+                            return dateParts[1] + '-' + dateParts[2] + ' ' + parts[1];
+                        }
+                    }
+                    return dtStr;
                 },
                 getStepClass(step) {
                     if (this.stepperStage > step) return 'completed';
@@ -858,7 +975,7 @@
                             popupAnchor: [0, -32]
                         });
 
-                        const popupHtml = '<div style="font-size:13px; line-height:1.5;">' +
+                        const popupHtml = '<div style="font-size:13px; line-height:1.5; max-width:220px;">' +
                             '<strong style="color:#0284c7;"><i class="fas fa-layer-group mr-1"></i>' + (this.detail.BareGroundNo || this.detail.Bare_ID) + '</strong><br/>' +
                             '<span>地址：' + (this.detail.ADDR || '未填寫') + '</span><br/>' +
                             '<a href="https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng + '" target="_blank" style="color:#0284c7; font-weight:700;">開啟導航 &raquo;</a>' +

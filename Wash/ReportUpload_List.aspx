@@ -422,6 +422,129 @@
             align-items: center;
             justify-content: center;
         }
+        /* ========================================================
+           自適應現代化底部分頁列 (Responsive Pagination Footer)
+           解決小尺寸螢幕 (手機) 壅擠與按鈕折行難以點擊問題
+           ======================================================== */
+        .pagination-footer {
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+                gap: 16px;
+            }
+        }
+
+        .pagination-footer-info {
+            font-size: 0.88rem;
+            color: #64748b;
+            text-align: center;
+            white-space: nowrap !important;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer-info {
+                text-align: left;
+            }
+        }
+
+        .pagination-action-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            max-width: 100%;
+        }
+        @media (min-width: 768px) {
+            .pagination-action-group {
+                width: auto;
+                justify-content: flex-end;
+            }
+        }
+
+        .btn-page-ctrl {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #334155;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.15s ease-in-out;
+            white-space: nowrap !important;
+            text-decoration: none !important;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .btn-page-ctrl:hover:not(:disabled) {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+        .btn-page-ctrl:active:not(:disabled) {
+            background: #e2e8f0;
+            transform: translateY(1px);
+        }
+        .btn-page-ctrl:disabled,
+        .btn-page-ctrl.disabled {
+            background: #f8fafc;
+            color: #94a3b8;
+            border-color: #e2e8f0;
+            cursor: not-allowed;
+            opacity: 0.55;
+            box-shadow: none;
+        }
+
+        /* 頁碼指示膠囊 */
+        .page-indicator-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #166534;
+            white-space: nowrap !important;
+        }
+
+        /* 手機端大按鈕排版 (Mobile Touch Optimized) */
+        @media (max-width: 767.98px) {
+            .btn-page-ctrl.btn-step {
+                flex: 1;
+                min-width: 0;
+                padding: 0 8px;
+            }
+            .btn-page-ctrl.btn-edge {
+                width: 40px;
+                min-width: 40px;
+                padding: 0;
+                flex-shrink: 0;
+            }
+            .page-indicator-pill {
+                flex-shrink: 0;
+                padding: 0 10px;
+                font-size: 0.84rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -758,31 +881,34 @@
                     </div>
                 </div>
 
-                <!-- 分頁導覽區塊 -->
-                <div v-if="pagination.TotalPages > 1" class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center py-3 border-top">
-                    <div class="text-muted small mb-2 mb-sm-0">
-                        顯示第 {{ (pagination.PageIndex - 1) * pagination.PageSize + 1 }} 至 {{ Math.min(pagination.PageIndex * pagination.PageSize, pagination.TotalRows) }} 筆，共 {{ pagination.TotalRows }} 筆資料
+                <!-- 自適應底部分頁導覽列 (Responsive Pagination Footer) -->
+                <div v-if="!loading && pagination.TotalRows > 0" class="pagination-footer">
+                    <div class="pagination-footer-info">
+                        顯示第 <strong class="text-dark">{{ (pagination.PageIndex - 1) * pagination.PageSize + 1 }}</strong> 至 <strong class="text-dark">{{ Math.min(pagination.PageIndex * pagination.PageSize, pagination.TotalRows) }}</strong> 筆，共 <strong class="text-dark">{{ pagination.TotalRows }}</strong> 筆資料
                     </div>
-
-                    <ul class="pagination pagination-sm m-0">
-                        <li class="page-item" :class="{ 'disabled': pagination.PageIndex <= 1 }">
-                            <a class="page-link" href="javascript:void(0);" v-on:click="changePage(1)">首頁</a>
-                        </li>
-                        <li class="page-item" :class="{ 'disabled': pagination.PageIndex <= 1 }">
-                            <a class="page-link" href="javascript:void(0);" v-on:click="changePage(pagination.PageIndex - 1)">上一頁</a>
-                        </li>
-
-                        <li v-for="p in visiblePages" :key="p" class="page-item" :class="{ 'active': pagination.PageIndex === p }">
-                            <a class="page-link" href="javascript:void(0);" v-on:click="changePage(p)">{{ p }}</a>
-                        </li>
-
-                        <li class="page-item" :class="{ 'disabled': pagination.PageIndex >= pagination.TotalPages }">
-                            <a class="page-link" href="javascript:void(0);" v-on:click="changePage(pagination.PageIndex + 1)">下一頁</a>
-                        </li>
-                        <li class="page-item" :class="{ 'disabled': pagination.PageIndex >= pagination.TotalPages }">
-                            <a class="page-link" href="javascript:void(0);" v-on:click="changePage(pagination.TotalPages)">末頁</a>
-                        </li>
-                    </ul>
+                    <div class="pagination-action-group">
+                        <button type="button" class="btn-page-ctrl btn-edge" :disabled="pagination.PageIndex <= 1" v-on:click="changePage(1)" title="第一頁">
+                            <i class="fas fa-angle-double-left"></i>
+                            <span class="d-none d-md-inline ml-1">首頁</span>
+                        </button>
+                        <button type="button" class="btn-page-ctrl btn-step" :disabled="pagination.PageIndex <= 1" v-on:click="changePage(pagination.PageIndex - 1)" title="上一頁">
+                            <i class="fas fa-chevron-left mr-1"></i>
+                            <span>上一頁</span>
+                        </button>
+                        <div class="page-indicator-pill" title="目前頁次 / 總頁數">
+                            <span>{{ pagination.PageIndex }}</span>
+                            <span class="mx-1 text-muted" style="opacity: 0.5; font-weight: normal;">/</span>
+                            <span>{{ pagination.TotalPages }}</span>
+                        </div>
+                        <button type="button" class="btn-page-ctrl btn-step" :disabled="pagination.PageIndex >= pagination.TotalPages" v-on:click="changePage(pagination.PageIndex + 1)" title="下一頁">
+                            <span>下一頁</span>
+                            <i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                        <button type="button" class="btn-page-ctrl btn-edge" :disabled="pagination.PageIndex >= pagination.TotalPages" v-on:click="changePage(pagination.TotalPages)" title="最後一頁">
+                            <span class="d-none d-md-inline ml-1">末頁</span>
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </main>

@@ -1,4 +1,4 @@
-﻿﻿﻿using System;
+﻿using System;
 using System.Data;
 using System.Data.SqlClient;
 using NTPC_FEC.Helpers;
@@ -19,6 +19,7 @@ namespace NTPC_FEC.Services
         public int CaseInv3 { get; set; }           // 案件三審 (INV3)
         public int CaseMission7Day { get; set; }    // 巡查派遣 (7天內改善)
         public int CaseMission2Times { get; set; }  // 提報稽查 (稽查列管)
+        public int CaseProject { get; set; }        // 臺北港專區 (八里區場所數: 24)
 
         // 2. 作業機具調查
         public int MachineDraft { get; set; }       // 機具暫存
@@ -110,17 +111,20 @@ namespace NTPC_FEC.Services
         // 2. 工廠巡查任務派遣統計
         private static void QueryCaseCounts(PendingTaskCounts counts)
         {
+            // 查詢工廠巡查待審件數 (與審查平台 Get_Check_INV_FAC_Main_BySearch 100% 同源同標準)
+            counts.CaseInv1 = QueryInvCasesBySp("A00"); // 初審待審 (INV1)
+            counts.CaseInv2 = QueryInvCasesBySp("A01"); // 複審待審 (INV2)
+            counts.CaseInv3 = QueryInvCasesBySp("A02"); // 三審待審 (INV3)
+
             try
             {
                 string sql = @"
                     SELECT 
                         ISNULL((SELECT COUNT(1) FROM INV_DATA WHERE INV_State = 'A00a'), 0) AS CaseDraft,
-                        ISNULL((SELECT COUNT(1) FROM INV_DATA WHERE INV_State = 'A00b' OR INV_State LIKE '%b%'), 0) AS CaseBack,
-                        ISNULL((SELECT COUNT(1) FROM INV_DATA WHERE INV_State = 'A00'), 0) AS CaseInv1,
-                        ISNULL((SELECT COUNT(1) FROM INV_DATA WHERE INV_State = 'A01'), 0) AS CaseInv2,
-                        ISNULL((SELECT COUNT(1) FROM INV_DATA WHERE INV_State = 'A02'), 0) AS CaseInv3,
+                        ISNULL((SELECT COUNT(1) FROM INV_DATA WHERE INV_State = 'A00b'), 0) AS CaseBack,
                         ISNULL((SELECT COUNT(1) FROM INV_Mission WHERE Cancel_Date IS NULL AND (pReason LIKE '%7天內未完成改善回報%' OR pReason LIKE '%7天%')), 0) AS CaseMission7Day,
-                        ISNULL((SELECT COUNT(1) FROM INV_Mission WHERE Cancel_Date IS NULL AND pReason LIKE '%稽查列管%'), 0) AS CaseMission2Times";
+                        ISNULL((SELECT COUNT(1) FROM INV_Mission WHERE Cancel_Date IS NULL AND pReason LIKE '%稽查列管%'), 0) AS CaseMission2Times,
+                        ISNULL((SELECT COUNT(1) FROM FAC_Main WHERE TOWN LIKE '%八里%' OR ADDR LIKE '%八里%'), 0) AS CaseProject";
 
                 DataTable dt = DbHelper.ExecuteDataTable(sql);
                 if (dt != null && dt.Rows.Count > 0)
@@ -128,11 +132,9 @@ namespace NTPC_FEC.Services
                     DataRow r = dt.Rows[0];
                     if (r["CaseDraft"] != DBNull.Value) counts.CaseDraft = Convert.ToInt32(r["CaseDraft"]);
                     if (r["CaseBack"] != DBNull.Value) counts.CaseBack = Convert.ToInt32(r["CaseBack"]);
-                    if (r["CaseInv1"] != DBNull.Value) counts.CaseInv1 = Convert.ToInt32(r["CaseInv1"]);
-                    if (r["CaseInv2"] != DBNull.Value) counts.CaseInv2 = Convert.ToInt32(r["CaseInv2"]);
-                    if (r["CaseInv3"] != DBNull.Value) counts.CaseInv3 = Convert.ToInt32(r["CaseInv3"]);
                     if (r["CaseMission7Day"] != DBNull.Value) counts.CaseMission7Day = Convert.ToInt32(r["CaseMission7Day"]);
                     if (r["CaseMission2Times"] != DBNull.Value) counts.CaseMission2Times = Convert.ToInt32(r["CaseMission2Times"]);
+                    if (r["CaseProject"] != DBNull.Value) counts.CaseProject = Convert.ToInt32(r["CaseProject"]);
                 }
             }
             catch
@@ -140,17 +142,86 @@ namespace NTPC_FEC.Services
             }
         }
 
+        // 輔助方法：呼叫與 managerList.aspx 完全一致之預存程序統計有效場所營建巡查待審案件數
+        private static int QueryInvCasesBySp(string stateCode)
+        {
+            int totalCases = 0;
+            string colName = "初審件數";
+            if (stateCode == "A01") colName = "複審件數";
+            else if (stateCode == "A02") colName = "三審件數";
+
+            try
+            {
+                using (SqlConnection conn = DbHelper.GetOpenConnection())
+                using (SqlCommand cmd = new SqlCommand("Get_Check_INV_FAC_Main_BySearch", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandTimeout = 30;
+                    cmd.Parameters.Add(new SqlParameter("@Where_FAC_NAME", DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Where_C_NO", DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Where_S_C_ID", DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Where_INV_State", stateCode));
+                    cmd.Parameters.Add(new SqlParameter("@CountColName", colName));
+
+                    using (SqlDataAdapter da = new SqlDataAdapter(cmd))
+                    {
+                        DataTable dt = new DataTable();
+                        da.Fill(dt);
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            int c = 0;
+                            if (row.Table.Columns.Contains("Case_Count") && row["Case_Count"] != DBNull.Value)
+                            {
+                                int.TryParse(row["Case_Count"].ToString(), out c);
+                            }
+                            else if (row.Table.Columns.Contains(colName) && row[colName] != DBNull.Value)
+                            {
+                                int.TryParse(row[colName].ToString(), out c);
+                            }
+                            else if (row.Table.Columns.Contains("件數") && row["件數"] != DBNull.Value)
+                            {
+                                int.TryParse(row["件數"].ToString(), out c);
+                            }
+                            totalCases += c;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                try
+                {
+                    string sql = @"
+                        SELECT COUNT(d.INV_NO) 
+                        FROM INV_DATA d
+                        INNER JOIN FAC_Main f ON d.FAC_ID = f.FAC_ID
+                        WHERE d.INV_State = @StateCode";
+                    object obj = DbHelper.ExecuteScalar(sql, new SqlParameter("@StateCode", stateCode));
+                    if (obj != null && obj != DBNull.Value)
+                    {
+                        totalCases = Convert.ToInt32(obj);
+                    }
+                }
+                catch { }
+            }
+            return totalCases;
+        }
+
         // 3. 作業機具與裸露地統計
         private static void QueryMachineAndBareCounts(PendingTaskCounts counts)
         {
+            // 查詢施工機具待審件數 (與審查平台 Get_Check_Mac_FAC_Main_BySearch 100% 同源同標準)
+            counts.MachineInv1 = QueryMachineCasesBySp("A00"); // 初審待審 (MAC1)
+            counts.MachineInv2 = QueryMachineCasesBySp("A01"); // 複審待審 (MAC2)
+            counts.MachineInv3 = QueryMachineCasesBySp("A02"); // 三審待審 (MAC3)
+            counts.MachineExamine = counts.MachineInv1;
+
             try
             {
+                // 機具暫存草稿與裸露地統計
                 string sql = @"
                     SELECT 
                         ISNULL((SELECT COUNT(1) FROM Machine_Main WHERE (Mac_State IN ('A00a', 'A00b') OR Mac_State IS NULL) AND (Deleted_mac IS NULL OR Deleted_mac <> 'Y')), 0) AS MachineDraft,
-                        ISNULL((SELECT COUNT(1) FROM Machine_Main WHERE Mac_State = 'A00' AND (Deleted_mac IS NULL OR Deleted_mac <> 'Y')), 0) AS MachineInv1,
-                        ISNULL((SELECT COUNT(1) FROM Machine_Main WHERE Mac_State = 'A01' AND (Deleted_mac IS NULL OR Deleted_mac <> 'Y')), 0) AS MachineInv2,
-                        ISNULL((SELECT COUNT(1) FROM Machine_Main WHERE Mac_State = 'A02' AND (Deleted_mac IS NULL OR Deleted_mac <> 'Y')), 0) AS MachineInv3,
                         ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00a'), 0) AS BareDraft,
                         ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00b'), 0) AS BareBack,
                         ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00'), 0) AS BareInv1,
@@ -162,10 +233,6 @@ namespace NTPC_FEC.Services
                 {
                     DataRow r = dt.Rows[0];
                     if (r["MachineDraft"] != DBNull.Value) counts.MachineDraft = Convert.ToInt32(r["MachineDraft"]);
-                    if (r["MachineInv1"] != DBNull.Value) counts.MachineInv1 = Convert.ToInt32(r["MachineInv1"]);
-                    if (r["MachineInv2"] != DBNull.Value) counts.MachineInv2 = Convert.ToInt32(r["MachineInv2"]);
-                    if (r["MachineInv3"] != DBNull.Value) counts.MachineInv3 = Convert.ToInt32(r["MachineInv3"]);
-                    counts.MachineExamine = counts.MachineInv1;
                     if (r["BareDraft"] != DBNull.Value) counts.BareDraft = Convert.ToInt32(r["BareDraft"]);
                     if (r["BareBack"] != DBNull.Value) counts.BareBack = Convert.ToInt32(r["BareBack"]);
                     if (r["BareInv1"] != DBNull.Value) counts.BareInv1 = Convert.ToInt32(r["BareInv1"]);
@@ -176,6 +243,72 @@ namespace NTPC_FEC.Services
             catch
             {
             }
+        }
+
+        // 輔助方法：呼叫與 managerList.aspx 完全一致之預存程序統計有效場所待審機具數
+        private static int QueryMachineCasesBySp(string stateCode)
+        {
+            int totalCases = 0;
+            string colName = "初審件數";
+            if (stateCode == "A01") colName = "複審件數";
+            else if (stateCode == "A02") colName = "三審件數";
+
+            try
+            {
+                using (SqlConnection conn = DbHelper.GetOpenConnection())
+                using (SqlCommand cmd = new SqlCommand("Get_Check_Mac_FAC_Main_BySearch", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandTimeout = 30;
+                    cmd.Parameters.Add(new SqlParameter("@Where_FAC_NAME", DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Where_C_NO", DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Where_S_C_ID", DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Where_Mac_State", stateCode));
+                    cmd.Parameters.Add(new SqlParameter("@CountColName", colName));
+
+                    using (SqlDataAdapter da = new SqlDataAdapter(cmd))
+                    {
+                        DataTable dt = new DataTable();
+                        da.Fill(dt);
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            int c = 0;
+                            if (row.Table.Columns.Contains("Case_Count") && row["Case_Count"] != DBNull.Value)
+                            {
+                                int.TryParse(row["Case_Count"].ToString(), out c);
+                            }
+                            else if (row.Table.Columns.Contains(colName) && row[colName] != DBNull.Value)
+                            {
+                                int.TryParse(row[colName].ToString(), out c);
+                            }
+                            else if (row.Table.Columns.Contains("件數") && row["件數"] != DBNull.Value)
+                            {
+                                int.TryParse(row["件數"].ToString(), out c);
+                            }
+                            totalCases += c;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                try
+                {
+                    string sql = @"
+                        SELECT COUNT(m.mac_ID) 
+                        FROM Machine_Main m
+                        INNER JOIN FAC_Main f ON m.FAC_ID = f.FAC_ID
+                        WHERE m.Mac_State = @StateCode 
+                          AND (m.Deleted_mac IS NULL OR m.Deleted_mac <> 'Y')";
+                    object obj = DbHelper.ExecuteScalar(sql, new SqlParameter("@StateCode", stateCode));
+                    if (obj != null && obj != DBNull.Value)
+                    {
+                        totalCases = Convert.ToInt32(obj);
+                    }
+                }
+                catch { }
+            }
+            return totalCases;
         }
 
         // 4. 自主管理回報統計
@@ -196,11 +329,11 @@ namespace NTPC_FEC.Services
                 }
                 else
                 {
-                    // 管理端：統計近 30 天內提報案件
+                    // 管理端：統計全站之自主與缺失改善申報總案件數 (與 PIC_Report_List.aspx 100% 同源同標準)
                     string sql = @"
                         SELECT 
-                            ISNULL((SELECT COUNT(1) FROM INV_Report WHERE Report_Type = '自主回報' AND Report_Date >= DATEADD(day, -30, GETDATE())), 0) AS OwnCount,
-                            ISNULL((SELECT COUNT(1) FROM INV_Report WHERE Report_Type = '缺失改善' AND Report_Date >= DATEADD(day, -30, GETDATE())), 0) AS WrongCount";
+                            ISNULL((SELECT COUNT(1) FROM INV_Report WHERE Report_Type = '自主回報'), 0) AS OwnCount,
+                            ISNULL((SELECT COUNT(1) FROM INV_Report WHERE Report_Type = '缺失改善'), 0) AS WrongCount";
 
                     dt = DbHelper.ExecuteDataTable(sql);
                 }

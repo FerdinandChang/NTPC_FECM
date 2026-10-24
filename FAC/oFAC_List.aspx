@@ -59,22 +59,54 @@
             position: sticky;
             top: 0;
             z-index: 1020;
+            box-sizing: border-box;
+        }
+
+        .top-navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1 1 auto;
+            overflow: hidden;
+        }
+
+        .top-navbar-right {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            margin-left: 8px;
         }
 
         .navbar-brand-title {
             font-size: 1.15rem;
             font-weight: 700;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             color: #ffffff;
             text-decoration: none;
             letter-spacing: 0.5px;
+            white-space: nowrap !important;
+            min-width: 0;
         }
 
         .navbar-brand-title:hover {
             color: #ffffff;
             text-decoration: none;
+        }
+
+        .brand-text {
+            white-space: nowrap !important;
+            display: inline-block;
+        }
+
+        .brand-badge {
+            font-size: 12px;
+            white-space: nowrap !important;
+            padding: 3px 8px;
+            border-radius: 6px;
+            flex-shrink: 0;
         }
 
         .nav-btn {
@@ -89,16 +121,126 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0 14px;
+            padding: 0 12px;
             gap: 6px;
             transition: all 0.2s ease;
             text-decoration: none !important;
+            flex-shrink: 0;
+            white-space: nowrap !important;
         }
 
         .nav-btn:hover {
             background-color: rgba(255, 255, 255, 0.32);
             color: #ffffff !important;
             text-decoration: none !important;
+        }
+
+        .btn-header-add {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 36px;
+            white-space: nowrap !important;
+        }
+
+        /* 頂部導覽列與標籤頁在小尺寸螢幕下的 RWD 優化 (防止跳行與文字過大) */
+        @media (max-width: 768px) {
+            .top-navbar {
+                height: 54px;
+                padding: 0 12px;
+            }
+            .top-navbar-left {
+                gap: 8px;
+            }
+            .navbar-brand-title {
+                font-size: 1rem;
+                gap: 6px;
+            }
+            .brand-text {
+                font-size: 1rem;
+            }
+            .brand-badge {
+                font-size: 11px;
+                padding: 2px 6px;
+            }
+            .nav-btn {
+                height: 34px;
+                padding: 0 10px;
+            }
+            .btn-header-add {
+                height: 34px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .top-navbar {
+                height: 50px;
+                padding: 0 10px;
+            }
+            .top-navbar-left {
+                gap: 6px;
+            }
+            .navbar-brand-title {
+                font-size: 0.92rem;
+                gap: 6px;
+            }
+            .navbar-brand-title i {
+                font-size: 0.95rem;
+            }
+            .brand-text {
+                font-size: 0.92rem;
+                letter-spacing: 0;
+            }
+            .brand-badge {
+                font-size: 11px;
+                padding: 2px 5px;
+            }
+            .nav-btn {
+                width: 32px;
+                height: 32px;
+                padding: 0;
+                border-radius: 6px;
+            }
+            .btn-header-add {
+                width: 32px;
+                height: 32px;
+                padding: 0;
+                border-radius: 6px;
+            }
+            .nav-mode-bar {
+                padding: 0 8px;
+                gap: 4px;
+            }
+            .nav-mode-item {
+                padding: 10px 10px;
+                font-size: 13px;
+                gap: 6px;
+            }
+            .nav-mode-item .tab-badge {
+                font-size: 11px;
+                padding: 1px 5px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .top-navbar {
+                padding: 0 6px;
+            }
+            .navbar-brand-title {
+                font-size: 0.85rem;
+                gap: 4px;
+            }
+            .brand-text {
+                font-size: 0.85rem;
+            }
+            .brand-badge {
+                font-size: 10px;
+                padding: 1px 4px;
+            }
+            .nav-mode-item {
+                padding: 8px 8px;
+                font-size: 12px;
+            }
         }
 
         /* 業務模式分頁切換列 */
@@ -238,6 +380,44 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
+        /* 篩選面板底部操作列 (兩行式響應排版) */
+        .filter-footer-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+        .filter-footer-info {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+        }
+        .filter-footer-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .filter-footer-actions .btn {
+            white-space: nowrap !important;
+        }
+        @media (max-width: 576px) {
+            .filter-footer-actions {
+                width: 100%;
+            }
+            .filter-footer-actions .btn {
+                flex: 1 1 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 7px 10px;
+            }
+        }
+
         /* 電腦端表格容器與佈局 - 嚴格防溢出與防擠壓 */
         .desktop-table-container {
             width: 100%;
@@ -352,14 +532,30 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 3px 8px;
+            width: 88px;
+            min-width: 88px;
+            max-width: 88px;
+            height: 26px;
+            min-height: 26px;
+            padding: 0 4px;
             font-size: 11.5px;
             font-weight: 600;
             border-radius: 4px;
             text-decoration: none !important;
             white-space: nowrap !important;
-            line-height: 1.2;
+            line-height: 1;
             transition: all 0.15s;
+            box-sizing: border-box;
+            gap: 4px;
+        }
+        .file-chip i {
+            font-size: 12px;
+            margin-right: 0 !important;
+            flex-shrink: 0;
+        }
+        .file-chip span {
+            line-height: 1;
+            display: inline-block;
         }
         .file-chip-lic {
             background: #f0f9ff;
@@ -369,6 +565,8 @@
         .file-chip-lic:hover {
             background: #e0f2fe;
             color: #0369a1;
+            border-color: #7dd3fc;
+            text-decoration: none !important;
         }
         .file-chip-unlock {
             background: #fef2f2;
@@ -378,11 +576,14 @@
         .file-chip-unlock:hover {
             background: #fee2e2;
             color: #991b1b;
+            border-color: #fca5a5;
+            text-decoration: none !important;
         }
         .file-chip-empty {
             background: #f8fafc;
             color: #94a3b8;
-            border: 1px solid #e2e8f0;
+            border: 1px dashed #cbd5e1;
+            cursor: default;
         }
 
         .table-modern thead th {
@@ -467,41 +668,128 @@
         .badge-expired { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
         .badge-unlocked { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
-        /* 分頁列 */
-        .pagination-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 20px;
+                /* ========================================================
+           自適應現代化底部分頁列 (Responsive Pagination Footer)
+           解決小尺寸螢幕 (手機) 壅擠與按鈕折行難以點擊問題
+           ======================================================== */
+        .pagination-footer {
             background: #ffffff;
-            border-top: 1px solid var(--border-color);
-            flex-wrap: wrap;
-            gap: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+                gap: 16px;
+            }
         }
 
-        .page-link-btn {
-            border: 1px solid var(--border-color);
+        .pagination-footer-info {
+            font-size: 0.88rem;
+            color: #64748b;
+            text-align: center;
+            white-space: nowrap !important;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer-info {
+                text-align: left;
+            }
+        }
+
+        .pagination-action-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            max-width: 100%;
+        }
+        @media (min-width: 768px) {
+            .pagination-action-group {
+                width: auto;
+                justify-content: flex-end;
+            }
+        }
+
+        .btn-page-ctrl {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #334155;
             background: #ffffff;
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.15s ease-in-out;
+            white-space: nowrap !important;
+            text-decoration: none !important;
+            user-select: none;
+            touch-action: manipulation;
         }
-        .page-link-btn:hover:not(:disabled) {
+        .btn-page-ctrl:hover:not(:disabled) {
             background: #f1f5f9;
-            color: var(--brand-blue);
+            color: #0f172a;
+            border-color: #94a3b8;
         }
-        .page-link-btn.active {
-            background: var(--brand-blue);
-            color: #ffffff;
-            border-color: var(--brand-blue);
+        .btn-page-ctrl:active:not(:disabled) {
+            background: #e2e8f0;
+            transform: translateY(1px);
         }
-        .page-link-btn:disabled {
-            opacity: 0.5;
+        .btn-page-ctrl:disabled,
+        .btn-page-ctrl.disabled {
+            background: #f8fafc;
+            color: #94a3b8;
+            border-color: #e2e8f0;
             cursor: not-allowed;
+            opacity: 0.55;
+            box-shadow: none;
+        }
+
+        /* 頁碼指示膠囊 */
+        .page-indicator-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #166534;
+            white-space: nowrap !important;
+        }
+
+        /* 手機端大按鈕排版 (Mobile Touch Optimized) */
+        @media (max-width: 767.98px) {
+            .btn-page-ctrl.btn-step {
+                flex: 1;
+                min-width: 0;
+                padding: 0 8px;
+            }
+            .btn-page-ctrl.btn-edge {
+                width: 40px;
+                min-width: 40px;
+                padding: 0;
+                flex-shrink: 0;
+            }
+            .page-indicator-pill {
+                flex-shrink: 0;
+                padding: 0 10px;
+                font-size: 0.84rem;
+            }
         }
 
         /* 模態彈窗 (Modals) */
@@ -635,23 +923,23 @@
     <div id="app" v-cloak>
         <!-- 頂部品牌導覽列 (全站標準左側導航、右側主操作) -->
         <header class="top-navbar">
-            <div class="d-flex align-items-center">
-                <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+            <div class="top-navbar-left">
+                <a href="../MainPage.aspx" class="nav-btn" title="返回主選單">
                     <i class="fas fa-home"></i>
                     <span class="d-none d-sm-inline">回首頁</span>
                 </a>
-                <a href="oFAC_List.aspx" class="navbar-brand-title">
+                <a href="oFAC_List.aspx" class="navbar-brand-title" title="固定污染源許可證管理">
                     <i class="fas fa-industry text-white"></i>
-                    <span>固定污染源許可證管理</span>
-                    <span class="badge badge-light text-dark font-weight-bold ml-1">
+                    <span class="brand-text">固定污染源許可證管理</span>
+                    <span class="badge badge-light text-dark font-weight-bold brand-badge">
                         {{ counts.Total }} 筆
                     </span>
                 </a>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2" v-on:click="openAddModal">
-                    <i class="fas fa-plus-circle mr-1"></i>
-                    <span class="d-none d-sm-inline">新增列管製程</span>
+            <div class="top-navbar-right">
+                <button type="button" class="btn btn-success btn-sm btn-header-add font-weight-bold shadow-sm" v-on:click="openAddModal" title="新增列管製程">
+                    <i class="fas fa-plus"></i>
+                    <span class="d-none d-sm-inline ml-1">新增列管製程</span>
                 </button>
             </div>
         </header>
@@ -764,13 +1052,16 @@
                         </div>
                     </div>
 
-                    <!-- 底部操作列 (全站標準格式：左側筆數統計、右側重設與查詢) -->
-                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                        <div class="small text-muted">
-                            共查詢到 <strong class="text-primary">{{ totalCount }}</strong> 筆製程許可證
+                    <!-- 底部操作列 (分開成兩行顯示：第一行統計文字、第二行按鈕選項) -->
+                    <div class="filter-footer-bar">
+                        <!-- 第一行：文字 (全寬顯示，防止折行跑版) -->
+                        <div class="filter-footer-info">
+                            <i class="fas fa-info-circle text-primary mr-1"></i>
+                            <span>共查詢到 <strong class="text-primary font-weight-bold">{{ totalCount }}</strong> 筆製程許可證</span>
                         </div>
-                        <div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm mr-2" v-on:click="resetFilter">
+                        <!-- 第二行：按鈕選項 (獨立一行，手機端平分寬度防疊合) -->
+                        <div class="filter-footer-actions">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" v-on:click="resetFilter">
                                 <i class="fas fa-undo mr-1"></i> 重設條件
                             </button>
                             <button type="button" class="btn btn-primary btn-sm px-3" v-on:click="searchData">
@@ -910,16 +1201,18 @@
                                 </td>
                                 <!-- 相關文件 -->
                                 <td class="col-file">
-                                    <div class="d-inline-flex flex-column align-items-center gap-1">
+                                    <div class="d-inline-flex flex-column align-items-center" style="gap: 4px;">
                                         <!-- 許可證 -->
                                         <a v-if="item.LicFileUrl" :href="item.LicFileUrl" target="_blank" class="file-chip file-chip-lic" title="點擊檢視許可證 PDF">
-                                            <i class="fas fa-file-pdf mr-1 text-danger"></i>許可證
+                                            <i class="fas fa-file-pdf text-danger"></i><span>許可證</span>
                                         </a>
-                                        <span v-else class="file-chip file-chip-empty">無許可證</span>
+                                        <span v-else class="file-chip file-chip-empty">
+                                            <span>無許可證</span>
+                                        </span>
 
                                         <!-- 解列公文 (若有) -->
                                         <a v-if="item.UnlockFileUrl" :href="item.UnlockFileUrl" target="_blank" class="file-chip file-chip-unlock" title="點擊檢視解列公文 PDF">
-                                            <i class="fas fa-file-pdf mr-1 text-danger"></i>解列公文
+                                            <i class="fas fa-file-pdf text-danger"></i><span>解列公文</span>
                                         </a>
                                     </div>
                                 </td>
@@ -997,35 +1290,31 @@
                     </div>
                 </div>
 
-                <!-- 分頁控制項 -->
-                <div class="pagination-container" v-if="!loading && list.length > 0">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted small">每頁顯示：</span>
-                        <select class="form-control form-control-sm" style="width: 80px;" v-model="filter.pageSize" v-on:change="onPageSizeChange">
-                            <option :value="15">15</option>
-                            <option :value="20">20</option>
-                            <option :value="30">30</option>
-                            <option :value="50">50</option>
-                        </select>
-                        <span class="text-muted small ml-2">第 {{ filter.pageIndex }} / {{ totalPages }} 頁 (共 {{ totalCount }} 筆)</span>
+                <!-- 自適應底部分頁導覽列 (Responsive Pagination Footer) -->
+                <div v-if="!loading && totalCount > 0" class="pagination-footer">
+                    <div class="pagination-footer-info">
+                        顯示第 <strong class="text-dark">{{ (filter.pageIndex - 1) * filter.pageSize + 1 }}</strong> 至 <strong class="text-dark">{{ Math.min(filter.pageIndex * filter.pageSize, totalCount) }}</strong> 筆，共 <strong class="text-dark">{{ totalCount }}</strong> 筆
                     </div>
-
-                    <div class="d-flex align-items-center gap-1">
-                        <button type="button" class="page-link-btn" :disabled="filter.pageIndex <= 1" v-on:click="goToPage(1)" title="第一頁">
+                    <div class="pagination-action-group">
+                        <button type="button" class="btn-page-ctrl btn-edge" :disabled="filter.pageIndex <= 1" v-on:click="goToPage(1)" title="第一頁">
                             <i class="fas fa-angle-double-left"></i>
+                            <span class="d-none d-md-inline ml-1">首頁</span>
                         </button>
-                        <button type="button" class="page-link-btn" :disabled="filter.pageIndex <= 1" v-on:click="goToPage(filter.pageIndex - 1)" title="上一頁">
-                            <i class="fas fa-angle-left"></i>
+                        <button type="button" class="btn-page-ctrl btn-step" :disabled="filter.pageIndex <= 1" v-on:click="goToPage(filter.pageIndex - 1)" title="上一頁">
+                            <i class="fas fa-chevron-left mr-1"></i>
+                            <span>上一頁</span>
                         </button>
-
-                        <button v-for="p in visiblePages" :key="p" type="button" class="page-link-btn" :class="{ 'active': p === filter.pageIndex }" v-on:click="goToPage(p)">
-                            {{ p }}
+                        <div class="page-indicator-pill" title="目前頁次 / 總頁數">
+                            <span>{{ filter.pageIndex }}</span>
+                            <span class="mx-1 text-muted" style="opacity: 0.5; font-weight: normal;">/</span>
+                            <span>{{ totalPages }}</span>
+                        </div>
+                        <button type="button" class="btn-page-ctrl btn-step" :disabled="filter.pageIndex >= totalPages" v-on:click="goToPage(filter.pageIndex + 1)" title="下一頁">
+                            <span>下一頁</span>
+                            <i class="fas fa-chevron-right ml-1"></i>
                         </button>
-
-                        <button type="button" class="page-link-btn" :disabled="filter.pageIndex >= totalPages" v-on:click="goToPage(filter.pageIndex + 1)" title="下一頁">
-                            <i class="fas fa-angle-right"></i>
-                        </button>
-                        <button type="button" class="page-link-btn" :disabled="filter.pageIndex >= totalPages" v-on:click="goToPage(totalPages)" title="最後一頁">
+                        <button type="button" class="btn-page-ctrl btn-edge" :disabled="filter.pageIndex >= totalPages" v-on:click="goToPage(totalPages)" title="最後一頁">
+                            <span class="d-none d-md-inline ml-1">末頁</span>
                             <i class="fas fa-angle-double-right"></i>
                         </button>
                     </div>

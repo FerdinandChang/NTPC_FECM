@@ -147,6 +147,8 @@ namespace NTPC_FEC.Case
             public double MinorLossPercent { get; set; }
             public int SevereLossCount { get; set; }
             public double SevereLossPercent { get; set; }
+            public int PageIndex { get; set; }
+            public int TotalPages { get; set; }
             public List<CaseRowItem> Rows { get; set; }
             public List<TownStatItem> TownStats { get; set; }
 
@@ -156,6 +158,8 @@ namespace NTPC_FEC.Case
                 Message = "";
                 TotalRecords = 0;
                 TotalFacs = 0;
+                PageIndex = 1;
+                TotalPages = 1;
                 ZeroLossCount = 0;
                 ZeroLossPercent = 0.0;
                 MinorLossCount = 0;
@@ -300,9 +304,17 @@ namespace NTPC_FEC.Case
                     response.TownStats.Add(kv.Value);
                 }
 
-                // 分頁切片
+                // 分頁切片 (增加頁碼防呆自動校正，防止篩選後頁碼超出範圍回傳空清單)
                 int pageSize = filter.PageSize > 0 ? filter.PageSize : 25;
+                int totalRecords = allList.Count;
+                int totalPages = totalRecords > 0 ? (int)Math.Ceiling((double)totalRecords / (double)pageSize) : 1;
                 int pageIndex = filter.PageIndex > 0 ? filter.PageIndex : 1;
+
+                if (pageIndex > totalPages || pageIndex < 1)
+                {
+                    pageIndex = 1;
+                }
+
                 int startIndex = (pageIndex - 1) * pageSize;
 
                 if (startIndex < allList.Count)
@@ -314,6 +326,9 @@ namespace NTPC_FEC.Case
                 {
                     response.Rows = new List<CaseRowItem>();
                 }
+
+                response.PageIndex = pageIndex;
+                response.TotalPages = totalPages;
 
                 response.Success = true;
             }

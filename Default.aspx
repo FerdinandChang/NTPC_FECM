@@ -146,7 +146,7 @@
         .captcha-row {
             display: flex;
             align-items: center;
-            margin-bottom: 14px;
+            margin-bottom: 20px;
         }
 
         .captcha-img {
@@ -417,7 +417,7 @@
 
             /* 驗證碼在手機窄螢幕自適應 */
             .captcha-row {
-                margin-bottom: 12px;
+                margin-bottom: 16px;
             }
 
             .captcha-img {
@@ -525,12 +525,12 @@
                         <div>{{ errorMessage }}</div>
                     </div>
 
-                    <form id="formLogin" v-on:submit.prevent="handleLogin">
+                    <form id="formLogin" v-on:submit.prevent="handleLogin" autocomplete="off">
                         <!-- 帳號 -->
                         <div class="input-icon-group">
                             <i class="fas fa-user icon-left"></i>
                             <input type="text" id="tbUser" class="form-control form-control-pill" 
-                                   placeholder="請輸入使用者名稱" v-model="userId" required autofocus autocomplete="username" />
+                                   placeholder="請輸入使用者名稱" v-model="userId" required autofocus autocomplete="off" />
                         </div>
 
                         <!-- 密碼 -->
@@ -538,7 +538,7 @@
                             <i class="fas fa-lock icon-left"></i>
                             <input :type="showPassword ? 'text' : 'password'" id="tbPassword" 
                                    class="form-control form-control-pill pr-5" 
-                                   placeholder="請輸入密碼" v-model="password" required autocomplete="current-password" />
+                                   placeholder="請輸入密碼" v-model="password" required autocomplete="new-password" />
                             <span class="toggle-pwd" v-on:click="showPassword = !showPassword">
                                 {{ showPassword ? '隱藏' : '顯示' }}
                             </span>
@@ -549,16 +549,10 @@
                             <div class="input-icon-group mb-0 flex-grow-1">
                                 <i class="fas fa-shield-alt icon-left"></i>
                                 <input type="text" id="tbChkCode" class="form-control form-control-pill" 
-                                       placeholder="輸入驗證碼" v-model="validateCode" maxlength="5" required />
+                                       placeholder="輸入驗證碼" v-model="validateCode" maxlength="5" required autocomplete="off" />
                             </div>
                             <img :src="captchaSrc" alt="驗證碼" class="captcha-img" 
                                  title="看不清楚？點擊換一張" v-on:click="refreshCaptcha" />
-                        </div>
-
-                        <!-- 記住帳號 -->
-                        <div class="custom-control custom-checkbox mb-3 text-center">
-                            <input type="checkbox" class="custom-control-input" id="chkRemember" v-model="rememberMe" />
-                            <label class="custom-control-label text-muted small" for="chkRemember">自動登入 (記住帳號)</label>
                         </div>
 
                         <!-- 登入按鈕 -->
@@ -695,7 +689,6 @@
                     userId: '',
                     password: '',
                     validateCode: '',
-                    rememberMe: false,
                     showPassword: false,
                     loading: false,
                     errorMessage: '',
@@ -704,11 +697,11 @@
                 };
             },
             mounted() {
-                const savedUser = localStorage.getItem('FEC_SAVED_USER');
-                if (savedUser) {
-                    this.userId = savedUser;
-                    this.rememberMe = true;
-                }
+                // 符合資訊安全規範：主動清除先前可能殘留之帳號憑證
+                try {
+                    localStorage.removeItem('FEC_SAVED_USER');
+                } catch (e) {}
+
                 // ESC 鍵關閉彈窗
                 window.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape' && this.activeModal) {
@@ -744,11 +737,6 @@
                         const data = response.data;
 
                         if (data && data.Success) {
-                            if (this.rememberMe) {
-                                localStorage.setItem('FEC_SAVED_USER', this.userId);
-                            } else {
-                                localStorage.removeItem('FEC_SAVED_USER');
-                            }
                             window.location.href = data.RedirectUrl || 'MainPage.aspx';
                         } else {
                             this.errorMessage = data ? data.Message : '登入失敗，請確認輸入資訊！';

@@ -1,4 +1,4 @@
-﻿﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="MainPage.Master.cs" Inherits="NTPC_FEC.MainPageMaster" %>
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="MainPage.Master.cs" Inherits="NTPC_FEC.MainPageMaster" %>
 
 
 

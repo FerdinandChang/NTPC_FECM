@@ -188,24 +188,43 @@ namespace NTPC_FEC.Manager
                     bm.ADDR,
                     bm.Land_USE,
                     bm.Latitude,
-                    bm.Longtitude,
-                    bm.TOWN_ID,
-                    t.TOWN_NA AS TownName
+                    bm.Longtitude
                 FROM Bare_Main bm
-                LEFT JOIN Town_List t ON bm.TOWN_ID = t.TOWN_ID
                 WHERE bm.Bare_ID = @Bare_ID";
 
             DataTable dtMain = DbHelper.ExecuteDataTable(sqlMain, new SqlParameter("@Bare_ID", bareId));
             if (dtMain != null && dtMain.Rows.Count > 0)
             {
                 DataRow r = dtMain.Rows[0];
+                string addr = r["ADDR"] != DBNull.Value ? r["ADDR"].ToString() : "";
                 mainData["Bare_ID"] = r["Bare_ID"] != DBNull.Value ? r["Bare_ID"].ToString() : "";
                 mainData["BareGroundNo"] = r["BareGroundNo"] != DBNull.Value ? r["BareGroundNo"].ToString() : "";
-                mainData["ADDR"] = r["ADDR"] != DBNull.Value ? r["ADDR"].ToString() : "";
+                mainData["ADDR"] = addr;
                 mainData["Land_USE"] = r["Land_USE"] != DBNull.Value ? r["Land_USE"].ToString() : "";
-                mainData["Latitude"] = r["Latitude"] != DBNull.Value ? r["Latitude"].ToString() : "";
-                mainData["Longtitude"] = r["Longtitude"] != DBNull.Value ? r["Longtitude"].ToString() : "";
-                mainData["TownName"] = r["TownName"] != DBNull.Value ? r["TownName"].ToString() : "";
+
+                double lat = 0, lng = 0;
+                if (r["Latitude"] != DBNull.Value) double.TryParse(r["Latitude"].ToString(), out lat);
+                if (r["Longtitude"] != DBNull.Value) double.TryParse(r["Longtitude"].ToString(), out lng);
+
+                // 檢查是否為 TWD97 二度分帶座標
+                if (lng > 100000 && lat > 1000000)
+                {
+                    double wgsLat, wgsLon;
+                    Twd97ToWgs84(lng, lat, out wgsLat, out wgsLon);
+                    lat = wgsLat;
+                    lng = wgsLon;
+                }
+                else if (lat > 100000 && lng > 1000000)
+                {
+                    double wgsLat, wgsLon;
+                    Twd97ToWgs84(lat, lng, out wgsLat, out wgsLon);
+                    lat = wgsLat;
+                    lng = wgsLon;
+                }
+
+                mainData["Latitude"] = (lat > 0) ? lat.ToString("0.000000") : "";
+                mainData["Longtitude"] = (lng > 0) ? lng.ToString("0.000000") : "";
+                mainData["TownName"] = ExtractTownName(addr);
             }
             else
             {
@@ -600,6 +619,62 @@ namespace NTPC_FEC.Manager
                     Message = "儲存審核結果失敗：" + ex.Message
                 }));
             }
+        }
+
+        private static string ExtractTownName(string addr)
+        {
+            if (string.IsNullOrEmpty(addr)) return "新北市";
+            string[] towns = new string[] {
+                "萬里區", "金山區", "板橋區", "汐止區", "深坑區", "石碇區", "瑞芳區", "平溪區", "雙溪區", "貢寮區",
+                "新店區", "坪林區", "烏來區", "永和區", "中和區", "土城區", "三峽區", "樹林區", "鶯歌區", "三重區",
+                "新莊區", "泰山區", "林口區", "蘆洲區", "五股區", "八里區", "淡水區", "三芝區", "石門區"
+            };
+            for (int i = 0; i < towns.Length; i++)
+            {
+                if (addr.IndexOf(towns[i]) != -1)
+                {
+                    return towns[i];
+                }
+            }
+            return "新北市";
+        }
+
+        private static void Twd97ToWgs84(double x, double y, out double lat, out double lon)
+        {
+            if (x <= 0 || y <= 0) { lat = 0; lon = 0; return; }
+
+            double a = 6378137.0;
+            double b = 6356752.314245;
+            double lon0 = 121.0 * Math.PI / 180.0;
+            double k0 = 0.9999;
+            double dx = 250000.0;
+
+            double e = Math.Sqrt(1.0 - (b * b) / (a * a));
+            double e2 = e * e / (1.0 - e * e);
+            x -= dx;
+
+            double M = y / k0;
+            double mu = M / (a * (1.0 - Math.Pow(e, 2) / 4.0 - 3.0 * Math.Pow(e, 4) / 64.0 - 5.0 * Math.Pow(e, 6) / 256.0));
+            double e1 = (1.0 - Math.Sqrt(1.0 - Math.Pow(e, 2))) / (1.0 + Math.Sqrt(1.0 - Math.Pow(e, 2)));
+
+            double J1 = (3.0 * e1 / 2.0 - 27.0 * Math.Pow(e1, 3) / 32.0);
+            double J2 = (21.0 * Math.Pow(e1, 2) / 16.0 - 55.0 * Math.Pow(e1, 4) / 32.0);
+            double J3 = (151.0 * Math.Pow(e1, 3) / 96.0);
+            double J4 = (1097.0 * Math.Pow(e1, 4) / 512.0);
+
+            double fp = mu + J1 * Math.Sin(2.0 * mu) + J2 * Math.Sin(4.0 * mu) + J3 * Math.Sin(6.0 * mu) + J4 * Math.Sin(8.0 * mu);
+
+            double C1 = e2 * Math.Pow(Math.Cos(fp), 2);
+            double T1 = Math.Pow(Math.Tan(fp), 2);
+            double R1 = a * (1.0 - Math.Pow(e, 2)) / Math.Pow(1.0 - Math.Pow(e, 2) * Math.Pow(Math.Sin(fp), 2), 1.5);
+            double N1 = a / Math.Sqrt(1.0 - Math.Pow(e, 2) * Math.Pow(Math.Sin(fp), 2));
+            double D = x / (N1 * k0);
+
+            double latRad = fp - (N1 * Math.Tan(fp) / R1) * (Math.Pow(D, 2) / 2.0 - (5.0 + 3.0 * T1 + 10.0 * C1 - 4.0 * Math.Pow(C1, 2) - 9.0 * e2) * Math.Pow(D, 4) / 24.0 + (61.0 + 90.0 * T1 + 298.0 * C1 + 45.0 * Math.Pow(T1, 2) - 252.0 * e2 - 3.0 * Math.Pow(C1, 2)) * Math.Pow(D, 6) / 720.0);
+            double lonRad = lon0 + (D - (1.0 + 2.0 * T1 + C1) * Math.Pow(D, 3) / 6.0 + (5.0 - 2.0 * C1 + 28.0 * T1 - 3.0 * Math.Pow(C1, 2) + 8.0 * e2 + 24.0 * Math.Pow(T1, 2)) * Math.Pow(D, 5) / 120.0) / Math.Cos(fp);
+
+            lat = latRad * 180.0 / Math.PI;
+            lon = lonRad * 180.0 / Math.PI;
         }
     }
 }

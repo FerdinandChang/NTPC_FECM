@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 NTPC_FEC  新北市 NDVI 月報圖磚產生器 (Sentinel-2 L2A, Microsoft Planetary Computer STAC)
@@ -137,7 +136,8 @@ def item_epsg(item):
 
 
 def search_items(bbox, aoi_wgs, start, end, max_cloud):
-    client = Client.open(STAC_URL, modifier=pc.sign_inplace)
+    # 注意: 此處不帶 modifier=pc.sign_inplace，保持 asset 原生 clean URL，避免預先簽發的 SAS Token 逾期
+    client = Client.open(STAC_URL)
     s = client.search(
         collections=["sentinel-2-l2a"], bbox=bbox,
         datetime="%s/%s" % (start.isoformat(), end.isoformat()),
@@ -150,8 +150,14 @@ def search_items(bbox, aoi_wgs, start, end, max_cloud):
         if not shape(it.geometry).intersects(aoi_wgs):
             continue
         items.append(it)
-    items.sort(key=lambda i: i.datetime)
+    items.sort(key=lambda i: i.properties.get("eo:cloud_cover", 100.0))
     return items
+
+
+def fresh_sign_url(url):
+    """移除可能殘留的 SAS 參數並取得最新、有效期限最長的 SAS 簽名 URL"""
+    clean = url.split("?")[0]
+    return pc.sign(clean)
 
 
 def boa_offset(item):
@@ -162,14 +168,14 @@ def boa_offset(item):
         return 1000.0 if item.datetime.date() >= dt.date(2022, 1, 25) else 0.0
 
 
-def retry(fn, tries=4, delay=3):
+def retry(fn, tries=5, delay=3):
     for k in range(tries):
         try:
             return fn()
         except Exception as e:  # noqa
             if k == tries - 1:
                 raise
-            log.warning("read retry %d: %s", k + 1, e)
+            log.warning("read retry %d/%d: %s", k + 1, tries, e)
             time.sleep(delay * (k + 1))
 
 
@@ -184,77 +190,88 @@ def read_rect(ds, left, top, res, w, h, resampling):
     r0, r1 = int(round((top - it_) / res)), int(round((top - ib) / res))
     if c1 <= c0 or r1 <= r0:
         return None
-    win = win_from_bounds(il, ib, ir, it_, transform=ds.transform)
-    arr = ds.read(1, window=win, out_shape=(r1 - r0, c1 - c0), resampling=resampling)
+    win = win_from_bounds(float(il), float(ib), float(ir), float(it_), transform=ds.transform)
+    arr = ds.read(1, window=win, out_shape=(int(r1 - r0), int(c1 - c0)), resampling=resampling)
     return r0, c0, arr
 
 
 # --------------------------------------------------------------------------
 # 合成
 # --------------------------------------------------------------------------
-def composite(items, left, top, res, W, H, stripe_rows):
+def composite(items, left, top, res, W, H):
     """回傳 ndvi_q(uint8), obs(uint8 有效觀測數), water_votes(uint8)"""
-    ndvi_q = np.full((H, W), Q_NODATA, np.uint8)
-    obs = np.zeros((H, W), np.uint8)
-    water = np.zeros((H, W), np.uint8)
+    log.info("allocating composite buffer: %d items x %d x %d (%.1f MB)",
+             len(items), H, W, (len(items) * H * W) / 1e6)
+    stack = np.full((len(items), H, W), Q_NODATA, np.uint8)
+    v_cnt = np.zeros((H, W), np.uint8)
+    w_cnt = np.zeros((H, W), np.uint8)
     offsets = [boa_offset(i) for i in items]
     rs_band = Resampling.average if res > 10 else Resampling.nearest
 
-    for r_start in range(0, H, stripe_rows):
-        h = min(stripe_rows, H - r_start)
-        s_top = top - r_start * res
-        stack = np.full((len(items), h, W), Q_NODATA, np.uint8)
-        v_cnt = np.zeros((h, W), np.uint8)
-        w_cnt = np.zeros((h, W), np.uint8)
-        used = 0
+    for k, item in enumerate(items):
         t0 = time.time()
-        for k, item in enumerate(items):
-            signed = pc.sign(item)
-            hr = {a: signed.assets[a].href for a in ("B04", "B08", "SCL")}
+        raw_urls = {
+            "B04": item.assets["B04"].href.split("?")[0],
+            "B08": item.assets["B08"].href.split("?")[0],
+            "SCL": item.assets["SCL"].href.split("?")[0],
+        }
 
-            def _read():
-                with rasterio.open(hr["B04"]) as d4, rasterio.open(hr["B08"]) as d8, \
-                        rasterio.open(hr["SCL"]) as ds:
-                    a = read_rect(d4, left, s_top, res, W, h, rs_band)
-                    if a is None:
-                        return None
-                    r0, c0, red = a
-                    _, _, nir = read_rect(d8, left, s_top, res, W, h, rs_band)
-                    _, _, scl = read_rect(ds, left, s_top, res, W, h, Resampling.nearest)
-                    return r0, c0, red, nir, scl
+        def _read():
+            # 每次讀取(含重試)動態向 PC API 取得最新 SAS Token，徹底避免過期
+            fresh_urls = {a: fresh_sign_url(u) for a, u in raw_urls.items()}
+            with rasterio.open(fresh_urls["B04"]) as d4, \
+                 rasterio.open(fresh_urls["B08"]) as d8, \
+                 rasterio.open(fresh_urls["SCL"]) as ds:
+                a = read_rect(d4, left, top, res, W, H, rs_band)
+                if a is None:
+                    return None
+                r0, c0, red = a
+                _, _, nir = read_rect(d8, left, top, res, W, H, rs_band)
+                _, _, scl = read_rect(ds, left, top, res, W, H, Resampling.nearest)
+                return r0, c0, red, nir, scl
 
-            got = retry(_read)
-            if got is None:
-                continue
-            r0, c0, red, nir, scl = got
-            hh, ww = red.shape
-            red = red.astype(np.float32)
-            nir = nir.astype(np.float32)
-            dn_ok = (red > 0) & (nir > 0)
-            red = np.maximum(red - offsets[k], 0)
-            nir = np.maximum(nir - offsets[k], 0)
-            den = nir + red
-            valid = dn_ok & np.isin(scl, SCL_VALID) & (den > 0)
-            nd = np.zeros_like(den)
-            np.divide(nir - red, den, out=nd, where=den > 0)
-            q = np.clip(np.rint((nd + 1.0) * 100.0), 0, 200).astype(np.uint8)
-            q[~valid] = Q_NODATA
-            stack[k, r0:r0 + hh, c0:c0 + ww] = q
-            v_cnt[r0:r0 + hh, c0:c0 + ww] += valid
-            w_cnt[r0:r0 + hh, c0:c0 + ww] += (valid & (scl == SCL_WATER))
-            used += 1
+        got = retry(_read, tries=5, delay=3)
+        if got is None:
+            log.warning("item %d/%d %s: no overlap with grid", k + 1, len(items), item.id)
+            continue
+        r0, c0, red, nir, scl = got
+        hh, ww = red.shape
+        red = red.astype(np.float32)
+        nir = nir.astype(np.float32)
+        dn_ok = (red > 0) & (nir > 0)
+        red = np.maximum(red - offsets[k], 0)
+        nir = np.maximum(nir - offsets[k], 0)
+        den = nir + red
+        valid = dn_ok & np.isin(scl, SCL_VALID) & (den > 0)
+        nd = np.zeros_like(den)
+        np.divide(nir - red, den, out=nd, where=den > 0)
+        q = np.clip(np.rint((nd + 1.0) * 100.0), 0, 200).astype(np.uint8)
+        q[~valid] = Q_NODATA
 
-        # 逐像素中位數 (忽略 255)
-        srt = np.sort(stack, axis=0)
-        idx = (np.maximum(v_cnt.astype(np.int16) - 1, 0) // 2)[None].astype(np.intp)
-        med = np.take_along_axis(srt, idx, axis=0)[0]
-        med[v_cnt == 0] = Q_NODATA
-        ndvi_q[r_start:r_start + h] = med
-        obs[r_start:r_start + h] = v_cnt
-        water[r_start:r_start + h] = w_cnt
-        log.info("stripe rows %d-%d  items_used=%d  %.0fs", r_start, r_start + h, used, time.time() - t0)
-        del stack, srt
-    return ndvi_q, obs, water
+        stack[k, r0:r0 + hh, c0:c0 + ww] = q
+        v_cnt[r0:r0 + hh, c0:c0 + ww] += valid
+        w_cnt[r0:r0 + hh, c0:c0 + ww] += (valid & (scl == SCL_WATER))
+        log.info("item %d/%d: %s (%dx%d px) read & processed in %.1fs",
+                 k + 1, len(items), item.id, ww, hh, time.time() - t0)
+
+    # 逐像素中位數 (分批排序以節省記憶體並加速)
+    log.info("computing median composite across %d scenes...", len(items))
+    t_med = time.time()
+    ndvi_q = np.full((H, W), Q_NODATA, np.uint8)
+    chunk = 2048
+    for r in range(0, H, chunk):
+        r_end = min(r + chunk, H)
+        sub_stack = stack[:, r:r_end, :]
+        sub_srt = np.sort(sub_stack, axis=0)
+        sub_vc = v_cnt[r:r_end, :]
+        sub_idx = (np.maximum(sub_vc.astype(np.int16) - 1, 0) // 2)[None].astype(np.intp)
+        sub_med = np.take_along_axis(sub_srt, sub_idx, axis=0)[0]
+        sub_med[sub_vc == 0] = Q_NODATA
+        ndvi_q[r:r_end, :] = sub_med
+
+    del stack
+    log.info("median composite finished in %.1fs", time.time() - t_med)
+    return ndvi_q, v_cnt, w_cnt
 
 
 def classify(ndvi_q, obs, water, town_mask):
@@ -389,11 +406,13 @@ IIS_WEB_CONFIG = u"""<?xml version="1.0" encoding="utf-8"?>
 
 
 def ensure_iis_config(out_root):
-    """Tiles 目錄內放 web.config: 確保 .json MIME 存在 (IIS 舊設定可能沒有), 圖磚快取 1 小時"""
+    """移除可能導致 IIS 500.19 繼承鎖定錯誤的子目錄 web.config"""
     p = os.path.join(out_root, "web.config")
-    if not os.path.isfile(p):
-        with open(p, "wb") as f:
-            f.write(IIS_WEB_CONFIG.encode("utf-8"))
+    if os.path.isfile(p):
+        try:
+            os.remove(p)
+        except Exception:
+            pass
 
 
 def export_towns_geojson(towns, path):
@@ -460,8 +479,8 @@ def main():
     ap.add_argument("--boundary", default=os.path.join(here, "towns-10t.json"))
     ap.add_argument("--zmin", type=int, default=10)
     ap.add_argument("--zmax", type=int, default=14)
-    ap.add_argument("--res", type=int, default=10, choices=[10, 20], help="合成解析度(m); 20 較快")
-    ap.add_argument("--max-cloud", type=float, default=70.0, help="單景雲量上限 %%")
+    ap.add_argument("--res", type=int, default=20, choices=[10, 20], help="合成解析度(m); 預設 20 (SCL 原生解析度, 穩定快速)")
+    ap.add_argument("--max-cloud", type=float, default=40.0, help="單景雲量上限 %% (預設 40, 自動排除高雲量雜訊景)")
     ap.add_argument("--keep", type=int, default=6)
     ap.add_argument("--towns", default="", help="僅處理指定區 (逗號分隔, 測試用), 例: 板橋區,永和區")
     ap.add_argument("--min-coverage", type=float, default=85.0, help="有效覆蓋率目標 %%, 未達則自動延長取樣窗")
@@ -515,9 +534,18 @@ def main():
     transform = from_origin(left, top, res, res)
     log.info("grid %d x %d px (%.1f M px)", W, H, W * H / 1e6)
 
-    env = rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif",
-                       GDAL_HTTP_MAX_RETRY="5", GDAL_HTTP_RETRY_DELAY="2", GDAL_HTTP_TIMEOUT="60",
-                       VSI_CACHE="TRUE", GDAL_HTTP_MULTIPLEX="YES")
+    env = rasterio.Env(
+        GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
+        CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif",
+        GDAL_HTTP_MAX_RETRY="5",
+        GDAL_HTTP_RETRY_DELAY="3",
+        GDAL_HTTP_TIMEOUT="30",
+        GDAL_HTTP_LOW_SPEED_LIMIT="1000",
+        GDAL_HTTP_LOW_SPEED_TIME="15",
+        GDAL_HTTP_MERGE_CONSECUTIVE_RANGES="YES",
+        GDAL_HTTP_MULTIPLEX="YES",
+        VSI_CACHE="TRUE"
+    )
     town_idx = np.zeros((H, W), np.uint8)
     shapes = [(g, i) for i, g in enumerate(towns_utm, start=1)]
     features.rasterize(shapes, out=town_idx, transform=transform, fill=0, dtype="uint8")
@@ -541,10 +569,9 @@ def main():
             continue
         for i in its:
             log.info("  %s  %s  cloud=%.1f", i.id, i.datetime.date(), i.properties.get("eo:cloud_cover", -1))
-        stripe_rows = int(max(64, min(2048, 220e6 / (len(its) * W))))
-        log.info("stripe rows: %d", stripe_rows)
+
         with env:
-            q2, o2, w2 = composite(its, left, top, res, W, H, stripe_rows)
+            q2, o2, w2 = composite(its, left, top, res, W, H)
         c2 = classify(q2, o2, w2, town_idx)
         cov2 = float((c2[inside] > 0).mean()) if inside.any() else 0.0
         log.info("[try %d] valid coverage inside AOI: %.1f%%", attempt + 1, cov2 * 100)

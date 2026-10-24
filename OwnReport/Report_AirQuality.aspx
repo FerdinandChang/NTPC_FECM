@@ -39,30 +39,43 @@
         }
         [v-cloak] { display: none !important; }
 
-        /* 置頂深青藍導覽列 */
+        /* 置頂深青藍導覽列 (全載具自適應 RWD，嚴格杜絕中文字折行直排與按鈕溢出) */
         .top-navbar {
             background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
             color: #ffffff;
             height: 56px;
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 16px;
+            padding: 0 12px;
             box-shadow: 0 2px 10px rgba(0, 153, 229, 0.25);
             position: sticky; top: 0; z-index: 1020;
+            gap: 8px;
         }
         .nav-btn {
             background: rgba(255, 255, 255, 0.18);
             border: none; color: #ffffff;
-            font-size: 0.92rem; font-weight: 600; cursor: pointer;
-            height: 36px; border-radius: 8px;
+            font-size: 0.88rem; font-weight: 600; cursor: pointer;
+            height: 34px; border-radius: 8px;
             display: inline-flex; align-items: center; justify-content: center;
-            padding: 0 14px; gap: 6px;
+            padding: 0 10px; gap: 4px;
             transition: all 0.2s;
             text-decoration: none;
+            flex-shrink: 0;
+            white-space: nowrap !important;
         }
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.32); color: #ffffff; text-decoration: none; }
         .top-navbar .brand-title {
-            font-size: 1.08rem; font-weight: 700; margin: 0;
-            display: flex; align-items: center; gap: 8px;
+            font-size: 1.05rem; font-weight: 700; margin: 0;
+            display: flex; align-items: center; gap: 6px;
+            min-width: 0;
+            flex: 1 1 auto;
+            white-space: nowrap !important;
+            overflow: hidden;
+        }
+        .brand-text-truncate {
+            white-space: nowrap !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
         }
 
         /* 主容器佈局 */
@@ -250,6 +263,135 @@
             .mobile-bottom-bar .btn { flex: 1; font-weight: 700; padding: 10px; border-radius: 8px; }
         }
 
+        /* 現代卡片標題列響應式 (解決小尺寸擠壓折字問題) */
+        .card-modern-header-responsive {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header-actions-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .header-actions-row .btn {
+            white-space: nowrap !important;
+            font-size: 13px;
+            font-weight: 600;
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 14px;
+        }
+        @media screen and (max-width: 576px) {
+            .card-modern-header-responsive {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 12px 14px;
+            }
+            .card-modern-header-responsive .card-modern-title {
+                width: 100%;
+                font-size: 0.98rem;
+                line-height: 1.45;
+                word-break: break-word;
+            }
+            .card-modern-header-responsive .header-actions-row {
+                width: 100%;
+                display: flex;
+                justify-content: flex-end;
+                margin-top: 2px;
+            }
+        }
+
+        /* 執行時間起訖 RWD 排版 (徹底根治小尺寸截字與被藏問題) */
+        .time-picker-wrapper {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            width: 100%;
+        }
+        .time-select-item {
+            flex: 1 1 180px;
+            max-width: 230px;
+            min-width: 135px;
+        }
+        .time-select-item select {
+            width: 100%;
+            min-height: 42px;
+            font-size: 14px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+        }
+        .time-select-item select:focus {
+            border-color: var(--brand-blue);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        }
+        .time-separator-text {
+            font-weight: 700;
+            color: #64748b;
+            padding: 0 4px;
+            white-space: nowrap;
+        }
+        .time-hours-chip {
+            white-space: nowrap;
+        }
+        .time-hours-chip .badge {
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @media screen and (max-width: 767px) {
+            .time-select-item {
+                max-width: 100%;
+            }
+        }
+        @media screen and (max-width: 576px) {
+            .time-picker-wrapper {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+            }
+            .time-select-item {
+                flex: 1 1 calc(50% - 20px);
+                min-width: 125px;
+            }
+            .time-hours-chip {
+                width: 100%;
+                margin-top: 4px;
+            }
+            .time-hours-chip .badge {
+                width: 100%;
+                justify-content: center;
+                display: flex;
+            }
+        }
+        @media screen and (max-width: 360px) {
+            .time-select-item {
+                flex: 1 1 100%;
+                width: 100%;
+            }
+            .time-separator-text {
+                width: 100%;
+                text-align: center;
+                margin: 2px 0;
+            }
+        }
+
         /* 列印樣式 */
         @media print {
             .no-print { display: none !important; }
@@ -268,32 +410,48 @@
     <form id="form1" runat="server">
     <div id="app" v-cloak>
         
-        <!-- 1. 置頂深青藍漸層導覽列 -->
+        <!-- 1. 置頂深青藍漸層導覽列 (自適應 RWD 最佳化) -->
         <header class="top-navbar no-print">
             <div class="brand-title">
-                <a href="AirQuality_List.aspx" class="nav-btn mr-2">
+                <a href="AirQuality_List.aspx" class="nav-btn mr-1 mr-sm-2" title="返回清單">
                     <i class="fas fa-arrow-left"></i>
                     <span class="d-none d-sm-inline">返回清單</span>
                 </a>
-                <i class="fas fa-wind text-white mr-1"></i>
-                <span>公私場所空品不良應變回報單</span>
-                <span v-if="reportData.C_NO" class="badge badge-light text-dark font-weight-bold ml-2" style="font-size: 0.85rem;">
+                <i class="fas fa-wind text-white mr-1 d-none d-sm-inline-block"></i>
+
+                <!-- 標題：小尺寸手機簡潔展示，大尺寸完整顯示，嚴格禁止垂直折行直排 -->
+                <span class="brand-text-truncate font-weight-bold">
+                    <span class="d-none d-md-inline">公私場所空品不良應變回報單</span>
+                    <span class="d-inline d-md-none">空品應變回報</span>
+                </span>
+
+                <!-- 管制編號 Badge：維持緊湊單行 -->
+                <span v-if="reportData.C_NO" class="badge badge-light text-dark font-weight-bold ml-1 ml-sm-2" style="font-size: 0.8rem; white-space: nowrap;">
                     {{ reportData.C_NO }}
                 </span>
-                <span class="badge ml-1" :class="mode === 'edit' ? 'badge-warning text-dark' : 'badge-success text-white'" style="font-size: 0.82rem;">
+
+                <!-- 案件狀態 Badge：小螢幕極簡顯示避免撐破邊界 -->
+                <span class="badge ml-1 d-none d-sm-inline-block" :class="mode === 'edit' ? 'badge-warning text-dark' : 'badge-success text-white'" style="font-size: 0.8rem; white-space: nowrap;">
                     {{ mode === 'edit' ? '編輯案件 #' + reportData.pIndex : '新增通報' }}
+                </span>
+                <span class="badge ml-1 d-inline-block d-sm-none" :class="mode === 'edit' ? 'badge-warning text-dark' : 'badge-success text-white'" style="font-size: 0.75rem; white-space: nowrap;">
+                    {{ mode === 'edit' ? '#' + reportData.pIndex : '新增' }}
                 </span>
             </div>
 
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="nav-btn bg-white text-dark shadow-sm mr-2" v-on:click="printReport">
+            <div class="d-flex align-items-center flex-shrink-0">
+                <!-- 列印按鈕：中大螢幕才顯示 (手機螢幕原生通常無印表機驅動，留空間給關鍵元素) -->
+                <button type="button" class="nav-btn bg-white text-dark shadow-sm mr-2 d-none d-md-inline-flex" v-on:click="printReport">
                     <i class="fas fa-print"></i>
-                    <span class="d-none d-md-inline">列印案件</span>
+                    <span>列印案件</span>
                 </button>
-                <button type="button" class="btn btn-primary font-weight-bold shadow-sm" v-on:click="submitForm" :disabled="isSaving">
+
+                <!-- 頂部確定送出按鈕：電腦端完整文字，手機小螢幕緊湊圖示按鈕 (亦可透過底部常駐浮動條送出) -->
+                <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm px-2 px-sm-3" v-on:click="submitForm" :disabled="isSaving" style="height: 34px; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;">
                     <i v-if="isSaving" class="fas fa-spinner fa-spin mr-1"></i>
                     <i v-else class="fas fa-save mr-1"></i>
-                    <span>{{ isSaving ? '儲存中...' : '確定送出' }}</span>
+                    <span class="d-none d-sm-inline">{{ isSaving ? '儲存中...' : '確定送出' }}</span>
+                    <span class="d-inline d-sm-none">{{ isSaving ? '存' : '送出' }}</span>
                 </button>
             </div>
         </header>
@@ -328,14 +486,16 @@
                         
                         <!-- 卡片 1: 工廠基本資訊卡片 -->
                         <div class="card-modern">
-                            <div class="card-modern-header">
+                            <div class="card-modern-header-responsive">
                                 <h3 class="card-modern-title">
                                     <i class="fas fa-industry text-primary"></i>
                                     <span>管制公私場所基本資料</span>
                                 </h3>
-                                <span class="badge badge-info">
+                                <div class="header-actions-row">
+                                    <span class="badge badge-info">
                                     {{ facInfo.TownName || '新北市' }}
                                 </span>
+                            </div>
                             </div>
                             <div class="card-modern-body">
                                 
@@ -392,22 +552,25 @@
 
                         <!-- 卡片 2: 廠區智慧地圖 -->
                         <div class="card-modern no-print">
-                            <div class="card-modern-header">
+                            <div class="card-modern-header-responsive">
                                 <h3 class="card-modern-title">
                                     <i class="fas fa-map-marked-alt text-info"></i>
                                     <span>現場廠區地圖</span>
                                 </h3>
-                                <div class="d-flex align-items-center gap-1">
+                                <div class="header-actions-row">
                                     <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2 mr-1" v-on:click="locateCurrentPosition" title="GPS 定位當前位置">
-                                        <i class="fas fa-crosshairs text-primary"></i> GPS
+                                        <i class="fas fa-crosshairs text-primary"></i>
+                                        <span class="d-none d-sm-inline ml-1">GPS</span>
                                     </button>
                                     <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2 mr-1" v-on:click="resetMapView" title="重設地圖全景">
-                                        <i class="fas fa-expand-arrows-alt"></i> 重設
+                                        <i class="fas fa-expand-arrows-alt"></i>
+                                        <span class="d-none d-sm-inline ml-1">全景</span>
                                     </button>
                                     <button v-if="facInfo.Lat && facInfo.Lng" type="button" class="btn btn-xs btn-outline-success py-1 px-2 mr-1" v-on:click="openGoogleMaps" title="開啟 Google Maps 導航">
-                                        <i class="fas fa-location-arrow"></i> 導航
+                                        <i class="fas fa-location-arrow"></i>
+                                        <span class="d-none d-sm-inline ml-1">導航</span>
                                     </button>
-                                    <button type="button" class="btn btn-xs btn-outline-dark py-1 px-2" v-on:click="isMapCollapsed = !isMapCollapsed">
+                                    <button type="button" class="btn btn-xs btn-outline-dark py-1 px-2" v-on:click="isMapCollapsed = !isMapCollapsed" :title="isMapCollapsed ? '展開地圖' : '收合地圖'">
                                         <i :class="isMapCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up'"></i>
                                     </button>
                                 </div>
@@ -422,13 +585,14 @@
                                     <span v-if="facInfo.Lat && facInfo.Lng" class="badge badge-light border text-success">
                                         <i class="fas fa-check-circle mr-1"></i>座標已定位
                                     </span>
+                            </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- 卡片 3: 填報指引與通報須知 -->
                         <div class="card-modern no-print">
-                            <div class="card-modern-header">
+                            <div class="card-modern-header-responsive">
                                 <h3 class="card-modern-title">
                                     <i class="fas fa-info-circle text-secondary"></i>
                                     <span>空品應變自主通報說明</span>
@@ -452,12 +616,14 @@
                     
                     <!-- 卡片 A: 空品不良應變通知與操作狀況 -->
                     <div class="card-modern">
-                        <div class="card-modern-header">
+                        <div class="card-modern-header-responsive">
                             <h3 class="card-modern-title">
                                 <i class="fas fa-calendar-check text-primary"></i>
                                 <span>一、空品預警與今日操作狀況</span>
                             </h3>
-                            <span class="badge badge-pill badge-primary">必填</span>
+                            <div class="header-actions-row">
+                                <span class="badge badge-pill badge-primary">必填</span>
+                            </div>
                         </div>
                         <div class="card-modern-body">
                             
@@ -528,14 +694,16 @@
 
                     <!-- 卡片 B: 減排措施配合與具體作為 -->
                     <div class="card-modern">
-                        <div class="card-modern-header">
+                        <div class="card-modern-header-responsive">
                             <h3 class="card-modern-title">
                                 <i class="fas fa-leaf text-success"></i>
                                 <span>二、配合減排措施與具體執行作為</span>
                             </h3>
-                            <span class="badge badge-pill" :class="reportData.Less === '是' ? 'badge-success' : 'badge-danger'">
+                            <div class="header-actions-row">
+                                <span class="badge badge-pill" :class="reportData.Less === '是' ? 'badge-success' : 'badge-danger'">
                                 {{ reportData.Less === '是' ? '已配合' : '未配合' }}
                             </span>
+                            </div>
                         </div>
                         <div class="card-modern-body">
                             
@@ -572,6 +740,7 @@
                                         <i class="fas fa-clipboard-check text-success mr-1"></i>
                                         具體減排措施說明 <span class="text-danger">*</span>
                                     </span>
+                            </div>
                                     <span class="badge badge-light text-muted font-weight-normal">若前項為「是」本項為必填</span>
                                 </label>
 
@@ -605,17 +774,17 @@
 
                     <!-- 卡片 C: 執行時間與污染物削減量 -->
                     <div class="card-modern">
-                        <div class="card-modern-header">
+                        <div class="card-modern-header-responsive">
                             <h3 class="card-modern-title">
                                 <i class="fas fa-chart-line text-info"></i>
                                 <span>三、執行時段與污染物削減量 (公斤)</span>
                             </h3>
-                            <div class="d-flex align-items-center gap-1 no-print">
-                                <button type="button" class="btn btn-xs btn-outline-primary py-1 px-2 mr-1" v-on:click="fillAllZeros" title="一鍵填入0">
-                                    <i class="fas fa-bolt"></i> 一鍵全填 0
+                            <div class="header-actions-row no-print">
+                                <button type="button" class="btn btn-outline-primary" v-on:click="fillAllZeros" title="一鍵全數填入0公斤">
+                                    <i class="fas fa-bolt mr-1"></i>一鍵全填 0
                                 </button>
-                                <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" v-on:click="clearAllQuantities" title="清空數值">
-                                    <i class="fas fa-eraser"></i> 清空
+                                <button type="button" class="btn btn-outline-secondary" v-on:click="clearAllQuantities" title="清空削減量數值">
+                                    <i class="fas fa-eraser mr-1"></i>清空
                                 </button>
                             </div>
                         </div>
@@ -627,22 +796,29 @@
                                     <i class="fas fa-clock text-primary mr-1"></i> 減排執行時間：
                                 </label>
                                 <div class="col-md-9">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <select class="form-control font-weight-bold" v-model="reportData.RunTimeStart" style="max-width: 140px;">
+                                    <div class="time-picker-wrapper">
+                                        <div class="time-select-item">
+                                            <select class="form-control font-weight-bold" v-model="reportData.RunTimeStart" aria-label="執行起始時間">
                                             <option v-for="t in timeOptions" :key="t.val" :value="t.val">
                                                 {{ t.text }}
                                             </option>
                                         </select>
-                                        <span class="mx-2 font-weight-bold text-muted">至</span>
-                                        <select class="form-control font-weight-bold" v-model="reportData.RunTimeEnd" style="max-width: 140px;">
+                                        </div>
+                                        <span class="time-separator-text">至</span>
+                                        <div class="time-select-item">
+                                            <select class="form-control font-weight-bold" v-model="reportData.RunTimeEnd" aria-label="執行結束時間">
                                             <option v-for="t in timeOptions" :key="t.val" :value="t.val">
                                                 {{ t.text }}
                                             </option>
                                         </select>
-                                        <span class="badge badge-light border text-dark ml-2 py-2 px-2 d-none d-sm-inline">
+                                        </div>
+                                        <div class="time-hours-chip">
+                                            <span class="badge badge-light border text-dark shadow-xs">
                                             <i class="fas fa-hourglass-half text-warning mr-1"></i>
                                             時數：{{ calculatedHours }} 小時
-                                        </span>
+                                            </span>
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -651,7 +827,7 @@
                             <div class="row">
                                 
                                 <!-- TSP -->
-                                <div class="col-md-4 col-sm-6 mb-3">
+                                <div class="col-6 col-md-4 mb-3">
                                     <div class="pollutant-card">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="pollutant-badge">TSP</span>
@@ -668,7 +844,7 @@
                                 </div>
 
                                 <!-- PM10 -->
-                                <div class="col-md-4 col-sm-6 mb-3">
+                                <div class="col-6 col-md-4 mb-3">
                                     <div class="pollutant-card">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="pollutant-badge">PM10</span>
@@ -685,7 +861,7 @@
                                 </div>
 
                                 <!-- PM2.5 -->
-                                <div class="col-md-4 col-sm-6 mb-3">
+                                <div class="col-6 col-md-4 mb-3">
                                     <div class="pollutant-card">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="pollutant-badge">PM2.5</span>
@@ -702,7 +878,7 @@
                                 </div>
 
                                 <!-- SOx -->
-                                <div class="col-md-4 col-sm-6 mb-3">
+                                <div class="col-6 col-md-4 mb-3">
                                     <div class="pollutant-card">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="pollutant-badge">SOx</span>
@@ -719,7 +895,7 @@
                                 </div>
 
                                 <!-- NOx -->
-                                <div class="col-md-4 col-sm-6 mb-3">
+                                <div class="col-6 col-md-4 mb-3">
                                     <div class="pollutant-card">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="pollutant-badge">NOx</span>
@@ -736,7 +912,7 @@
                                 </div>
 
                                 <!-- VOCs -->
-                                <div class="col-md-4 col-sm-6 mb-3">
+                                <div class="col-6 col-md-4 mb-3">
                                     <div class="pollutant-card">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="pollutant-badge">VOCs</span>

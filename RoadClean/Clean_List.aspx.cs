@@ -1044,7 +1044,7 @@ namespace NTPC_FEC.RoadClean
             Response.Write(json.Serialize(new { Success = true, Message = "巡檢草稿紀錄已成功刪除！" }));
         }
     
-        #region 匯出 Excel 報表
+                #region 匯出 Excel 報表
         private void HandleExportExcel()
         {
             try
@@ -1056,96 +1056,127 @@ namespace NTPC_FEC.RoadClean
                 string chkDateS = Request["chkDateS"] != null ? Request["chkDateS"].Trim() : "";
                 string chkDateE = Request["chkDateE"] != null ? Request["chkDateE"].Trim() : "";
 
-                StringBuilder sb = new StringBuilder();
-                sb.Append("SELECT c.ChkId, c.Town, c.RoadName, c.ChkDate, c.RoadLevel, c.FloodLevel, c.CState, c.CreateUser, c.Score ");
-                sb.Append("FROM RoadClean_Main c WHERE 1=1 ");
-
+                StringBuilder where = new StringBuilder(" WHERE 1=1 ");
                 List<SqlParameter> pList = new List<SqlParameter>();
-
-                if (mode == "apply")
-                {
-                    sb.Append(" AND (c.CState = 'A00' OR c.CState IS NULL) ");
-                }
-                else if (mode == "examine")
-                {
-                    sb.Append(" AND c.CState = 'A01' ");
-                }
-                else if (mode == "back")
-                {
-                    sb.Append(" AND c.CState = 'A00b' ");
-                }
-                else if (mode == "search")
-                {
-                    sb.Append(" AND c.CState = 'A02' ");
-                }
 
                 if (!string.IsNullOrEmpty(town))
                 {
-                    sb.Append(" AND c.Town = @Town ");
+                    where.Append(" AND R.TOWN = @Town ");
                     pList.Add(new SqlParameter("@Town", town));
                 }
                 if (!string.IsNullOrEmpty(roadName))
                 {
-                    sb.Append(" AND c.RoadName LIKE @RoadName ");
+                    where.Append(" AND R.RoadName LIKE @RoadName ");
                     pList.Add(new SqlParameter("@RoadName", "%" + roadName + "%"));
                 }
                 if (!string.IsNullOrEmpty(chkId))
                 {
-                    sb.Append(" AND c.ChkId LIKE @ChkId ");
+                    where.Append(" AND M.ChkID LIKE @ChkId ");
                     pList.Add(new SqlParameter("@ChkId", "%" + chkId + "%"));
                 }
                 DateTime dtS;
                 if (DateTime.TryParse(chkDateS, out dtS))
                 {
-                    sb.Append(" AND c.ChkDate >= @DateS ");
-                    pList.Add(new SqlParameter("@DateS", dtS));
+                    where.Append(" AND M.ChkDate >= @dateS ");
+                    pList.Add(new SqlParameter("@dateS", dtS.ToString("yyyy-MM-dd 00:00:00")));
                 }
                 DateTime dtE;
                 if (DateTime.TryParse(chkDateE, out dtE))
                 {
-                    sb.Append(" AND c.ChkDate <= @DateE ");
-                    pList.Add(new SqlParameter("@DateE", dtE.AddDays(1).AddSeconds(-1)));
+                    where.Append(" AND M.ChkDate <= @dateE ");
+                    pList.Add(new SqlParameter("@dateE", dtE.ToString("yyyy-MM-dd 23:59:59")));
                 }
 
-                sb.Append(" ORDER BY c.ChkDate DESC, c.ChkId DESC");
+                switch (mode)
+                {
+                    case "apply":
+                        where.Append(" AND M.Case_State IN (1001, 2201) ");
+                        break;
+                    case "back":
+                        where.Append(" AND M.Case_State = 2301 ");
+                        break;
+                    case "examine":
+                        where.Append(" AND M.Case_State = 2001 ");
+                        break;
+                    case "search":
+                        where.Append(" AND M.Case_State = 2101 ");
+                        break;
+                    case "all":
+                    default:
+                        break;
+                }
 
-                DataTable dt = DbHelper.ExecuteDataTable(sb.ToString(), pList.ToArray());
+                string sql = @"
+                    SELECT 
+                        M.ChkID, 
+                        M.ChkRoadID, 
+                        M.ChkDate, 
+                        M.Case_State, 
+                        M.Create_User,
+                        R.TOWN, 
+                        R.RoadName, 
+                        R.RDLV,
+                        ISNULL(R.dis, 0) AS Dis, 
+                        ISNULL(R.wid, 0) AS Wid,
+                        (SELECT COUNT(*) FROM RoadClean_ChkRecord_PointMain PM WHERE PM.ChkID = M.ChkID) AS PointCount,
+                        (SELECT AVG(Score) FROM RoadClean_ChkRecord_PointScore PS WHERE PS.ChkID = M.ChkID AND PS.Chk_Code LIKE 'RCC%') AS RoadScore,
+                        (SELECT SUM(Score) FROM RoadClean_ChkRecord_PointScore PS WHERE PS.ChkID = M.ChkID AND PS.Chk_Code LIKE 'FLD%') 
+                            / NULLIF((SELECT COUNT(*) FROM RoadClean_ChkRecord_PointMain PM WHERE PM.ChkID = M.ChkID), 0) AS FloodScore
+                    FROM RoadClean_ChkRecord_Main M
+                    LEFT JOIN RoadClean_CheckPointMain R ON M.ChkRoadID = R.RDID "
+                    + where.ToString() + @"
+                    ORDER BY M.ChkDate DESC, M.ChkID DESC";
+
+                DataTable dt = DbHelper.ExecuteDataTable(sql, pList.ToArray());
 
                 HSSFWorkbook workbook = new HSSFWorkbook();
                 ISheet sheet = workbook.CreateSheet("道路潔淨巡檢清單");
 
-                // 標題樣式
+                // 標題樣式 (深藍底白字)
                 ICellStyle headerStyle = workbook.CreateCellStyle();
                 IFont headerFont = workbook.CreateFont();
                 headerFont.FontName = "微軟正黑體";
-                headerFont.FontHeightInPoints = 11.0;
+                headerFont.FontHeightInPoints = 10;
                 headerFont.IsBold = true;
+                headerFont.Color = NPOI.HSSF.Util.HSSFColor.White.Index;
                 headerStyle.SetFont(headerFont);
                 headerStyle.Alignment = HorizontalAlignment.Center;
                 headerStyle.VerticalAlignment = VerticalAlignment.Center;
-                headerStyle.FillForegroundColor = NPOI.HSSF.Util.HSSFColor.Grey25Percent.Index;
+                headerStyle.FillForegroundColor = NPOI.HSSF.Util.HSSFColor.RoyalBlue.Index;
                 headerStyle.FillPattern = FillPattern.SolidForeground;
-                headerStyle.BorderBottom = NPOI.SS.UserModel.BorderStyle.Thin;
-                headerStyle.BorderTop = NPOI.SS.UserModel.BorderStyle.Thin;
-                headerStyle.BorderLeft = NPOI.SS.UserModel.BorderStyle.Thin;
-                headerStyle.BorderRight = NPOI.SS.UserModel.BorderStyle.Thin;
+                headerStyle.BorderBottom = BorderStyle.Thin;
+                headerStyle.BorderTop = BorderStyle.Thin;
+                headerStyle.BorderLeft = BorderStyle.Thin;
+                headerStyle.BorderRight = BorderStyle.Thin;
 
-                // 內容樣式
-                ICellStyle dataStyle = workbook.CreateCellStyle();
+                // 內容文字樣式 (置中)
+                ICellStyle centerStyle = workbook.CreateCellStyle();
                 IFont dataFont = workbook.CreateFont();
                 dataFont.FontName = "微軟正黑體";
-                dataFont.FontHeightInPoints = 10.0;
-                dataStyle.SetFont(dataFont);
-                dataStyle.VerticalAlignment = VerticalAlignment.Center;
-                dataStyle.BorderBottom = NPOI.SS.UserModel.BorderStyle.Thin;
-                dataStyle.BorderTop = NPOI.SS.UserModel.BorderStyle.Thin;
-                dataStyle.BorderLeft = NPOI.SS.UserModel.BorderStyle.Thin;
-                dataStyle.BorderRight = NPOI.SS.UserModel.BorderStyle.Thin;
+                dataFont.FontHeightInPoints = 9.5;
+                centerStyle.SetFont(dataFont);
+                centerStyle.Alignment = HorizontalAlignment.Center;
+                centerStyle.VerticalAlignment = VerticalAlignment.Center;
+                centerStyle.BorderBottom = BorderStyle.Thin;
+                centerStyle.BorderTop = BorderStyle.Thin;
+                centerStyle.BorderLeft = BorderStyle.Thin;
+                centerStyle.BorderRight = BorderStyle.Thin;
+
+                // 內容文字樣式 (靠左)
+                ICellStyle leftStyle = workbook.CreateCellStyle();
+                leftStyle.SetFont(dataFont);
+                leftStyle.Alignment = HorizontalAlignment.Left;
+                leftStyle.VerticalAlignment = VerticalAlignment.Center;
+                leftStyle.BorderBottom = BorderStyle.Thin;
+                leftStyle.BorderTop = BorderStyle.Thin;
+                leftStyle.BorderLeft = BorderStyle.Thin;
+                leftStyle.BorderRight = BorderStyle.Thin;
 
                 string[] headers = new string[]
                 {
-                    "序號", "巡檢案號", "行政區", "巡檢道路名稱", "巡檢日期",
-                    "道路評級", "淹水評級", "案件階段", "填報人員", "總分"
+                    "序號", "巡檢編號", "行政區", "巡檢道路名稱", "道路等級", "巡檢日期",
+                    "檢核點數", "道路潔淨得分", "道路潔淨評級", "淹水潛勢得分", "淹水潛勢評級",
+                    "案件階段狀態", "填報人員"
                 };
 
                 IRow rowHeader = sheet.CreateRow(0);
@@ -1166,56 +1197,100 @@ namespace NTPC_FEC.RoadClean
                         row.HeightInPoints = 20;
 
                         string seq = (r + 1).ToString();
-                        string chkIdVal = dr["ChkId"] != DBNull.Value ? dr["ChkId"].ToString().Trim() : "";
-                        string townVal = dr["Town"] != DBNull.Value ? dr["Town"].ToString().Trim() : "";
+                        string chkIdVal = dr["ChkID"] != DBNull.Value ? dr["ChkID"].ToString().Trim() : "";
+                        string townVal = dr["TOWN"] != DBNull.Value ? dr["TOWN"].ToString().Trim() : "";
                         string roadVal = dr["RoadName"] != DBNull.Value ? dr["RoadName"].ToString().Trim() : "";
-                        string dateVal = dr["ChkDate"] != DBNull.Value ? string.Format("{0:yyyy-MM-dd}", dr["ChkDate"]) : "";
-                        string rLvl = dr["RoadLevel"] != DBNull.Value ? dr["RoadLevel"].ToString().Trim() : "";
-                        string fLvl = dr["FloodLevel"] != DBNull.Value ? dr["FloodLevel"].ToString().Trim() : "";
-                        string stateVal = dr["CState"] != DBNull.Value ? dr["CState"].ToString().Trim() : "";
-                        string userVal = dr["CreateUser"] != DBNull.Value ? dr["CreateUser"].ToString().Trim() : "";
-                        string scoreVal = dr["Score"] != DBNull.Value ? dr["Score"].ToString().Trim() : "";
+                        string rLvVal = dr["RDLV"] != DBNull.Value ? dr["RDLV"].ToString().Trim() : "";
+                        string dateVal = dr["ChkDate"] != DBNull.Value ? Convert.ToDateTime(dr["ChkDate"]).ToString("yyyy-MM-dd HH:mm") : "";
+                        string ptCountVal = dr["PointCount"] != DBNull.Value ? dr["PointCount"].ToString().Trim() + " 個" : "0 個";
+
+                        int roadScore = -1;
+                        if (dr["RoadScore"] != DBNull.Value)
+                        {
+                            roadScore = Convert.ToInt32(Math.Round(Convert.ToDouble(dr["RoadScore"])));
+                        }
+                        string roadScoreStr = roadScore >= 0 ? roadScore.ToString() + " 分" : "未評";
+                        string roadScoreLv = "未調查";
+                        if (roadScore >= 85) roadScoreLv = "A級";
+                        else if (roadScore >= 60) roadScoreLv = "B級";
+                        else if (roadScore >= 0) roadScoreLv = "C級";
+
+                        int floodScore = -1;
+                        if (dr["FloodScore"] != DBNull.Value)
+                        {
+                            floodScore = Convert.ToInt32(Math.Round(Convert.ToDouble(dr["FloodScore"])));
+                        }
+                        string floodScoreStr = floodScore >= 0 ? floodScore.ToString() + " 分" : "未評";
+                        string floodScoreLv = "未調查";
+                        if (floodScore >= 85) floodScoreLv = "A級";
+                        else if (floodScore >= 60) floodScoreLv = "B級";
+                        else if (floodScore >= 0) floodScoreLv = "C級";
+
+                        int caseState = dr["Case_State"] != DBNull.Value ? Convert.ToInt32(dr["Case_State"]) : 1001;
+                        string stateName = "審查未送出";
+                        switch (caseState)
+                        {
+                            case 1001: stateName = "審查未送出"; break;
+                            case 2001: stateName = "審查中"; break;
+                            case 2101: stateName = "審查通過"; break;
+                            case 2201: stateName = "駁回"; break;
+                            case 2301: stateName = "退回補正"; break;
+                            case 9001: stateName = "案件取消"; break;
+                        }
+
+                        string userVal = dr["Create_User"] != DBNull.Value ? dr["Create_User"].ToString().Trim() : "";
 
                         string[] vals = new string[]
                         {
-                            seq, chkIdVal, townVal, roadVal, dateVal,
-                            rLvl, fLvl, stateVal, userVal, scoreVal
+                            seq, chkIdVal, townVal, roadVal, rLvVal, dateVal,
+                            ptCountVal, roadScoreStr, roadScoreLv, floodScoreStr, floodScoreLv,
+                            stateName, userVal
                         };
 
                         for (int cIdx = 0; cIdx < vals.Length; cIdx++)
                         {
                             ICell cell = row.CreateCell(cIdx);
                             cell.SetCellValue(vals[cIdx]);
-                            cell.CellStyle = dataStyle;
+                            cell.CellStyle = (cIdx == 3) ? leftStyle : centerStyle;
                         }
                     }
                 }
 
-                for (int i = 0; i < headers.Length; i++)
-                {
-                    sheet.SetColumnWidth(i, 16 * 256);
-                }
-                sheet.SetColumnWidth(0, 8 * 256);
-                sheet.SetColumnWidth(3, 30 * 256); // 道路名稱放寬
-
-                Response.Clear();
-                Response.ContentType = "application/vnd.ms-excel";
-                string filename = "道路潔淨巡檢清單_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".xls";
-                Response.AddHeader("Content-Disposition", "attachment;filename=" + HttpUtility.UrlEncode(filename, Encoding.UTF8));
+                sheet.SetColumnWidth(0, 7 * 256);
+                sheet.SetColumnWidth(1, 18 * 256);
+                sheet.SetColumnWidth(2, 12 * 256);
+                sheet.SetColumnWidth(3, 28 * 256);
+                sheet.SetColumnWidth(4, 11 * 256);
+                sheet.SetColumnWidth(5, 18 * 256);
+                sheet.SetColumnWidth(6, 11 * 256);
+                sheet.SetColumnWidth(7, 14 * 256);
+                sheet.SetColumnWidth(8, 14 * 256);
+                sheet.SetColumnWidth(9, 14 * 256);
+                sheet.SetColumnWidth(10, 14 * 256);
+                sheet.SetColumnWidth(11, 14 * 256);
+                sheet.SetColumnWidth(12, 14 * 256);
 
                 using (MemoryStream ms = new MemoryStream())
                 {
                     workbook.Write(ms);
-                    Response.BinaryWrite(ms.ToArray());
-                }
+                    byte[] bytes = ms.ToArray();
 
-                try
-                {
-                    Response.End();
+                    Response.Clear();
+                    Response.ClearHeaders();
+                    Response.Buffer = true;
+                    Response.ContentType = "application/vnd.ms-excel";
+                    string filename = string.Format("道路潔淨巡檢清單_{0}.xls", DateTime.Now.ToString("yyyyMMddHHmmss"));
+                    string encodedFilename = HttpUtility.UrlEncode(filename, Encoding.UTF8).Replace("+", "%20");
+                    Response.AddHeader("Content-Disposition", "attachment; filename=" + encodedFilename);
+                    Response.AddHeader("Content-Length", bytes.Length.ToString());
+                    Response.BinaryWrite(bytes);
+                    Response.Flush();
+                    Response.SuppressContent = true;
+                    HttpContext.Current.ApplicationInstance.CompleteRequest();
                 }
-                catch (System.Threading.ThreadAbortException)
-                {
-                }
+            }
+            catch (System.Threading.ThreadAbortException)
+            {
             }
             catch (Exception ex)
             {

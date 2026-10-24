@@ -494,47 +494,128 @@
             text-decoration: none;
         }
 
-        /* 分頁列 */
-        .pagination-bar {
+                /* ========================================================
+           自適應現代化底部分頁列 (Responsive Pagination Footer)
+           解決小尺寸螢幕 (手機) 壅擠與按鈕折行難以點擊問題
+           ======================================================== */
+        .pagination-footer {
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+                gap: 16px;
+            }
+        }
+
+        .pagination-footer-info {
+            font-size: 0.88rem;
+            color: #64748b;
+            text-align: center;
+            white-space: nowrap !important;
+        }
+        @media (min-width: 768px) {
+            .pagination-footer-info {
+                text-align: left;
+            }
+        }
+
+        .pagination-action-group {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 16px;
-            font-size: 13px;
-            color: var(--text-muted);
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            max-width: 100%;
+        }
+        @media (min-width: 768px) {
+            .pagination-action-group {
+                width: auto;
+                justify-content: flex-end;
+            }
         }
 
-        .page-btn {
-            border: 1px solid var(--border-color);
+        .btn-page-ctrl {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #334155;
             background: #ffffff;
-            color: #475569;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            min-width: 34px;
-            text-align: center;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.15s ease-in-out;
+            white-space: nowrap !important;
+            text-decoration: none !important;
+            user-select: none;
+            touch-action: manipulation;
         }
-
-        .page-btn:hover:not(:disabled) {
+        .btn-page-ctrl:hover:not(:disabled) {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+        .btn-page-ctrl:active:not(:disabled) {
+            background: #e2e8f0;
+            transform: translateY(1px);
+        }
+        .btn-page-ctrl:disabled,
+        .btn-page-ctrl.disabled {
             background: #f8fafc;
-            border-color: #cbd5e1;
-            color: var(--brand-blue);
-        }
-
-        .page-btn.active {
-            background: var(--brand-blue);
-            border-color: var(--brand-blue);
-            color: #ffffff;
-        }
-
-        .page-btn:disabled {
-            opacity: 0.5;
+            color: #94a3b8;
+            border-color: #e2e8f0;
             cursor: not-allowed;
+            opacity: 0.55;
+            box-shadow: none;
+        }
+
+        /* 頁碼指示膠囊 */
+        .page-indicator-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #166534;
+            white-space: nowrap !important;
+        }
+
+        /* 手機端大按鈕排版 (Mobile Touch Optimized) */
+        @media (max-width: 767.98px) {
+            .btn-page-ctrl.btn-step {
+                flex: 1;
+                min-width: 0;
+                padding: 0 8px;
+            }
+            .btn-page-ctrl.btn-edge {
+                width: 40px;
+                min-width: 40px;
+                padding: 0;
+                flex-shrink: 0;
+            }
+            .page-indicator-pill {
+                flex-shrink: 0;
+                padding: 0 10px;
+                font-size: 0.84rem;
+            }
         }
 
         /* 載入中骨架畫面 */
@@ -565,7 +646,7 @@
 
         /* 列印樣式 */
         @media print {
-            .no-print, .top-navbar, .nav-mode-bar, .pagination-bar, .btn-group, .search-box {
+            .no-print, .top-navbar, .nav-mode-bar, .pagination-footer, .btn-group, .search-box {
                 display: none !important;
             }
             body {
@@ -674,18 +755,10 @@
                 </div>
             </div>
 
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="nav-btn" v-on:click="reloadAll" title="重新整理所有統計數據">
-                    <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
-                    <span class="d-none d-md-inline">重新整理</span>
-                </button>
-                <button type="button" class="nav-btn bg-white text-dark shadow-sm ml-2" v-on:click="exportExcel" title="匯出當前清單 Excel">
-                    <i class="fas fa-file-excel text-success"></i>
-                    <span class="d-none d-md-inline">匯出報表</span>
-                </button>
-                <button type="button" class="nav-btn bg-white text-dark shadow-sm ml-2" v-on:click="printPage" title="列印報表">
+            <div class="d-flex align-items-center">
+                <button type="button" class="nav-btn bg-white text-dark shadow-sm" v-on:click="printPage" title="列印報表">
                     <i class="fas fa-print"></i>
-                    <span class="d-none d-md-inline">列印</span>
+                    <span class="d-none d-sm-inline">列印</span>
                 </button>
             </div>
         </header>
@@ -1051,30 +1124,31 @@
                         </div>
                     </div>
 
-                    <!-- 分頁控制項 -->
-                    <div class="pagination-bar px-3 py-2 no-print">
-                        <div>
-                            顯示第 <strong>{{ totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1 }}</strong> 至 
-                            <strong>{{ Math.min(currentPage * pageSize, totalCount) }}</strong> 筆，
-                            共 <strong>{{ totalCount }}</strong> 筆資料
+                    <!-- 自適應底部分頁導覽列 (Responsive Pagination Footer) -->
+                    <div v-if="totalCount > 0" class="pagination-footer no-print">
+                        <div class="pagination-footer-info">
+                            顯示第 <strong class="text-dark">{{ totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1 }}</strong> 至 <strong class="text-dark">{{ Math.min(currentPage * pageSize, totalCount) }}</strong> 筆，共 <strong class="text-dark">{{ totalCount }}</strong> 筆
                         </div>
-
-                        <div class="d-flex align-items-center gap-1">
-                            <button type="button" class="page-btn" :disabled="currentPage <= 1" v-on:click="changePage(1)" title="第一頁">
+                        <div class="pagination-action-group">
+                            <button type="button" class="btn-page-ctrl btn-edge" :disabled="currentPage <= 1" v-on:click="changePage(1)" title="第一頁">
                                 <i class="fas fa-angle-double-left"></i>
+                                <span class="d-none d-md-inline ml-1">首頁</span>
                             </button>
-                            <button type="button" class="page-btn" :disabled="currentPage <= 1" v-on:click="changePage(currentPage - 1)" title="上一頁">
-                                <i class="fas fa-angle-left"></i>
+                            <button type="button" class="btn-page-ctrl btn-step" :disabled="currentPage <= 1" v-on:click="changePage(currentPage - 1)" title="上一頁">
+                                <i class="fas fa-chevron-left mr-1"></i>
+                                <span>上一頁</span>
                             </button>
-
-                            <span class="mx-2 font-weight-bold text-dark">
-                                第 {{ currentPage }} / {{ totalPages || 1 }} 頁
-                            </span>
-
-                            <button type="button" class="page-btn" :disabled="currentPage >= totalPages" v-on:click="changePage(currentPage + 1)" title="下一頁">
-                                <i class="fas fa-angle-right"></i>
+                            <div class="page-indicator-pill" title="目前頁次 / 總頁數">
+                                <span>{{ currentPage }}</span>
+                                <span class="mx-1 text-muted" style="opacity: 0.5; font-weight: normal;">/</span>
+                                <span>{{ totalPages || 1 }}</span>
+                            </div>
+                            <button type="button" class="btn-page-ctrl btn-step" :disabled="currentPage >= totalPages" v-on:click="changePage(currentPage + 1)" title="下一頁">
+                                <span>下一頁</span>
+                                <i class="fas fa-chevron-right ml-1"></i>
                             </button>
-                            <button type="button" class="page-btn" :disabled="currentPage >= totalPages" v-on:click="changePage(totalPages)" title="最後一頁">
+                            <button type="button" class="btn-page-ctrl btn-edge" :disabled="currentPage >= totalPages" v-on:click="changePage(totalPages)" title="最後一頁">
+                                <span class="d-none d-md-inline ml-1">末頁</span>
                                 <i class="fas fa-angle-double-right"></i>
                             </button>
                         </div>

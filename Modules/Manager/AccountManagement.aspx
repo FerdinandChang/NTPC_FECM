@@ -697,6 +697,7 @@
                                             <td class="col-name">
                                                 <div class="user-name-title"><%# Eval("Name") %></div>
                                                 <%# !string.IsNullOrEmpty(Convert.ToString(Eval("FAC_ID"))) ? "<span class='fac-id-badge'><i class='fas fa-industry mr-1 text-secondary'></i>管編: " + Eval("FAC_ID") + "</span>" : "" %>
+                                                <%# (Eval("Email") != null && Eval("Email") != DBNull.Value && !string.IsNullOrEmpty(Convert.ToString(Eval("Email")))) ? "<div class='text-muted small mt-1' style='font-size:0.75rem;'><i class='fas fa-envelope mr-1 text-info'></i>" + Eval("Email") + "</div>" : "" %>
                                             </td>
 
                                             <!-- 單位 PUnit -->
@@ -733,6 +734,13 @@
                                                         CommandArgument='<%# Eval("UserID") + "|" + Eval("Acc_State") %>'
                                                         OnClientClick='<%# Convert.ToString(Eval("Acc_State")) == "OK" ? "return confirm(\"確定要停用此帳號嗎？\");" : "return confirm(\"確定要啟用此帳號嗎？\");" %>'>
                                                         <%# Convert.ToString(Eval("Acc_State")) == "OK" ? "停用帳號" : "啟用帳號" %>
+                                                    </asp:LinkButton>
+
+                                                    <asp:LinkButton ID="btnOpenResetModal" runat="server" 
+                                                        CssClass="btn btn-outline-warning btn-sm w-100 font-weight-bold"
+                                                        CommandName="OpenResetModal" 
+                                                        CommandArgument='<%# Eval("UserID") + "|" + Eval("Name") + "|" + (Eval("Email") != DBNull.Value ? Eval("Email") : "") %>'>
+                                                        <i class="fas fa-paper-plane mr-1"></i>重設並寄發密碼
                                                     </asp:LinkButton>
                                                 </div>
                                             </td>
@@ -893,6 +901,10 @@
                                 <asp:TextBox ID="txtNewName" runat="server" CssClass="form-control" placeholder="請輸入姓名 (如: 王大明)"></asp:TextBox>
                             </div>
                             <div class="form-group mb-3">
+                                <label class="font-weight-bold small text-muted">電子郵件 (Email)</label>
+                                <asp:TextBox ID="txtNewEmail" runat="server" CssClass="form-control" placeholder="例如: user@ntpc.gov.tw"></asp:TextBox>
+                            </div>
+                            <div class="form-group mb-3">
                                 <label class="font-weight-bold small text-muted">所屬單位分類 (PUnit)</label>
                                 <asp:TextBox ID="txtNewPUnit" runat="server" CssClass="form-control" placeholder="例如: 空噪、區公所、康廷、環科..."></asp:TextBox>
                                 <div class="mt-2">
@@ -911,6 +923,59 @@
                         <div class="modal-footer bg-light">
                             <asp:Button ID="btnCancelNewAcc" runat="server" CssClass="btn btn-secondary" Text="取消" OnClick="btnCloseModal_Click" />
                             <asp:Button ID="btnConfirmNewAcc" runat="server" CssClass="btn btn-primary font-weight-bold px-4" Text="確認新增" OnClick="btnConfirmNewAcc_Click" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </asp:Panel>
+
+        <!-- ========================================== -->
+        <!-- 彈窗 3：配發臨時密碼並寄送信箱 Modal       -->
+        <!-- ========================================== -->
+        <asp:Panel ID="pnlResetPwdModal" runat="server" Visible="false">
+            <div class="modal fade show" style="display: block; background-color: rgba(15, 23, 42, 0.65); z-index: 1060;" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered" style="max-width: 490px;">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+                        <div class="modal-header bg-primary text-white py-3 px-4">
+                            <h5 class="modal-title font-weight-bold mb-0">
+                                <i class="fas fa-paper-plane mr-2"></i>配發臨時密碼並寄送信箱
+                            </h5>
+                            <asp:LinkButton ID="btnCloseResetModalX" runat="server" CssClass="close text-white" OnClick="btnCloseResetModal_Click">&times;</asp:LinkButton>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-secondary small">目標使用者帳號</label>
+                                <div class="p-2 bg-light rounded text-dark font-weight-bold" style="font-size: 1rem; border: 1px solid #e2e8f0;">
+                                    <i class="fas fa-user-circle mr-2 text-primary"></i><asp:Literal ID="litResetTargetInfo" runat="server"></asp:Literal>
+                                </div>
+                                <asp:HiddenField ID="hfResetTargetUserId" runat="server" />
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark small" for="<%= txtResetTargetEmail.ClientID %>">
+                                    收件電子信箱 (Email) <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-white"><i class="fas fa-envelope text-muted"></i></span>
+                                    </div>
+                                    <asp:TextBox ID="txtResetTargetEmail" runat="server" CssClass="form-control" placeholder="請輸入收件者信箱 (例如: user@ntpc.gov.tw)"></asp:TextBox>
+                                </div>
+                                <small class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle mr-1 text-info"></i>系統產生臨時密碼後將直接寄發至此信箱，並同步更新該帳號之 Email。
+                                </small>
+                            </div>
+
+                            <div class="alert alert-warning small mb-0 p-3" style="border-radius: 8px; line-height: 1.5;">
+                                <strong><i class="fas fa-shield-alt mr-1"></i>資安控管機制：</strong><br/>
+                                • 密碼重設後原密碼立即作廢失效。<br/>
+                                • 系統會自動將原密碼記入歷史表記錄，防範日後重複使用。<br/>
+                                • 使用者持臨時密碼登入後，系統將<strong>強制要求立即修改密碼</strong>方可操作。
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light py-2 px-4 d-flex justify-content-between">
+                            <asp:Button ID="btnCancelResetModal" runat="server" CssClass="btn btn-secondary px-3" Text="取消" OnClick="btnCloseResetModal_Click" />
+                            <asp:Button ID="btnConfirmSendTempPwd" runat="server" CssClass="btn btn-primary px-4 font-weight-bold" Text="確認產生並發送信件" OnClick="btnConfirmSendTempPwd_Click" OnClientClick="if(!confirm('確定要產生臨時密碼並發送信件給該使用者嗎？')){return false;} this.disabled=true; this.value='正在寄送郵件中...'; __doPostBack(this.name, '');" UseSubmitBehavior="false" />
                         </div>
                     </div>
                 </div>

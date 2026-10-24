@@ -78,7 +78,7 @@ def build_project():
     print("[2/4] 正在執行專案建置 (dotnet build - 強制 C# 5.0 語法驗證)...")
     csproj_path = PROJECT_ROOT / "NTPC_FEC.csproj"
     res = subprocess.run(
-        ["dotnet", "build", str(csproj_path), "-c", "Release"],
+        ["dotnet", "build", str(csproj_path), "-c", "Release", "--no-restore", "/p:EnableSourceControlManagerQueries=false"],
         capture_output=True,
         text=True,
         encoding="utf-8",

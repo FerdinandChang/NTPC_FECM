@@ -120,34 +120,35 @@ namespace NTPC_FEC.Manager
                 reqMode = "INV1";
             }
 
-            // 統計各審查階段待審查場址數
-            int countInv1 = 0;
-            int countInv2 = 0;
-            int countInv3 = 0;
-            int countTotal = 0;
+            // 統計各審查階段待審查場址數與查核案件數
+            int countInv1Sites = 0, countInv1Cases = 0;
+            int countInv2Sites = 0, countInv2Cases = 0;
+            int countInv3Sites = 0, countInv3Cases = 0;
+            int countTotalSites = 0;
 
             try
             {
                 string sqlStat = @"
                     SELECT 
-                        ISNULL(SUM(CASE WHEN Last_INV_State = 'A00' THEN 1 ELSE 0 END), 0) AS Cnt_Inv1,
-                        ISNULL(SUM(CASE WHEN Last_INV_State = 'A01' THEN 1 ELSE 0 END), 0) AS Cnt_Inv2,
-                        ISNULL(SUM(CASE WHEN Last_INV_State = 'A02' THEN 1 ELSE 0 END), 0) AS Cnt_Inv3,
-                        COUNT(1) AS Cnt_Total
-                    FROM (
-                        SELECT 
-                            Bare_Main.Bare_ID,
-                            (SELECT TOP 1 INV_State FROM Bare_INV WHERE Bare_INV.Bare_ID = Bare_Main.Bare_ID ORDER BY Check_Date DESC) AS Last_INV_State
-                        FROM Bare_Main
-                    ) AS T";
+                        ISNULL((SELECT COUNT(DISTINCT Bare_ID) FROM Bare_INV WHERE INV_State = 'A00'), 0) AS Cnt_Inv1_Sites,
+                        ISNULL((SELECT COUNT(DISTINCT Bare_ID) FROM Bare_INV WHERE INV_State = 'A01'), 0) AS Cnt_Inv2_Sites,
+                        ISNULL((SELECT COUNT(DISTINCT Bare_ID) FROM Bare_INV WHERE INV_State = 'A02'), 0) AS Cnt_Inv3_Sites,
+                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00'), 0) AS Cnt_Inv1_Cases,
+                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A01'), 0) AS Cnt_Inv2_Cases,
+                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A02'), 0) AS Cnt_Inv3_Cases,
+                        ISNULL((SELECT COUNT(1) FROM Bare_Main), 0) AS Cnt_Total_Sites";
 
                 DataTable dtStat = DbHelper.ExecuteDataTable(sqlStat);
                 if (dtStat != null && dtStat.Rows.Count > 0)
                 {
-                    countInv1 = Convert.ToInt32(dtStat.Rows[0]["Cnt_Inv1"]);
-                    countInv2 = Convert.ToInt32(dtStat.Rows[0]["Cnt_Inv2"]);
-                    countInv3 = Convert.ToInt32(dtStat.Rows[0]["Cnt_Inv3"]);
-                    countTotal = Convert.ToInt32(dtStat.Rows[0]["Cnt_Total"]);
+                    DataRow r = dtStat.Rows[0];
+                    countInv1Sites = Convert.ToInt32(r["Cnt_Inv1_Sites"]);
+                    countInv2Sites = Convert.ToInt32(r["Cnt_Inv2_Sites"]);
+                    countInv3Sites = Convert.ToInt32(r["Cnt_Inv3_Sites"]);
+                    countInv1Cases = Convert.ToInt32(r["Cnt_Inv1_Cases"]);
+                    countInv2Cases = Convert.ToInt32(r["Cnt_Inv2_Cases"]);
+                    countInv3Cases = Convert.ToInt32(r["Cnt_Inv3_Cases"]);
+                    countTotalSites = Convert.ToInt32(r["Cnt_Total_Sites"]);
                 }
             }
             catch
@@ -161,10 +162,13 @@ namespace NTPC_FEC.Manager
                 InitialMode = reqMode,
                 Stats = new
                 {
-                    CountInv1 = countInv1,
-                    CountInv2 = countInv2,
-                    CountInv3 = countInv3,
-                    CountTotal = countTotal
+                    CountInv1 = countInv1Sites,
+                    CountInv2 = countInv2Sites,
+                    CountInv3 = countInv3Sites,
+                    CountInv1Cases = countInv1Cases,
+                    CountInv2Cases = countInv2Cases,
+                    CountInv3Cases = countInv3Cases,
+                    CountTotal = countTotalSites
                 }
             }));
         }
@@ -517,18 +521,76 @@ namespace NTPC_FEC.Manager
             List<string> photos = new List<string>();
             try
             {
-                string relPath = "/Upload/BareGround/" + bareId + "/" + invNo;
-                string dirPath = HttpContext.Current.Server.MapPath("~" + relPath);
-                if (Directory.Exists(dirPath))
+                // 優先探測可能的實體目錄路徑 (相容本機與正式機子站台 NTPC_FEC / NTPC_FECM)
+                string[] candidateDirs = new string[]
                 {
-                    string[] titles = new string[] { "現場照片(一)", "現場照片(二)", "現場照片(三)", "現場照片(四)" };
-                    DirectoryInfo di = new DirectoryInfo(dirPath);
-                    foreach (string t in titles)
+                    HttpContext.Current.Server.MapPath("~/Upload/BareGround/" + bareId + "/" + invNo),
+                    HttpContext.Current.Server.MapPath("/NTPC_FEC/Upload/BareGround/" + bareId + "/" + invNo),
+                    HttpContext.Current.Server.MapPath("/NTPC_FECM/Upload/BareGround/" + bareId + "/" + invNo),
+                    HttpContext.Current.Server.MapPath("/Upload/BareGround/" + bareId + "/" + invNo)
+                };
+
+                DirectoryInfo di = null;
+                for (int i = 0; i < candidateDirs.Length; i++)
+                {
+                    if (Directory.Exists(candidateDirs[i]))
                     {
-                        FileInfo[] fi = di.GetFiles("*" + t + "*.*");
-                        if (fi.Length > 0)
+                        di = new DirectoryInfo(candidateDirs[i]);
+                        break;
+                    }
+                }
+
+                if (di != null)
+                {
+                    // 支援「現場照片」與「裸露地現場照片」等多種命名規則
+                    string[][] patternGroups = new string[][]
+                    {
+                        new string[] { "*現場照片(一)*", "*裸露地現場照片(一)*", "*現場照片1*", "*photo1*" },
+                        new string[] { "*現場照片(二)*", "*裸露地現場照片(二)*", "*現場照片2*", "*photo2*" },
+                        new string[] { "*現場照片(三)*", "*裸露地現場照片(三)*", "*現場照片3*", "*photo3*" },
+                        new string[] { "*現場照片(四)*", "*裸露地現場照片(四)*", "*現場照片4*", "*photo4*" }
+                    };
+
+                    HashSet<string> addedFiles = new HashSet<string>();
+
+                    for (int g = 0; g < patternGroups.Length; g++)
+                    {
+                        string[] patterns = patternGroups[g];
+                        FileInfo targetFi = null;
+                        for (int p = 0; p < patterns.Length; p++)
                         {
-                            photos.Add(relPath + "/" + fi[0].Name);
+                            FileInfo[] files = di.GetFiles(patterns[p] + ".*");
+                            if (files.Length > 0)
+                            {
+                                targetFi = files[0];
+                                break;
+                            }
+                        }
+
+                        if (targetFi != null && !addedFiles.Contains(targetFi.Name))
+                        {
+                            addedFiles.Add(targetFi.Name);
+                            // 重要：使用相對路徑 ../Upload/BareGround/...，相對於 /Manager/ 頁面能完美適應站台子目錄 (/NTPC_FECM 或 /NTPC_FEC)
+                            photos.Add("../Upload/BareGround/" + bareId + "/" + invNo + "/" + targetFi.Name);
+                        }
+                    }
+
+                    // 若特定檔名未配對到，則將資料夾中所有圖片 (排除簽名檔 Sig) 納入
+                    if (photos.Count == 0)
+                    {
+                        FileInfo[] allFiles = di.GetFiles("*.*");
+                        for (int f = 0; f < allFiles.Length; f++)
+                        {
+                            FileInfo fi = allFiles[f];
+                            string ext = fi.Extension.ToLower();
+                            if ((ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif") && !fi.Name.ToLower().StartsWith("sig"))
+                            {
+                                if (!addedFiles.Contains(fi.Name))
+                                {
+                                    addedFiles.Add(fi.Name);
+                                    photos.Add("../Upload/BareGround/" + bareId + "/" + invNo + "/" + fi.Name);
+                                }
+                            }
                         }
                     }
                 }

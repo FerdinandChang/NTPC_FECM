@@ -39,3 +39,4 @@ Scripts/gen_ico.ps1
 __pycache__/
 *.pyc
 *.pyo
+Microsoft/

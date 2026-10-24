@@ -19,6 +19,9 @@
     <None Remove="scripts\**" />
     <Compile Remove="scratch\**" />
     <None Remove="scratch\**" />
+    <Compile Remove="temp_pack*\**" />
+    <None Remove="temp_pack*\**" />
+    <EmbeddedResource Remove="temp_pack*\**" />
   </ItemGroup>
 
   <ItemGroup>

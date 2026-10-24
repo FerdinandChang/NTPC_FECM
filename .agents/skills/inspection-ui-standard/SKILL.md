@@ -547,6 +547,183 @@ methods: {
 2. **匯出 EXCEL**：`<button type="button" class="btn btn-sm btn-outline-success font-weight-bold mr-2" v-on:click="exportExcel" :disabled="exporting || totalCount === 0"><i class="fas fa-file-excel mr-1"></i><span class="d-none d-md-inline">{{ exporting ? '匯出中...' : '匯出 EXCEL' }}</span></button>`。
 3. **每頁筆數選擇器**：支援 10 / 15 / 30 / 50 筆切換。
 
+
+### 4. 自適應現代化底部分頁列標準規範 (Responsive Pagination Footer Standard)
+
+全專案所有資料清單頁面換頁導覽列**統一以 `FAC/FAC_List.aspx` 為唯一標準樣式**，徹底解決手機等小尺寸載具下多頁碼按鈕嚴重擠壓折行、跳動與觸控不易之問題。
+
+#### (1) 設計原則與全載具互動特點
+- **桌面端 (Desktop, $\ge 768\text{px}$)**：
+  - 採左右兩端分列（`justify-content: space-between`）。
+  - 左側：資料筆數資訊（`顯示第 X 至 Y 筆，共 Z 筆`）。
+  - 右側：控制按鈕群（首頁、上一頁、頁碼膠囊、下一頁、末頁），首頁與末頁顯示文字與圖示。
+- **手機行動端 (Mobile, $< 768\text{px}$)**：
+  - 採垂直置中堆疊佈局（`flex-direction: column; align-items: center`）。
+  - 上方：獨立置中顯示資料筆數資訊。
+  - 下方：滿寬按鈕組（`width: 100%`）：
+    - **首頁 / 末頁 (`.btn-edge`)**：隱藏文字（`d-none d-md-inline`），僅保留雙箭頭圖示（« 與 »），寬度固定 40px，精簡空間。
+    - **上一頁 / 下一頁 (`.btn-step`)**：寬度設定為 `flex: 1` 自動撐滿剩餘空間，確保手指單手觸控熱區大於 42px。
+    - **頁碼狀態膠囊 (`.page-indicator-pill`)**：置中淡綠底綠字圓角方塊（如 `1 / 13`），不隨點擊縮放變形，廢除傳統會造成手機折行的一長串數字頁碼按鈕。
+
+#### (2) 標準 HTML / Vue 樣板
+```html
+<!-- 自適應底部分頁導覽列 (Responsive Pagination Footer) -->
+<div v-if="!loading && totalCount > 0" class="pagination-footer">
+    <div class="pagination-footer-info">
+        顯示第 <strong class="text-dark">{{ (pageIndex - 1) * pageSize + 1 }}</strong> 至 
+        <strong class="text-dark">{{ Math.min(pageIndex * pageSize, totalCount) }}</strong> 筆，共 
+        <strong class="text-dark">{{ totalCount }}</strong> 筆
+    </div>
+    <div class="pagination-action-group">
+        <button type="button" class="btn-page-ctrl btn-edge" :disabled="pageIndex <= 1" v-on:click="goToPage(1)" title="第一頁">
+            <i class="fas fa-angle-double-left"></i>
+            <span class="d-none d-md-inline ml-1">首頁</span>
+        </button>
+        <button type="button" class="btn-page-ctrl btn-step" :disabled="pageIndex <= 1" v-on:click="goToPage(pageIndex - 1)" title="上一頁">
+            <i class="fas fa-chevron-left mr-1"></i>
+            <span>上一頁</span>
+        </button>
+        <div class="page-indicator-pill" title="目前頁次 / 總頁數">
+            <span>{{ pageIndex }}</span>
+            <span class="mx-1 text-muted" style="opacity: 0.5; font-weight: normal;">/</span>
+            <span>{{ totalPages }}</span>
+        </div>
+        <button type="button" class="btn-page-ctrl btn-step" :disabled="pageIndex >= totalPages" v-on:click="goToPage(pageIndex + 1)" title="下一頁">
+            <span>下一頁</span>
+            <i class="fas fa-chevron-right ml-1"></i>
+        </button>
+        <button type="button" class="btn-page-ctrl btn-edge" :disabled="pageIndex >= totalPages" v-on:click="goToPage(totalPages)" title="最後一頁">
+            <span class="d-none d-md-inline ml-1">末頁</span>
+            <i class="fas fa-angle-double-right"></i>
+        </button>
+    </div>
+</div>
+```
+
+#### (3) 標準 CSS 樣式 Tokens
+```css
+/* 自適應現代化底部分頁列 (Responsive Pagination Footer) */
+.pagination-footer {
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+@media (min-width: 768px) {
+    .pagination-footer {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        gap: 16px;
+    }
+}
+
+.pagination-footer-info {
+    font-size: 0.88rem;
+    color: #64748b;
+    text-align: center;
+    white-space: nowrap !important;
+}
+@media (min-width: 768px) {
+    .pagination-footer-info {
+        text-align: left;
+    }
+}
+
+.pagination-action-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    max-width: 100%;
+}
+@media (min-width: 768px) {
+    .pagination-action-group {
+        width: auto;
+        justify-content: flex-end;
+    }
+}
+
+.btn-page-ctrl {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    padding: 0 14px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #334155;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.15s ease-in-out;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+    user-select: none;
+    touch-action: manipulation;
+}
+.btn-page-ctrl:hover:not(:disabled) {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+.btn-page-ctrl:active:not(:disabled) {
+    background: #e2e8f0;
+    transform: translateY(1px);
+}
+.btn-page-ctrl:disabled,
+.btn-page-ctrl.disabled {
+    background: #f8fafc;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+    opacity: 0.55;
+    box-shadow: none;
+}
+
+/* 頁碼指示膠囊 */
+.page-indicator-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    padding: 0 12px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #166534;
+    white-space: nowrap !important;
+}
+
+/* 手機端大按鈕排版 (Mobile Touch Optimized) */
+@media (max-width: 767.98px) {
+    .btn-page-ctrl.btn-step {
+        flex: 1;
+        min-width: 0;
+        padding: 0 8px;
+    }
+    .btn-page-ctrl.btn-edge {
+        width: 40px;
+        min-width: 40px;
+        padding: 0;
+        flex-shrink: 0;
+    }
+    .page-indicator-pill {
+        flex-shrink: 0;
+        padding: 0 10px;
+        font-size: 0.84rem;
+    }
+}
+```
+
 ---
 
 ## 七、專案鐵律自檢清單 (Checklist)
@@ -558,5 +735,6 @@ methods: {
 4. [ ] **靜態資源本地化**：嚴禁外部 CDN，引用本地 `Scripts/vue.global.prod.js`、`Scripts/leaflet/leaflet.js`、`Content/leaflet/leaflet.css`。
 5. [ ] **C# 5.0 語法合規**：嚴禁使用字串插值 `$"..."`、Null 條件運算子 `?.`、區域函式。
 6. [ ] **清單頁大四元工具列齊備**：清單標題列必須包含「重新整理」、「匯出 EXCEL」與「每頁筆數選擇器」。
-7. [ ] **打包自檢**：執行 `python Scripts/deploy_pack.py` 確保冒煙驗證 100% 通過。
+7. [ ] **全載具自適應分頁列**：清單換頁一律統一使用 `pagination-footer`、`pagination-action-group`、`btn-page-ctrl`、`page-indicator-pill`（以 `FAC/FAC_List.aspx` 為唯一標準），嚴禁手機端使用多數字折行按鈕。
+8. [ ] **打包自檢**：執行 `python Scripts/deploy_pack.py` 確保冒煙驗證 100% 通過。
 

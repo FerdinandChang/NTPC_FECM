@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 管辦改善歷程追蹤統計</title>
+    <title>新北市固定溢散源管理平台 - 固定污染源管辦改善歷程追蹤統計</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -49,11 +49,11 @@
             display: none !important;
         }
 
-        /* 頂部導覽列 */
+        /* 1. 置頂深青藍漸層導覽列 (Sticky Top Navbar - 嚴格依據 inspection-ui-standard 規範) */
         .top-navbar {
             background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
-            color: #ffffff;
-            height: 58px;
+            color: #ffffff !important;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -70,21 +70,35 @@
             margin: 0;
             display: flex;
             align-items: center;
-            gap: 10px;
-            color: #ffffff;
-            text-decoration: none;
+            gap: 8px;
+            color: #ffffff !important;
         }
 
-        .top-navbar .brand-title:hover {
-            color: #ffffff;
-            text-decoration: none;
+        .top-navbar .brand-title .title-text {
+            color: #ffffff !important;
+        }
+
+        .top-navbar .brand-title i {
+            color: #ffffff !important;
+        }
+
+        /* 標題旁白底數量徽章 - 深色文字確保清晰高對比度 */
+        .top-navbar .brand-count-badge {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            font-size: 0.85rem !important;
+            font-weight: 800 !important;
+            padding: 4px 10px;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+            letter-spacing: 0.5px;
         }
 
         .nav-btn {
             background: rgba(255, 255, 255, 0.18);
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: #ffffff !important;
-            font-size: 0.88rem;
+            font-size: 0.92rem;
             font-weight: 600;
             cursor: pointer;
             height: 36px;
@@ -104,9 +118,32 @@
             text-decoration: none !important;
         }
 
-        /* 主容器 */
+        /* 白底黑字陰影膠囊按鈕 (右側功能動作標準樣式) */
+        .nav-btn.bg-white {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+            border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        }
+
+        .nav-btn.bg-white:hover {
+            background-color: #f8fafc !important;
+            color: #0284c7 !important;
+        }
+
+        .nav-btn.bg-white:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        /* 2. 列印專用報表頁首 (螢幕隱藏，列印時顯現) */
+        .print-only-header {
+            display: none;
+        }
+
+        /* 3. 主作業容器 (固定最大寬度 1560px 居中) */
         .container-fluid-custom {
-            max-width: 1600px;
+            max-width: 1560px;
             margin: 0 auto;
             padding: 16px;
         }
@@ -427,10 +464,34 @@
             margin-top: 12px;
         }
 
-        /* 列印模式隱藏 */
+        /* 列印模式排版設定 */
         @media print {
             .no-print {
                 display: none !important;
+            }
+            .print-only-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .print-only-header h2 {
+                margin: 0;
+                font-size: 18pt;
+                font-weight: bold;
+                color: #000000;
+            }
+            .print-only-header h3 {
+                margin: 6px 0;
+                font-size: 14pt;
+                font-weight: bold;
+                color: #000000;
+            }
+            .print-only-header p {
+                margin: 4px 0 0 0;
+                font-size: 10pt;
+                color: #555555;
+                border-bottom: 2px solid #000000;
+                padding-bottom: 6px;
             }
             .container-fluid-custom {
                 max-width: 100% !important;
@@ -450,30 +511,29 @@
 <body>
     <form id="form1" runat="server">
         <div id="app" v-cloak>
-            <!-- 1. 置頂導覽列 (全站標準左側導航、右側主操作) -->
+            <!-- 1. 置頂深青藍漸層導覽列 (Sticky Top Navbar - 嚴格依據 inspection-ui-standard 規範) -->
             <header class="top-navbar no-print">
-                <div class="d-flex align-items-center">
+                <div class="brand-title">
                     <a href="../MainPage.aspx?sub=menu4" class="nav-btn mr-2" title="返回主選單">
-                        <i class="fas fa-home"></i>
-                        <span class="d-none d-sm-inline">回首頁</span>
+                        <i class="fas fa-arrow-left"></i>
+                        <span class="d-none d-sm-inline">返回清單</span>
                     </a>
-                    <a href="Case_Sum_1.aspx" class="navbar-brand-title">
-                        <i class="fas fa-chart-line text-white"></i>
-                        <span>管辦改善歷程追蹤統計</span>
-                        <span class="badge badge-light text-dark font-weight-bold ml-1" v-if="facList.length > 0">
-                            {{ facList.length }} 家場所
-                        </span>
-                    </a>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-outline-light btn-sm font-weight-bold" v-on:click="printReport">
-                        <i class="fas fa-print mr-1"></i>
-                        <span class="d-none d-md-inline">列印報表</span>
-                    </button>
+                    <i class="fas fa-chart-line text-white"></i>
+                    <span class="title-text">固定污染源管辦改善歷程追蹤統計</span>
+                    <span v-if="hasSearched && facList.length > 0" class="brand-count-badge ml-2">
+                        {{ facList.length }} 家場所
+                    </span>
                 </div>
             </header>
 
-            <!-- 2. 主內容作業區 -->
+            <!-- 2. 列印專用報表頁首 (螢幕隱藏，列印時顯現) -->
+            <div class="print-only-header">
+                <h2>新北市固定溢散源管理平台</h2>
+                <h3>固定污染源管辦改善歷程追蹤統計表</h3>
+                <p>統計區間：{{ filter.DateStart }} ～ {{ filter.DateEnd }} ｜ 列印日期：{{ printDate }}</p>
+            </div>
+
+            <!-- 3. 主內容作業區 (最大寬度 1560px 居中) -->
             <main class="container-fluid-custom">
                 <!-- A. 篩選設定卡片 -->
                 <div class="card-modern no-print">
@@ -594,21 +654,19 @@
                             </div>
                         </div>
 
-                        <!-- 底部標準操作列 (左側統計、右側重設與查詢) -->
-                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                            <div class="small text-muted">
-                                共統計出 <strong class="text-primary">{{ facList.length }}</strong> 家管辦改善場所
-                            </div>
-                            <div>
-                                <button type="button" class="btn btn-outline-secondary btn-sm mr-2" v-on:click="resetFilter" :disabled="loading">
-                                    <i class="fas fa-undo mr-1"></i> 重設條件
-                                </button>
-                                <button type="button" class="btn btn-primary btn-sm px-4 font-weight-bold" v-on:click="searchData" :disabled="loading">
-                                    <i class="fas fa-search mr-1" v-if="!loading"></i>
-                                    <span class="spinner-border spinner-border-sm mr-1" v-if="loading"></span>
-                                    {{ loading ? '資料統計分析中...' : '立即統計分析' }}
-                                </button>
-                            </div>
+                        <!-- 動作按鈕列 -->
+                        <div class="action-bar">
+                            <button type="button" class="btn btn-success btn-sm px-3 font-weight-bold" v-on:click="exportExcel" :disabled="loading || facList.length === 0" title="匯出當前統計結果為 Excel">
+                                <i class="fas fa-file-excel mr-1"></i> 匯出 Excel
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm px-3" v-on:click="resetFilter" :disabled="loading">
+                                <i class="fas fa-undo mr-1"></i> 重設條件
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm px-4 font-weight-bold" v-on:click="searchData" :disabled="loading">
+                                <i class="fas fa-search mr-1" v-if="!loading"></i>
+                                <span class="spinner-border spinner-border-sm mr-1" v-if="loading"></span>
+                                {{ loading ? '資料統計分析中...' : '開始統計分析' }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -681,34 +739,8 @@
                     </div>
                 </div>
 
-                <!-- D. 資料卡片清單 (標準操作工具列) -->
+                <!-- D. 資料卡片清單 (每家場所一張現代卡片) -->
                 <div v-else>
-                    <div class="card-modern mb-3 no-print">
-                        <div class="card-modern-header">
-                            <div class="d-flex align-items-center gap-2">
-                                <h2 class="card-modern-title">
-                                    <i class="fas fa-list-alt text-primary"></i>
-                                    <span>管辦歷程場所明細卡</span>
-                                </h2>
-                                <span class="badge badge-light border text-dark font-weight-bold ml-1">
-                                    共 {{ facList.length }} 家場所
-                                </span>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <!-- 1. 重新整理 -->
-                                <button type="button" class="btn btn-sm btn-outline-secondary mr-2" v-on:click="searchData" :disabled="loading" title="重新整理統計">
-                                    <i class="fas fa-sync-alt mr-1" :class="{ 'fa-spin': loading }"></i>
-                                    <span class="d-none d-md-inline">重新整理</span>
-                                </button>
-
-                                <!-- 2. 匯出 EXCEL -->
-                                <button type="button" class="btn btn-sm btn-outline-success font-weight-bold" v-on:click="exportExcel" :disabled="loading || facList.length === 0" title="匯出統計 Excel 報表">
-                                    <i class="fas fa-file-excel mr-1"></i>
-                                    <span class="d-none d-md-inline">匯出 EXCEL</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                     <div v-for="fac in facList" :key="fac.FAC_ID" class="card-modern mb-3">
                         <!-- 場所標題列 -->
                         <div class="fac-info-banner">
@@ -811,6 +843,12 @@
                 },
                 statTotalTimes() {
                     return this.facList.reduce((sum, f) => sum + (f.Special_Times || 0), 0);
+                },
+                printDate() {
+                    const d = new Date();
+                    const m = (d.getMonth() + 1);
+                    const day = d.getDate();
+                    return d.getFullYear() + '/' + (m < 10 ? '0' + m : m) + '/' + (day < 10 ? '0' + day : day);
                 }
             },
             created() {

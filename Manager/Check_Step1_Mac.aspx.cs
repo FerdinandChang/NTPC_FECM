@@ -339,7 +339,7 @@ namespace NTPC_FEC.Manager
                 LEFT JOIN UserAcc ON Mac_Chk_Result.Chk_User = UserAcc.UserID 
                 LEFT JOIN mac_State_List ON Mac_Chk_Result.Mac_State = mac_State_List.State_ID 
                 WHERE Mac_Chk_Result.FAC_ID = @FAC_ID AND Mac_Chk_Result.mac_ID = @mac_ID 
-                ORDER BY Mac_Chk_Result.Chk_Date DESC, Mac_Chk_Result.Chk_ID DESC";
+                ORDER BY Mac_Chk_Result.Chk_Date DESC";
 
             DataTable dtHist = DbHelper.ExecuteDataTable(sqlHistory,
                 new SqlParameter("@FAC_ID", facId),

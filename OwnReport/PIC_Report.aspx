@@ -48,6 +48,7 @@
             padding: 0 16px;
             box-shadow: 0 2px 10px rgba(0, 153, 229, 0.25);
             position: sticky; top: 0; z-index: 1020;
+            overflow: hidden; /* 杜絕內容溢出蓋到下方卡片 */
         }
         .nav-btn {
             background: rgba(255, 255, 255, 0.18);
@@ -55,14 +56,25 @@
             font-size: 0.92rem; font-weight: 600; cursor: pointer;
             height: 36px; border-radius: 8px;
             display: inline-flex; align-items: center; justify-content: center;
-            padding: 0 14px; gap: 6px;
+            padding: 0 12px; gap: 6px;
             transition: all 0.2s;
             text-decoration: none;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.32); color: #ffffff; text-decoration: none; }
         .top-navbar .brand-title {
-            font-size: 1.08rem; font-weight: 700; margin: 0;
+            font-size: 1.05rem; font-weight: 700; margin: 0;
             display: flex; align-items: center; gap: 8px;
+            min-width: 0; flex: 1; overflow: hidden;
+        }
+        .navbar-page-title {
+            font-size: 1.02rem; font-weight: 700;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            display: inline-block;
+        }
+        .badge-mode-pill {
+            font-size: 0.82rem; padding: 4px 8px; white-space: nowrap; flex-shrink: 0;
         }
 
         /* 主容器佈局 */
@@ -175,6 +187,7 @@
             width: 100%; height: 260px;
             border-radius: 8px; z-index: 10;
             border: 1px solid var(--border-color);
+            transition: height 0.25s ease;
         }
 
         /* 規格晶片 (Stat Chips) */
@@ -375,7 +388,7 @@
             padding: 6px 16px; border-radius: 20px;
         }
 
-        /* 手機行動端底部常駐動作列 */
+        /* 手機行動端全載具自適應 RWD 規範 */
         @media screen and (max-width: 991px) {
             body { padding-bottom: 76px; }
             .mobile-bottom-bar {
@@ -383,13 +396,149 @@
                 background: #ffffff; border-top: 1px solid #e2e8f0;
                 box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
                 padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-                gap: 10px;
+                gap: 8px;
             }
             .mobile-bottom-bar .btn { flex: 1; font-weight: 700; padding: 10px; border-radius: 8px; }
-            .stat-chip-grid { grid-template-columns: 1fr; }
         }
         @media screen and (min-width: 992px) {
             .mobile-bottom-bar { display: none !important; }
+        }
+
+        @media screen and (max-width: 767px) {
+            .top-navbar {
+                height: 52px;
+                padding: 0 10px;
+            }
+            .top-navbar .brand-title {
+                gap: 5px;
+            }
+            .nav-btn {
+                height: 32px;
+                padding: 0 8px;
+                font-size: 0.85rem;
+                border-radius: 6px;
+            }
+            .navbar-page-title {
+                font-size: 0.94rem;
+                max-width: 140px;
+            }
+            .badge-mode-pill {
+                font-size: 0.72rem;
+                padding: 3px 6px;
+            }
+            .container-fluid-custom {
+                padding: 10px 8px;
+            }
+            .stepper-container {
+                padding: 12px 6px;
+                margin-bottom: 10px;
+                border-radius: 10px;
+            }
+            .step-circle {
+                width: 28px; height: 28px;
+                font-size: 12px;
+                margin-bottom: 3px;
+                box-shadow: 0 0 0 1.5px #cbd5e1;
+            }
+            .stepper-line {
+                top: 25px;
+                left: 14%; right: 14%;
+                height: 2px;
+            }
+            .step-title {
+                font-size: 11px;
+                margin-bottom: 1px;
+                letter-spacing: -0.5px;
+                line-height: 1.2;
+                text-align: center;
+            }
+            .step-time {
+                font-size: 9.5px;
+                color: #94a3b8;
+                white-space: nowrap;
+                transform: scale(0.92);
+                line-height: 1.2;
+                text-align: center;
+            }
+            .alert-banner {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 10px;
+            }
+            .alert-banner .badge {
+                align-self: flex-start;
+                font-size: 0.82rem;
+                padding: 4px 8px;
+            }
+            .stat-chip-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            .stat-chip {
+                padding: 6px 8px;
+            }
+            .stat-chip-label {
+                font-size: 10.5px;
+                margin-bottom: 1px;
+            }
+            .stat-chip-val {
+                font-size: 12px;
+            }
+            #map {
+                height: 190px;
+            }
+            .leaflet-popup-content-wrapper {
+                font-size: 11.5px;
+                padding: 2px;
+            }
+            .leaflet-popup-content {
+                margin: 6px 8px;
+                line-height: 1.3;
+            }
+            .section-card {
+                margin-bottom: 12px;
+                border-radius: 10px;
+            }
+            .section-header {
+                padding: 10px 12px;
+            }
+            .section-title {
+                font-size: 0.94rem;
+            }
+            .photo-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            .photo-thumb-wrap, .photo-upload-slot {
+                height: 120px;
+            }
+            .photo-card-header {
+                padding: 4px 6px;
+                font-size: 11px;
+            }
+            .photo-memo-input {
+                font-size: 11px;
+                padding: 4px 6px;
+            }
+            .card-modern-body {
+                padding: 12px;
+            }
+        }
+
+        @media screen and (max-width: 380px) {
+            .navbar-page-title {
+                max-width: 115px;
+                font-size: 0.88rem;
+            }
+            .photo-grid {
+                grid-template-columns: 1fr;
+            }
+            .photo-thumb-wrap, .photo-upload-slot {
+                height: 140px;
+            }
         }
 
         /* 列印最佳化 */
@@ -414,36 +563,39 @@
             <!-- 1. 置頂深青藍導覽列 (Top Navbar) -->
             <header class="top-navbar no-print">
                 <div class="brand-title">
-                    <a :href="backUrl" class="nav-btn mr-2" title="返回清單">
+                    <a :href="backUrl" class="nav-btn mr-1" title="返回清單">
                         <i class="fas fa-arrow-left"></i>
-                        <span class="d-none d-sm-inline">返回清單</span>
+                        <span class="d-none d-md-inline">返回清單</span>
                     </a>
-                    <i class="fas fa-industry text-white"></i>
-                    <span>固定污染源現場查核改善與自主回報</span>
-                    <span v-if="detail && detail.FacInfo && detail.FacInfo.CNo" class="badge badge-light text-dark font-weight-bold ml-2">
+                    <i class="fas fa-industry text-white d-none d-sm-inline"></i>
+                    <span class="navbar-page-title" :title="modeTitle">
+                        <span class="d-none d-sm-inline">固定污染源</span>現場查核回報
+                    </span>
+                    <span v-if="detail && detail.FacInfo && detail.FacInfo.CNo" class="badge badge-light text-dark font-weight-bold d-none d-lg-inline ml-1" style="font-size: 0.82rem;">
                         {{ detail.FacInfo.CNo }}
                     </span>
-                    <span v-if="detail" class="badge ml-2" :class="modeBadgeClass">
-                        {{ modeTitle }}
+                    <span v-if="detail" class="badge ml-1 badge-mode-pill" :class="modeBadgeClass">
+                        <span class="d-none d-sm-inline">{{ modeTitle }}</span>
+                        <span class="d-inline d-sm-none">{{ modeShortTitle }}</span>
                     </span>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="nav-btn bg-white text-dark shadow-sm" v-on:click="printCase">
+                <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
+                    <button type="button" class="nav-btn bg-white text-dark shadow-sm" v-on:click="printCase" title="列印報表">
                         <i class="fas fa-print"></i>
-                        <span class="d-none d-md-inline">列印報表</span>
+                        <span class="d-none d-md-inline ml-1">列印</span>
                     </button>
-                    <button v-if="detail && detail.FacInfo && detail.FacInfo.Lat" type="button" class="nav-btn bg-white text-dark shadow-sm ml-2" v-on:click="openGoogleMaps">
+                    <button v-if="detail && detail.FacInfo && detail.FacInfo.Lat" type="button" class="nav-btn bg-white text-dark shadow-sm ml-1" v-on:click="openGoogleMaps" title="廠址導航">
                         <i class="fas fa-location-arrow text-success"></i>
-                        <span class="d-none d-md-inline">廠址導航</span>
+                        <span class="d-none d-md-inline ml-1">導航</span>
                     </button>
 
-                    <!-- 自主回報模式特有：一鍵全正常快速帶入 -->
-                    <button v-if="detail && detail.CanEdit && detail.Mode === 'own'" type="button" class="btn btn-warning btn-sm font-weight-bold shadow-sm ml-2" v-on:click="quickPassAll">
+                    <!-- 自主回報模式特有：一鍵全正常快速帶入 (手機版收合至底部動作列) -->
+                    <button v-if="detail && detail.CanEdit && detail.Mode === 'own'" type="button" class="btn btn-warning btn-sm font-weight-bold shadow-sm ml-1 d-none d-lg-inline-flex" v-on:click="quickPassAll">
                         <i class="fas fa-bolt mr-1"></i> 一鍵正常運行
                     </button>
 
-                    <!-- 儲存送出按鈕 -->
-                    <button v-if="detail && detail.CanEdit" type="button" class="btn btn-success btn-sm font-weight-bold shadow-sm ml-2" :disabled="submitting" v-on:click="submitReport">
+                    <!-- 儲存送出按鈕 (手機版收合至底部常駐動作列) -->
+                    <button v-if="detail && detail.CanEdit" type="button" class="btn btn-success btn-sm font-weight-bold shadow-sm ml-1 d-none d-lg-inline-flex" :disabled="submitting" v-on:click="submitReport">
                         <i class="fas fa-paper-plane mr-1"></i>
                         <span v-if="submitting">儲存中...</span>
                         <span v-else>確定送出回報</span>
@@ -471,14 +623,14 @@
                 </div>
 
                 <!-- A. 管理者/未綁定特定工廠時的公私場所選取器 -->
-                <div v-else-if="needSelectFac" class="card-modern shadow mx-auto my-5" style="max-width: 680px;">
+                <div v-else-if="needSelectFac" class="card-modern shadow mx-auto my-4" style="max-width: 680px;">
                     <div class="card-modern-header bg-primary text-white">
                         <h6 class="card-modern-title text-white">
                             <i class="fas fa-building mr-1"></i> 請選取公私場所
                         </h6>
                         <span class="badge badge-light text-primary">管理員模式</span>
                     </div>
-                    <div class="card-modern-body p-4">
+                    <div class="card-modern-body p-3 p-sm-4">
                         <div class="alert alert-info py-2 px-3 small mb-3">
                             <i class="fas fa-info-circle mr-1"></i> 當前登入帳號未綁定單一公私場所，請選取欲填寫或檢視查核回報之公私場所：
                         </div>
@@ -510,7 +662,7 @@
                     </button>
                 </div>
 
-                <!-- 核心作業區 -->
+                <!-- C. 核心作業區 -->
                 <div v-else-if="detail">
                     <!-- A. 通報階段進度時間軸 (Status Stepper) -->
                     <div class="stepper-container shadow-sm no-print">
@@ -574,7 +726,7 @@
                                         <span class="badge badge-info">{{ detail.FacInfo.CNo }}</span>
                                     </div>
                                     <div class="card-modern-body">
-                                        <h5 class="font-weight-bold text-dark mb-2">{{ detail.FacInfo.FacName }}</h5>
+                                        <h5 class="font-weight-bold text-dark mb-2" style="font-size: 1.1rem;">{{ detail.FacInfo.FacName }}</h5>
                                         <p class="text-muted small mb-3">
                                             <i class="fas fa-map-marker-alt text-danger mr-1"></i> {{ detail.FacInfo.Addr }}
                                         </p>
@@ -610,13 +762,17 @@
                                         <h6 class="card-modern-title">
                                             <i class="fas fa-map-marked-alt text-primary"></i> 現場位置圖
                                         </h6>
-                                        <div>
+                                        <div class="d-flex align-items-center">
+                                            <button type="button" class="btn btn-xs btn-outline-primary py-1 px-2 d-inline-block d-md-none mr-1" style="font-size: 11px;" v-on:click="toggleMapCollapse">
+                                                <i :class="isMapCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up'"></i>
+                                                {{ isMapCollapsed ? '展開地圖' : '收合地圖' }}
+                                            </button>
                                             <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 11px;" v-on:click="resetMapView">
                                                 <i class="fas fa-crosshairs"></i> 置中
                                             </button>
                                         </div>
                                     </div>
-                                    <div class="card-modern-body p-2">
+                                    <div class="card-modern-body p-2" v-show="!isMapCollapsed">
                                         <div id="map"></div>
                                         <div class="text-muted small mt-1 px-1 d-flex justify-content-between">
                                             <span>TWD97: {{ detail.FacInfo.Twd97X.toFixed(0) }}, {{ detail.FacInfo.Twd97Y.toFixed(0) }}</span>
@@ -625,8 +781,8 @@
                                     </div>
                                 </div>
 
-                                <!-- 九大項快速定位跳轉面板 -->
-                                <div class="card-modern no-print">
+                                <!-- 九大項快速定位跳轉面板 (桌面端) -->
+                                <div class="card-modern no-print d-none d-lg-block">
                                     <div class="card-modern-header">
                                         <h6 class="card-modern-title">
                                             <i class="fas fa-list-ol text-primary"></i> 九大防制項目導航
@@ -650,7 +806,7 @@
                         <div class="col-xl-7 col-lg-7 col-12">
                             <!-- 頂部篩選與進度 -->
                             <div class="card-modern mb-3 no-print">
-                                <div class="card-modern-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                <div class="card-modern-body py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="font-weight-bold small text-secondary">顯示項目：</span>
                                         <div class="btn-group btn-group-toggle btn-group-sm">
@@ -658,7 +814,7 @@
                                                 全部 9 項 ({{ detail.Sections.length }})
                                             </button>
                                             <button type="button" class="btn" :class="filterOnlyLoss ? 'btn-danger' : 'btn-outline-danger'" v-on:click="filterOnlyLoss = true">
-                                                僅看缺失項目 ({{ lossSectionCount }})
+                                                僅看缺失 ({{ lossSectionCount }})
                                             </button>
                                         </div>
                                     </div>
@@ -680,10 +836,10 @@
                                         <div class="section-rule">{{ sec.LawRule }}</div>
                                     </div>
                                     <div>
-                                        <span v-if="sec.HasLoss" class="badge badge-danger p-2" style="font-size: 0.9rem;">
+                                        <span v-if="sec.HasLoss" class="badge badge-danger p-2" style="font-size: 0.85rem;">
                                             <i class="fas fa-times-circle mr-1"></i> 違規記 {{ sec.LossPoint }} 點
                                         </span>
-                                        <span v-else class="badge badge-success p-2" style="font-size: 0.9rem;">
+                                        <span v-else class="badge badge-success p-2" style="font-size: 0.85rem;">
                                             <i class="fas fa-check-circle mr-1"></i> 合格 (0點)
                                         </span>
                                     </div>
@@ -739,7 +895,7 @@
                                             <label class="font-weight-bold small text-primary m-0">
                                                 <i class="fas fa-upload text-primary mr-1"></i> {{ detail.Mode === 'own' ? '自主巡報照片與佐證' : '改善完成佐證照片與說明' }}：
                                             </label>
-                                            <span v-if="detail.CanEdit" class="badge badge-warning text-dark">可點選槽位拍照或選檔</span>
+                                            <span v-if="detail.CanEdit" class="badge badge-warning text-dark d-none d-sm-inline">可點選槽位拍照或選檔</span>
                                         </div>
 
                                         <div class="photo-grid">
@@ -767,16 +923,16 @@
 
                                                 <!-- 唯讀模式：無照片提示 -->
                                                 <div v-else class="photo-thumb-wrap" style="background: #f1f5f9; cursor: default;">
-                                                    <span class="text-muted small">未提供回報照片</span>
+                                                    <span class="text-muted small">未提供照片</span>
                                                 </div>
 
                                                 <!-- 補充說明輸入框或唯讀文字 -->
                                                 <div class="photo-card-body">
                                                     <div v-if="detail.CanEdit">
-                                                        <input type="text" class="photo-memo-input" v-model="rp.Memo" placeholder="請輸入本照片補充說明..." />
+                                                        <input type="text" class="photo-memo-input" v-model="rp.Memo" placeholder="輸入照片補充說明..." />
                                                         <div v-if="rp.PreviewUrl" class="text-right mt-1">
                                                             <button type="button" class="btn btn-link btn-xs text-danger p-0 font-weight-bold" style="font-size: 11px;" v-on:click="clearUpload(rp)">
-                                                                <i class="fas fa-trash-alt mr-1"></i> 清除重傳
+                                                                <i class="fas fa-trash-alt mr-1"></i> 清除
                                                             </button>
                                                         </div>
                                                     </div>
@@ -791,8 +947,8 @@
                                 </div>
                             </div>
 
-                            <!-- 底部儲存列 -->
-                            <div v-if="detail.CanEdit" class="card-modern shadow-sm no-print">
+                            <!-- 底部儲存列 (桌面版) -->
+                            <div v-if="detail.CanEdit" class="card-modern shadow-sm no-print d-none d-lg-block">
                                 <div class="card-modern-body text-center py-3">
                                     <button type="button" class="btn btn-outline-secondary mr-2 px-4" v-on:click="goBack">
                                         <i class="fas fa-undo mr-1"></i> 取消返回
@@ -811,10 +967,13 @@
 
             <!-- 手機端懸浮底部動作列 (Sticky Bottom Bar) -->
             <div v-if="detail && detail.CanEdit" class="mobile-bottom-bar no-print">
-                <button type="button" class="btn btn-outline-secondary" v-on:click="goBack">
-                    取消
+                <button type="button" class="btn btn-outline-secondary" v-on:click="goBack" style="flex: 0 0 54px;" title="返回">
+                    <i class="fas fa-arrow-left"></i>
                 </button>
-                <button type="button" class="btn btn-success" :disabled="submitting" v-on:click="submitReport">
+                <button v-if="detail.Mode === 'own'" type="button" class="btn btn-warning font-weight-bold" v-on:click="quickPassAll" style="flex: 1;">
+                    <i class="fas fa-bolt mr-1"></i> 一鍵正常
+                </button>
+                <button type="button" class="btn btn-success font-weight-bold" :disabled="submitting" v-on:click="submitReport" style="flex: 1.3;">
                     <i class="fas fa-paper-plane mr-1"></i> 送出回報
                 </button>
             </div>
@@ -852,6 +1011,7 @@
                     detail: null,
                     filterOnlyLoss: false,
                     printTime: '',
+                    isMapCollapsed: false,
                     needSelectFac: false,
                     facOptions: [],
                     facSearchKey: '',
@@ -874,6 +1034,12 @@
                     if (this.detail.Mode === 'own') return '自主維護回報';
                     if (this.detail.Mode === 'read') return '回報紀錄檢視';
                     return '缺失改善回報';
+                },
+                modeShortTitle() {
+                    if (!this.detail) return '';
+                    if (this.detail.Mode === 'own') return '自主';
+                    if (this.detail.Mode === 'read') return '檢視';
+                    return '改善';
                 },
                 modeBadgeClass() {
                     if (!this.detail) return 'badge-secondary';
@@ -1031,10 +1197,25 @@
                     // 標記工廠 Pin
                     const marker = L.marker([lat, lng]).addTo(mapInstance);
                     const popupContent = '<b>' + (this.detail.FacInfo.FacName || '公私場所') + '</b><br/>' + (this.detail.FacInfo.Addr || '');
-                    marker.bindPopup(popupContent).openPopup();
+                    
+                    // 手機端視窗小，避免彈出遮滿全圖，僅於點擊時打開或大螢幕時預設打開
+                    if (window.innerWidth >= 768) {
+                        marker.bindPopup(popupContent).openPopup();
+                    } else {
+                        marker.bindPopup(popupContent);
+                    }
 
                     // 使用 markRaw 存於原生屬性中
                     this.leafletMap = markRaw(mapInstance);
+                },
+
+                toggleMapCollapse() {
+                    this.isMapCollapsed = !this.isMapCollapsed;
+                    if (!this.isMapCollapsed && this.leafletMap) {
+                        nextTick(() => {
+                            this.leafletMap.invalidateSize();
+                        });
+                    }
                 },
 
                 resetMapView() {
@@ -1044,6 +1225,14 @@
                     if (lat && lng && lat > 0 && lng > 0) {
                         this.leafletMap.setView([lat, lng], 15);
                     }
+                },
+
+                confirmSelectFac() {
+                    if (!this.selectedFacId) return;
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('id', this.selectedFacId);
+                    window.history.replaceState({}, '', url.toString());
+                    this.loadData();
                 },
 
                 getStepClass(step) {
@@ -1066,13 +1255,6 @@
                     window.print();
                 },
 
-                confirmSelectFac() {
-                    if (!this.selectedFacId) return;
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('id', this.selectedFacId);
-                    window.history.replaceState({}, '', url.toString());
-                    this.loadData();
-                },
                 goBack() {
                     window.location.href = this.backUrl;
                 },

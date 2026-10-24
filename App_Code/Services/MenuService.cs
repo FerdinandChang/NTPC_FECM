@@ -64,10 +64,10 @@ namespace NTPC_FEC.Services
                     new MenuSubItem { Title = "案件複審", Url = "Manager/managerList.aspx?INV_State=INV2", BadgeCount = pending.CaseInv2, ShowZero = true },
                     new MenuSubItem { Title = "案件三審", Url = "Manager/managerList.aspx?INV_State=INV3", BadgeCount = pending.CaseInv3, ShowZero = true },
                     new MenuSubItem { Title = "查核紀錄列表", Url = "Case/CaseList.aspx?mode=search" },
-                    new MenuSubItem { Title = "臺北港專區", Url = "Case/CaseList.aspx?mode=project" },
+                    new MenuSubItem { Title = "臺北港專區", Url = "Case/CaseList.aspx?mode=project", BadgeCount = pending.CaseProject },
                     new MenuSubItem { Title = "案件派遣設定", Url = "FAC/FAC_List.aspx?mode=mission" },
                     new MenuSubItem { Title = "巡查派遣", Url = "Case/CaseList.aspx?mode=mission7day", BadgeCount = pending.CaseMission7Day },
-                    new MenuSubItem { Title = "提報稽查", Url = "Case/CaseList.aspx?mode=mission2times", BadgeCount = pending.CaseMission2Times },
+                    new MenuSubItem { Title = "提報稽查", Url = "Case/CaseList.aspx?mode=mission2times", BadgeCount = pending.CaseMission2Times, ShowZero = true },
                     new MenuSubItem { Title = "查核統計", Url = "Case/Case_Sum.aspx" },
                     new MenuSubItem { Title = "管辧狀況統計", Url = "Case/Case_Sum_1.aspx" }
                 }
@@ -88,9 +88,9 @@ namespace NTPC_FEC.Services
                 {
                     new MenuSubItem { Title = "作業機具調查", Url = "Machine/NewMac.aspx" },
                     new MenuSubItem { Title = "查核紀錄暫存", Url = "Machine/macList.aspx?mode=reject", BadgeCount = pending.MachineDraft },
-                    new MenuSubItem { Title = "案件初審", Url = "Manager/managerList.aspx?INV_State=MAC1", BadgeCount = pending.MachineInv1 },
-                    new MenuSubItem { Title = "案件複審", Url = "Manager/managerList.aspx?INV_State=MAC2", BadgeCount = pending.MachineInv2 },
-                    new MenuSubItem { Title = "案件三審", Url = "Manager/managerList.aspx?INV_State=MAC3", BadgeCount = pending.MachineInv3 },
+                    new MenuSubItem { Title = "案件初審", Url = "Manager/managerList.aspx?INV_State=MAC1", BadgeCount = pending.MachineInv1, ShowZero = true },
+                    new MenuSubItem { Title = "案件複審", Url = "Manager/managerList.aspx?INV_State=MAC2", BadgeCount = pending.MachineInv2, ShowZero = true },
+                    new MenuSubItem { Title = "案件三審", Url = "Manager/managerList.aspx?INV_State=MAC3", BadgeCount = pending.MachineInv3, ShowZero = true },
                     new MenuSubItem { Title = "調查成果列表", Url = "Machine/macList.aspx?mode=search" }
                 }
             });
@@ -109,7 +109,7 @@ namespace NTPC_FEC.Services
                 SubItems = new List<MenuSubItem>
                 {
                     new MenuSubItem { Title = "裸露地調查", Url = "BareGround/NewBare.aspx?mode=new" },
-                    new MenuSubItem { Title = "查核紀錄暫存", Url = "BareGround/Bare_List.aspx?mode=reject", BadgeCount = pending.BareDraft },
+                    new MenuSubItem { Title = "查核紀錄暫存", Url = "BareGround/Bare_List.aspx?mode=reject", BadgeCount = pending.BareDraft, ShowZero = true },
                     new MenuSubItem { Title = "退件紀錄", Url = "BareGround/Bare_List.aspx?mode=back", BadgeCount = pending.BareBack, ShowZero = true },
                     new MenuSubItem { Title = "案件初審", Url = "Manager/managerList_Bare.aspx?mode=INV1", BadgeCount = pending.BareInv1, ShowZero = true },
                     new MenuSubItem { Title = "案件複審", Url = "Manager/managerList_Bare.aspx?mode=INV2", BadgeCount = pending.BareInv2, ShowZero = true },
@@ -196,7 +196,7 @@ namespace NTPC_FEC.Services
                     // 分類一：道路潔淨巡檢
                     new MenuSubItem { Category = "道路潔淨巡檢", Title = "道路潔淨查核 (新增)", Url = "RoadClean/NewCleanChk.aspx?mode=new" },
                     new MenuSubItem { Category = "道路潔淨巡檢", Title = "查核紀錄暫存", Url = "RoadClean/Clean_List.aspx?mode=apply", BadgeCount = pending.RoadCleanDraft },
-                    new MenuSubItem { Category = "道路潔淨巡檢", Title = "退回補正案件", Url = "RoadClean/Clean_List.aspx?mode=back", BadgeCount = pending.RoadCleanBack },
+                    new MenuSubItem { Category = "道路潔淨巡檢", Title = "退回補正案件", Url = "RoadClean/Clean_List.aspx?mode=back", BadgeCount = pending.RoadCleanBack, ShowZero = true },
                     new MenuSubItem { Category = "道路潔淨巡檢", Title = "案件審核", Url = "RoadClean/Clean_List.aspx?mode=examine", BadgeCount = pending.RoadCleanExamine },
                     new MenuSubItem { Category = "道路潔淨巡檢", Title = "調查成果列表", Url = "RoadClean/Clean_List.aspx?mode=search" },
                     new MenuSubItem { Category = "道路潔淨巡檢", Title = "道路潔淨統計", Url = "RoadClean/RoadClean_Sum.aspx" },
@@ -216,7 +216,7 @@ namespace NTPC_FEC.Services
                     // 分類四：人行道與交通島管理
                     new MenuSubItem { Category = "人行道與交通島管理", Title = "裸露覆土通報", Url = "RoadBSC/NewBSC.aspx?mode=new" },
                     new MenuSubItem { Category = "人行道與交通島管理", Title = "查核紀錄暫存", Url = "RoadBSC/BSC_List.aspx?mode=BSCEdit" },
-                    new MenuSubItem { Category = "人行道與交通島管理", Title = "覆土改善回報", Url = "RoadBSC/BSC_List.aspx?mode=BSCImprove", BadgeCount = pending.RoadBSCImprove },
+                    new MenuSubItem { Category = "人行道與交通島管理", Title = "覆土改善回報", Url = "RoadBSC/BSC_List.aspx?mode=BSCImprove", BadgeCount = pending.RoadBSCImprove, ShowZero = true },
                     new MenuSubItem { Category = "人行道與交通島管理", Title = "覆土改善成果", Url = "RoadBSC/BSC_List.aspx?mode=Finish" }
                 }
             });
