@@ -345,6 +345,96 @@
             font-size: 13px;
         }
 
+        /* 行動端卡片式清單 (小螢幕免橫向捲動) */
+        .mobile-card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px;
+        }
+
+        .mobile-data-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .mobile-data-card:active {
+            background-color: #f8fafc;
+            transform: scale(0.99);
+        }
+
+        .card-row-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .m-seq-badge {
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            margin-right: 4px;
+        }
+
+        .card-fac-name {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--brand-navy);
+            line-height: 1.35;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .card-prop-tags {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .prop-item {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            color: #334155;
+            line-height: 1.4;
+        }
+
+        .prop-label {
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .card-addr-row {
+            font-size: 11px;
+            color: #64748b;
+            padding-top: 8px;
+            margin-top: 4px;
+            border-top: 1px dashed #e2e8f0;
+            display: flex;
+            align-items: flex-start;
+            line-height: 1.4;
+            word-break: break-all;
+        }
+
         /* 現代明細表格 */
         .table-responsive-custom {
             border-radius: 8px;
@@ -493,6 +583,9 @@
         }
 
         @media (max-width: 767.98px) {
+            .container-fluid-custom {
+                padding: 12px 10px 40px 10px;
+            }
             .top-navbar {
                 padding: 0 12px;
             }
@@ -501,18 +594,66 @@
             }
             .kpi-row {
                 grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .kpi-card {
+                padding: 12px 14px;
+            }
+            .kpi-icon-box {
+                width: 40px;
+                height: 40px;
+                font-size: 1.15rem;
+            }
+            .kpi-val {
+                font-size: 1.45rem;
             }
             .chart-wrapper {
                 min-height: 320px;
             }
+            .card-modern-header {
+                padding: 10px 12px;
+                gap: 8px;
+            }
             .card-tools-group {
                 width: 100%;
-                margin-top: 8px;
+                margin-top: 4px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-wrap: nowrap;
             }
             .search-box {
                 flex: 1;
                 width: auto;
-                min-width: 130px;
+                min-width: 110px;
+            }
+            .search-box input {
+                height: 36px;
+                font-size: 12px;
+                padding-left: 28px;
+            }
+            .search-box .search-icon {
+                left: 9px;
+                font-size: 11px;
+            }
+            .tool-page-select {
+                height: 36px !important;
+                width: 82px !important;
+                font-size: 12px !important;
+                padding: 0 4px !important;
+                flex-shrink: 0;
+            }
+            .tool-export-btn {
+                height: 36px !important;
+                font-size: 12px !important;
+                padding: 0 10px !important;
+                flex-shrink: 0;
+            }
+            .pagination-bar {
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+                text-align: center;
             }
         }
     </style>
@@ -703,13 +844,13 @@
                                    v-model="searchKeyword" 
                                    placeholder="搜尋管制編號、名稱、地址..." />
                         </div>
-                        <select class="form-control form-control-sm" style="width: 105px; height: 38px; flex-shrink: 0;" v-model="pageSize">
+                        <select class="form-control form-control-sm tool-page-select" style="width: 105px; height: 38px; flex-shrink: 0;" v-model="pageSize">
                             <option :value="10">每頁 10 筆</option>
                             <option :value="25">每頁 25 筆</option>
                             <option :value="50">每頁 50 筆</option>
                             <option :value="100">每頁 100 筆</option>
                         </select>
-                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold text-nowrap d-inline-flex align-items-center justify-content-center" style="height: 38px; flex-shrink: 0; padding: 0 14px; gap: 6px;" v-on:click="exportExcel" title="匯出 Excel 報表">
+                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold text-nowrap d-inline-flex align-items-center justify-content-center tool-export-btn" style="height: 38px; flex-shrink: 0; padding: 0 14px; gap: 6px;" v-on:click="exportExcel" title="匯出 Excel 報表">
                             <i class="fas fa-file-excel"></i>
                             <span>匯出</span>
                         </button>
@@ -717,7 +858,8 @@
                 </div>
 
                 <div class="card-modern-body p-0">
-                    <div class="table-responsive-custom">
+                    <!-- 電腦端/寬螢幕：標準資料表格 (>= 768px 顯示) -->
+                    <div class="table-responsive-custom d-none d-md-block">
                         <table class="modern-table">
                             <thead>
                                 <tr>
@@ -817,6 +959,96 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- 行動端/小螢幕：卡片式清單 (< 768px 顯示，徹底避免橫移視窗) -->
+                    <div class="mobile-card-list d-md-none">
+                        <div v-if="pagedList.length === 0" class="text-center py-4 text-muted bg-white rounded">
+                            <i class="fas fa-inbox fa-2x mb-2 d-block text-secondary"></i>
+                            查無相符之公私場所資料
+                        </div>
+
+                        <div v-for="(item, idx) in pagedList" :key="'m-' + idx" 
+                             class="mobile-data-card" 
+                             v-on:click="openFacModal(item.FAC_ID)">
+                            <!-- 卡片頂部：序號、管制編號、行政區、詳細動作 -->
+                            <div class="card-row-top">
+                                <div class="d-flex align-items-center">
+                                    <span class="m-seq-badge">{{ (currentPage - 1) * pageSize + idx + 1 }}</span>
+                                    <span class="badge-cno" title="檢視詳細資訊">
+                                        {{ item.管制編號 || '-' }}
+                                    </span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge badge-light border text-secondary font-weight-normal px-2 py-1 mr-1">
+                                        {{ item.行政區 || '-' }}
+                                    </span>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" title="檢視詳細資料">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 場所名稱 -->
+                            <div class="card-fac-name">
+                                {{ item.場所名稱 || item.名稱 || '-' }}
+                            </div>
+
+                            <!-- 動態維度屬性標籤 -->
+                            <div class="card-prop-tags">
+                                <!-- 製程 / 年度 -->
+                                <template v-if="currentDim === 'process' || currentDim === 'licyear'">
+                                    <div class="prop-item">
+                                        <span class="prop-label">製程：</span>
+                                        <strong>{{ item.製程編號 }} {{ item.製程名稱 }}</strong>
+                                    </div>
+                                    <div class="prop-item" v-if="item.核發年度">
+                                        <span class="prop-label">年度：</span>
+                                        <span class="badge badge-secondary px-2 py-1">{{ item.核發年度 }}年</span>
+                                    </div>
+                                    <div class="prop-item" v-if="item.許可證號">
+                                        <span class="prop-label">證號：</span>
+                                        <code>{{ item.許可證號 }}</code>
+                                    </div>
+                                </template>
+
+                                <!-- 行業別 -->
+                                <template v-else-if="currentDim === 'industrial'">
+                                    <div class="prop-item">
+                                        <span class="prop-label">行業：</span>
+                                        <strong>{{ item.行業別 || '-' }}</strong>
+                                        <code v-if="item.行業代碼">({{ item.行業代碼 }})</code>
+                                    </div>
+                                </template>
+
+                                <!-- 分級組別 -->
+                                <template v-else-if="currentDim === 'group'">
+                                    <div class="prop-item">
+                                        <span class="prop-label">分級：</span>
+                                        <span class="badge badge-primary px-2 py-1">{{ item.分級組別 || '-' }}</span>
+                                    </div>
+                                </template>
+
+                                <!-- 列管狀況 -->
+                                <template v-else>
+                                    <div class="prop-item">
+                                        <span class="prop-label">狀況：</span>
+                                        <span class="badge" :class="item.列管狀況 === '列管' ? 'badge-success' : 'badge-secondary'">
+                                            {{ item.列管狀況 || '-' }}
+                                        </span>
+                                        <span v-if="item.分級組別" class="badge badge-light border text-dark ml-1">
+                                            {{ item.分級組別 }}
+                                        </span>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- 地址資訊 (若有) -->
+                            <div class="card-addr-row" v-if="item.地址">
+                                <i class="fas fa-map-marker-alt text-danger mr-1" style="font-size: 11px; margin-top: 2px;"></i>
+                                <span>{{ item.地址 }}</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 分頁控制項 -->

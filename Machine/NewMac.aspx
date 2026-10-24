@@ -761,11 +761,13 @@
 
             <!-- 區塊一：公私場所基本資料 -->
             <div class="card-modern">
-                <div class="card-modern-header">
-                    <h5 class="card-modern-title">
+                <div class="card-modern-header flex-column align-items-start py-2">
+                    <h5 class="card-modern-title mb-1">
                         <i class="fas fa-building text-primary"></i> 一、公私場所基本資料
                     </h5>
-                    <span class="text-muted small">管制編號：<strong>{{ facInfo.C_NO || '無' }}</strong></span>
+                    <span class="text-muted small" style="padding-left: 26px;">
+                        管制編號：<strong class="text-dark">{{ facInfo.C_NO || '無' }}</strong>
+                    </span>
                 </div>
                 <div class="card-modern-body">
                     <div class="row">
@@ -1361,11 +1363,13 @@
 
             <!-- 區塊五：施工機具 不透光率排煙檢測結果 -->
             <div class="card-modern">
-                <div class="card-modern-header">
-                    <h5 class="card-modern-title">
+                <div class="card-modern-header flex-column align-items-start py-2">
+                    <h5 class="card-modern-title mb-1">
                         <i class="fas fa-tachometer-alt text-danger"></i> 五、施工機具 不透光率排煙檢測結果
                     </h5>
-                    <span class="text-muted small">系統即時自動計算 3 次平均值</span>
+                    <span class="text-muted small" style="padding-left: 26px;">
+                        系統即時自動計算 3 次平均值
+                    </span>
                 </div>
                 <div class="card-modern-body">
                     <div class="row">
@@ -1483,11 +1487,13 @@
 
             <!-- 區塊七：檢測照片上傳 (6 大類) -->
             <div class="card-modern">
-                <div class="card-modern-header">
-                    <h5 class="card-modern-title">
+                <div class="card-modern-header flex-column align-items-start py-2">
+                    <h5 class="card-modern-title mb-1">
                         <i class="fas fa-camera text-primary"></i> 七、檢測與機具佐證照片 (共 6 類)
                     </h5>
-                    <span class="text-muted small">點擊照片卡片可上傳或更換</span>
+                    <span class="text-muted small" style="padding-left: 26px;">
+                        點擊照片卡片可上傳或更換
+                    </span>
                 </div>
                 <div class="card-modern-body">
                     <div class="row">
