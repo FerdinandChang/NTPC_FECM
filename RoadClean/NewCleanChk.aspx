@@ -2072,6 +2072,7 @@
     <!-- 引用本地 Leaflet.js (完全免外連) -->
 
     <script src="../Scripts/leaflet/leaflet.js"></script>
+    <script src="../Scripts/fec-offline-sentinel.js"></script>
 
 
 
@@ -2088,6 +2089,7 @@
                 return {
 
                     mode: 'new',
+                    draftSentinel: null,
 
                     chkId: '',
 
@@ -2261,6 +2263,9 @@
                     if (this.chkId) {
 
                         await this.fetchRecord(this.chkId);
+                    }
+                } else {
+                    this.initDraftSentinel();
 
                     }
 
@@ -2269,6 +2274,45 @@
             },
 
             methods: {
+                initDraftSentinel() {
+                    if (this.mode !== 'new' || typeof FecOfflineSentinel === 'undefined') return;
+                    this.draftSentinel = FecOfflineSentinel.create({
+                        storageKey: 'FEC_DRAFT_CLEANCHK',
+                        getData: () => {
+                            if (!this.selectedTown && !this.selectedRdid) return null;
+                            return {
+                                selectedTown: this.selectedTown,
+                                selectedRdid: this.selectedRdid,
+                                pointList: this.pointList,
+                                signatureImg: this.signatureImg
+                            };
+                        },
+                        restoreData: (d) => {
+                            if (!d) return;
+                            if (d.selectedTown) this.selectedTown = d.selectedTown;
+                            if (d.selectedRdid) {
+                                this.selectedRdid = d.selectedRdid;
+                                this.onRoadChange();
+                            }
+                            if (d.pointList && d.pointList.length > 0) {
+                                setTimeout(() => {
+                                    this.pointList = d.pointList;
+                                    this.renderMapPins();
+                                }, 300);
+                            }
+                            if (d.signatureImg) {
+                                this.signatureImg = d.signatureImg;
+                                this.hasDrawnSignature = true;
+                            }
+                            this.alertMessage = '已成功為您還原上次暫存草稿！';
+                            this.alertType = 'success';
+                        }
+                    });
+
+                    this.$nextTick(() => {
+                        this.draftSentinel.checkAndPromptRestore(document.getElementById('cleanChkApp'));
+                    });
+                },
 
                 // 初始化 Leaflet 開源地圖 (隔離 Vue 3 響應式代理)
 
@@ -3167,6 +3211,11 @@
 
 
 
+                    if (!navigator.onLine) {
+                        alert('⚠️ 現場網路已斷線！系統已為您自動保存本機最新草稿，請待恢復網路連線後再按送出。');
+                        return;
+                    }
+
                     this.saving = true;
 
                     try {
@@ -3175,6 +3224,9 @@
 
                         if (res.data.Success) {
 
+                            if (this.draftSentinel) {
+                                this.draftSentinel.clearDraft();
+                            }
                             alert('🎉 巡檢紀錄已成功儲存！單號：' + res.data.ChkId);
 
                             window.location.href = 'Clean_List.aspx';

@@ -18,6 +18,11 @@
         {
             // 動態取得當前站台的 Default.aspx (相容 NTPC_FEC 與 NTPC_FECM 等任何自訂別名)
             string targetUrl = ResolveUrl("~/Default.aspx");
+            string reason = Request.QueryString["reason"];
+            if (!string.IsNullOrEmpty(reason))
+            {
+                targetUrl += (targetUrl.Contains("?") ? "&" : "?") + "reason=" + HttpUtility.UrlEncode(reason);
+            }
             Response.Redirect(targetUrl, true);
         }
     }

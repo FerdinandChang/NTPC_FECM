@@ -702,6 +702,14 @@
                     localStorage.removeItem('FEC_SAVED_USER');
                 } catch (e) {}
 
+                // 檢查是否為閒置逾時被自動安全登出
+                try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('reason') === 'timeout') {
+                        this.errorMessage = '系統偵測您已閒置逾時，為維護帳號資訊安全已自動安全登出，請重新登入！';
+                    }
+                } catch (e) {}
+
                 // ESC 鍵關閉彈窗
                 window.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape' && this.activeModal) {

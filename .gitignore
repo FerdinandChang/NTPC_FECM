@@ -18,6 +18,7 @@ BAK_FILE/
 # 機敏設定檔與正式機帳密保護
 Web.config
 !Web.config.template
+!Upload/Web.config
 
 # 除錯與日誌檔
 *.log

@@ -894,7 +894,17 @@
                             </div>
                             <div class="form-group mb-3">
                                 <label class="font-weight-bold small text-muted">預設密碼 <span class="text-danger">*</span></label>
-                                <asp:TextBox ID="txtNewPassword" runat="server" CssClass="form-control" placeholder="請設定 6 位數以上初始密碼"></asp:TextBox>
+                                <div class="input-group">
+                                    <asp:TextBox ID="txtNewPassword" runat="server" CssClass="form-control" placeholder="8-20 碼，需含英文大小寫、數字與符號"></asp:TextBox>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="generateRandomStrongPwd();" title="自動產生合規強密碼">
+                                            <i class="fas fa-magic mr-1"></i>隨機產生
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted mt-1" style="font-size: 0.78rem; line-height: 1.4;">
+                                    <i class="fas fa-shield-alt text-info mr-1"></i>須符合強密碼原則：長度 <strong>8-20 碼</strong>，且同時包含<strong>英文大寫、英文小寫、數字及特殊符號</strong>。
+                                </small>
                             </div>
                             <div class="form-group mb-3">
                                 <label class="font-weight-bold small text-muted">使用者姓名 <span class="text-danger">*</span></label>
@@ -1057,6 +1067,32 @@
                 });
             }
 
+        function generateRandomStrongPwd() {
+            var upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+            var lower = 'abcdefghijkmnopqrstuvwxyz';
+            var digits = '23456789';
+            var specials = '!@#$%*-_+';
+            var all = upper + lower + digits + specials;
+            var pwd = [
+                upper.charAt(Math.floor(Math.random() * upper.length)),
+                lower.charAt(Math.floor(Math.random() * lower.length)),
+                digits.charAt(Math.floor(Math.random() * digits.length)),
+                specials.charAt(Math.floor(Math.random() * specials.length))
+            ];
+            for (var i = 0; i < 6; i++) {
+                pwd.push(all.charAt(Math.floor(Math.random() * all.length)));
+            }
+            for (var i = pwd.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = pwd[i];
+                pwd[i] = pwd[j];
+                pwd[j] = temp;
+            }
+            var finalPwd = pwd.join('');
+            $('#<%= txtNewPassword.ClientID %>').val(finalPwd);
+        }
+
+        $(function () {
             // 即時快速鍵盤過濾 (提供行動端 427 筆即搜即現，免等 PostBack 重新整理)
             var $kwInput = $('#<%= txtKeyword.ClientID %>');
             if ($kwInput.length > 0) {

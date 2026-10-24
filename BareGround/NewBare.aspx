@@ -825,6 +825,7 @@
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
     <script src="../Scripts/leaflet/leaflet.js"></script>
+    <script src="../Scripts/fec-offline-sentinel.js"></script>
 
     <script>
         const { createApp, markRaw } = Vue;
@@ -833,6 +834,7 @@
             data() {
                 return {
                     mode: 'new',
+                    draftSentinel: null,
                     alertMessage: '',
                     alertType: 'info',
                     isMapCollapsed: false,
@@ -907,8 +909,44 @@
 
                 this.initMap();
                 this.loadInitData(bareId, invNo);
+                this.initDraftSentinel();
             },
             methods: {
+                initDraftSentinel() {
+                    if (this.mode !== 'new' || typeof FecOfflineSentinel === 'undefined') return;
+                    this.draftSentinel = FecOfflineSentinel.create({
+                        storageKey: 'FEC_DRAFT_NEWBARE',
+                        getData: () => {
+                            if (!this.form.ADDR && !this.form.BareGroundNo && !this.form.Bare_ID) return null;
+                            return {
+                                form: this.form,
+                                signatureBase64: this.signatureBase64,
+                                photos: this.photos
+                            };
+                        },
+                        restoreData: (d) => {
+                            if (!d) return;
+                            if (d.form) {
+                                Object.assign(this.form, d.form);
+                                if (this.form.Latitude && this.form.Longtitude) {
+                                    this.updateMarker(this.form.Latitude, this.form.Longtitude);
+                                }
+                            }
+                            if (d.signatureBase64) {
+                                this.signatureBase64 = d.signatureBase64;
+                                this.hasDrawn = true;
+                            }
+                            if (d.photos && d.photos.length > 0) {
+                                this.photos = d.photos;
+                            }
+                            this.showAlert('已成功為您還原上次裸露地巡檢暫存草稿！', 'success');
+                        }
+                    });
+
+                    this.$nextTick(() => {
+                        this.draftSentinel.checkAndPromptRestore(document.getElementById('bareApp'));
+                    });
+                },
                 // 初始化智慧地圖 (Leaflet)
                 initMap() {
                     const defaultLat = 25.0169;
@@ -1388,11 +1426,19 @@
                         }))
                     };
 
+                    if (!navigator.onLine) {
+                        alert('⚠️ 現場網路已離線！系統已自動保存本機最新草稿，請待恢復連線後再按送出。');
+                        return;
+                    }
+
                     this.showAlert('正在儲存巡查紀錄，請稍候...', 'info');
 
                     axios.post('NewBare.aspx?action=save', payload)
                         .then(res => {
                             if (res.data.Success) {
+                                if (this.draftSentinel) {
+                                    this.draftSentinel.clearDraft();
+                                }
                                 alert(res.data.Message || '儲存成功！');
                                 window.location.href = 'Bare_List.aspx?mode=reject';
                             } else {

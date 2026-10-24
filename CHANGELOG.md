@@ -4,6 +4,55 @@
 
 ---
 
+## [1.4.0] - 2026-10-24
+
+### 🚀 版本概述
+新北市固定溢散源管理平台（NTPC_FECM）發布 1.4.0 版本。本版本著重於「全域資安防護」、「政府資安規範相容性（30分鐘閒置自動登出）」、「外勤離線草稿守護（FEC Offline Sentinel）」及「原生 PowerShell 自動化安全發布工具」的全面實作與強化，打造高資安、高可靠性與抗斷網之外勤巡查作業環境。
+
+### ✨ 主要歷程與改動
+
+#### 1. 全域身分驗證過濾與上傳目錄防 WebShell 攻擊
+- **全域認證過濾模組 (`App_Code/Security/AuthFilterModule.cs`)**：
+  - 實作全域 HTTP 模組攔截未授權存取，涵蓋靜態資源與公開頁面白名單。
+  - 針對一般網頁請求：未登入或 Session 逾時強制安全導向 `Default.aspx?reason=timeout`。
+  - 針對 AJAX/API 呼叫：自動攔截並回傳標準 HTTP 401 JSON 回應（`{"success":false,"authenticated":false,"message":"連線逾時..."}`），杜絕 API 越權繞過風險。
+- **上傳目錄安全隔離 (`Upload/Web.config`)**：
+  - 在 `Upload/` 目錄部署專屬安全設定檔，將 IIS 處理常式存取原則限制為唯讀（`accessPolicy="Read"`）。
+  - 明確禁用 `.aspx`、`.ashx`、`.asmx`、`.cs`、`.config`、`.exe`、`.bat`、`.cmd` 等副檔名，並設定 `HttpForbiddenHandler`，徹底阻絕任何上傳 WebShell 與惡意腳本執行。
+
+#### 2. 全域例外攔截與資安日誌持久化 (`Global.asax`, `Global.asax.cs`)
+- **應用程式生命週期與錯誤攔截**：
+  - `Application_Start` 自動呼叫 `EnsurePasswordColumnCapacity()` 確保密碼欄位長度合規。
+  - `Application_Error` 全域攔截未預期異常，將時間、使用者帳號、來源 IP、HTTP 方法、請求網址及完整堆疊追蹤安全記錄至 `App_Data/Logs/Error_yyyyMMdd.log`。
+  - AJAX 請求自動屏蔽系統錯誤內部細節，統一回應安全的標準 500 JSON，符合 OWASP 資安防護標準。
+
+#### 3. 符合政府機關資安規範之 30 分鐘閒置自動登出與預警機制
+- **全域閒置偵測與預警彈窗 (`MainPage.Master`, `Logout.aspx`, `KeepAlive.ashx`)**：
+  - 符合政府機關資安規範：連續 30 分鐘無操作強制自動登出。
+  - 頂部導航列動態顯示操作有效倒數計時膠囊（`30:00`）。
+  - 進入最後 120 秒前跳出全螢幕模糊預警彈窗（`idle-modal-dialog`），支援大數字即時倒數與一鍵延長連線。
+  - 全載具操作即時重置：偵測到任何滑鼠移動、鍵盤按鍵、滾輪、點擊或觸控操作，即時無感重置倒數計時，每 5 分鐘自動向 `KeepAlive.ashx` 發送心跳展延 Session。
+  - 支援瀏覽器分頁能見度（`visibilitychange`）監聽，防止筆電休眠或背景分頁喚醒後繞過逾時檢驗。
+  - 登出時重定向至 `Default.aspx?reason=timeout`，登入頁友善提示逾時登出資訊。
+
+#### 4. 外勤現場巡查離線與本機草稿守護器 (`Scripts/fec-offline-sentinel.js`)
+- **弱網與斷網防呆保護**：
+  - 外勤現場弱網或斷網時即時感知，於頂部顯示醒目離線警報列。
+  - 每 15 秒自動將填報中的表單資料備份暫存至本機 localStorage。
+  - 斷線重連或重新整理頁面時，主動提供「一鍵還原上次填報草稿」功能。
+  - 表單成功送出後自動安全銷毀本機草稿。
+  - 全面應用於外勤表單頁面（`RoadClean/NewCleanChk.aspx`, `BareGround/NewBare.aspx` 等）。
+
+#### 5. 原生 PowerShell 自動化安全發布與防呆打包工具 (`Scripts/Deploy-Pack.ps1`)
+- **擺脫外部 Python 環境依賴**：
+  - 原生 PowerShell 實作一鍵安全發布工具，相容所有 Windows Server / IIS 環境。
+  - 整合 UTF-8 BOM 自動補齊、Vue `@` 語法合規前檢、Release DLL 建置、`App_Code` 防 CS0433 衝突覆蓋及發布包自檢。
+
+#### 6. 正式機發布清單升級 (`deploy_manifest.json`)
+- 納入 `KeepAlive.ashx`, `Global.asax`, `Upload/Web.config`, `Scripts/fec-offline-sentinel.js` 等核心防護檔案至發布清單。
+
+---
+
 ## [1.3.0] - 2026-10-24
 
 ### 🚀 版本概述
@@ -32,7 +81,7 @@
   - 介面整合「重設臨時密碼」彈跳視窗（Modal），直覺展示收件信箱並回傳即時發送狀態。
 
 #### 4. 空品惡化通報與自主申報全載具 RWD 重構
-- **空品惡化應變申報 (`OwnReport/Report_AirQuality.aspx`, `AirQuality_List.aspx`)**：
+- **空品惡化預警應變申報 (`OwnReport/Report_AirQuality.aspx`, `AirQuality_List.aspx`)**：
   - 全面優化通報填報表單與通報清單，徹底解決手機端破版與換行問題。
   - 強化自主檢查照片上傳即時預覽與縮圖點擊放大功能。
 - **自主防制措施照片申報 (`OwnReport/PIC_Report.aspx`, `PIC_Report_List.aspx`)**：
@@ -59,57 +108,6 @@
 
 ### 🚀 版本概述
 新北市固定溢散源管理平台（NTPC_FECM）發布 1.2.0 版本。本版本實現了多維度環境保護業務模組的全面整合與標準化，涵蓋施工機具管理、裸露地管制作業、營建工程案件審查、固定污染源稽查、洗車設備監控、業者自主申報及 Sentinel-2 衛星 NDVI 植生綠覆率圖台；同時全新上線即時待辦事項統計服務（`PendingTaskService`）與外部系統單一簽入（SSO）跳轉橋接架構。
-
-### ✨ 主要歷程與改動
-
-#### 1. 全業務功能模組全面整合與上線
-- **施工機具巡查模組 (`Machine/`)**：
-  - `NewMac.aspx` / `macList.aspx`：施工機具設備現場巡查填報、清單管制作業與檢驗履歷追蹤，優化行動端頂部導航列防止文字溢出與折行。
-- **裸露地管理模組 (`BareGround/`)**：
-  - `NewBare.aspx` / `Bare_List.aspx` / `BareResult.aspx`：裸露地查核填報、列管清單管理與改善成果查核。
-- **營建工程與案件管理模組 (`Case/`, `Manager/`)**：
-  - `CaseList.aspx` / `NewCase.aspx` / `CaseResult.aspx`：營建工地防制設施查核、申報案件管理與歷程檢視。
-  - `Case_Sum.aspx` / `Case_Sum_1.aspx`：查核成果統計與管辦狀況多維度交叉分析。
-  - `Manager/managerList.aspx` / `managerList_Bare.aspx`：案件初審、複審、三審綜合管制作業與裸露地審核。
-  - `Manager/Check_Step1.aspx` / `Check_Step1_Bare.aspx` / `Check_Step1_Mac.aspx`：多階段案件審核作業介面。
-- **固定污染源稽查管理模組 (`FAC/`)**：
-  - `FAC_List.aspx` / `FAC_Detail.aspx`：固定源稽巡查清單、詳細稽查紀錄與現場違規項目標註。
-  - `Charts.aspx`：固定污染源稽巡查成果圖表統計分析，優化搜尋列與每頁筆數自適應排列。
-  - `oFAC_List.aspx`：專案列管固定源清單管制作業。
-- **洗車設備與出入口沖洗監控模組 (`Wash/`)**：
-  - `ReportUpload.aspx` / `ReportUpload_List.aspx`：洗車設備自主檢查報告上傳審查與清單。
-  - `DataInput.aspx`：洗車台運作數據巡查登錄。
-- **業者自主申報與空品惡化通報模組 (`OwnReport/`)**：
-  - `PIC_Report.aspx`：業者現場自主防制措施照片申報。
-  - `Report_AirQuality.aspx` / `AirQuality_List.aspx`：空品惡化預警應變自主通報填報與案件清單。
-- **新北市 NDVI 植被監測（Sentinel-2 自動月報） (`NDVI/`, `NdviJob/`)**：
-  - `NDVI/NdviMap.aspx`：Leaflet + Vue 3 獨立頁面，取代舊版靜態圖片。支援期別切換、圖層透明度、圖例、行政區界互動與各區 NDVI 排行、點擊地圖查詢 NDVI 類別、兩期卷簾比對、以及「裸露地列管點 × NDVI 交叉分析」優先查核清單。
-  - `NdviJob/`：每月自動擷取 Sentinel-2 影像、去雲合成並產製統計數據與圖磚，排程自動執行且不干擾正式發布包。
-
-#### 2. 即時待辦事項與案件審查服務體系 (`PendingTaskService.cs`)
-- **待辦統計服務 (`App_Code/Services/PendingTaskService.cs`)**：
-  - 封裝高效率參數化 SQL 查詢，即時計算當前登入者所屬角色之待辦件數。
-  - 涵蓋初審 (`INV1`)、複審 (`INV2`)、三審 (`INV3`)、7日內巡查派遣、2次以上提報稽查、退件紀錄、暫存草稿及道路破損/覆土改善回報。
-- **首頁選單與儀表板動態徽章 (`MenuService.cs`, `MainPage.aspx`)**：
-  - 模組卡片自動動態累計顯示待辦總件數徽章。
-  - 次選單支援真實案件數量提示；當案件數為 0 時支援優雅的灰色 `0 件` 徽章呈現 (`ShowZero`)，審查進度一目瞭然。
-
-#### 3. 外部系統單一簽入 (SSO) 跳轉橋接 (`OutLink.aspx`)
-- **安全外部跳轉機制 (`OutLink.aspx`, `OutLink.aspx.cs`)**：
-  - 實作防竄改之單一簽入外部跳轉，安全導向環境部空氣品質監測、中央系統及地政地理資訊圖台。
-  - 納入 `deploy_manifest.json` 與發布清單，確保正式機跳轉功能正常運行。
-
-#### 4. 全載具自適應外勤與管理端介面擴展
-- **UI/UX 標準全面擴展**：
-  - 依據 `inspection-ui-standard` 規範重構所有清單、明細與統計匯總頁面。
-  - 優化導航列外勤操作按鈕與浮動工具列（浮動返回、儲存、提交等）。
-  - 全站表格、卡片與地圖在各解析度（手機、平板、桌機）皆具備流暢滾動與自適應佈局。
-
-#### 5. 正式機打包清單與版本維護升級
-- **發布清單升級 (`deploy_manifest.json`)**：
-  - 將 1.2.0 所有新模組完整納入 `required_in_zip`。
-  - 將未使用的龐大圖資暫存（如 `tiles/`, `ndvijob/`）排除，確保發布壓縮包輕量高效率。
-  - 補充引入本地 jQuery 資源庫版本 (`jquery-3.6.0.min.js`, `jquery-3.7.1.min.js`)。
 
 ---
 

@@ -343,6 +343,10 @@ namespace NTPC_FEC.Modules.Manager
                         new SqlParameter("@UserID", SqlDbType.VarChar) { Value = targetUserId }
                     };
                     DbHelper.ExecuteNonQuery(sql, parameters);
+                    if (newState == "OK")
+                    {
+                        AuthService.ClearLoginFailure(targetUserId);
+                    }
                     ShowAlert(string.Format("帳號 [{0}] 狀態已更新為：{1}", targetUserId, (newState == "OK" ? "正常啟用" : "停用")), "alert-success");
                     LoadUsers();
                 }
@@ -613,11 +617,13 @@ namespace NTPC_FEC.Modules.Manager
                 }
 
                 EnsureUserAccEmailColumn();
+                AuthService.EnsurePasswordColumnCapacity();
+                string hashedNewPwd = AuthService.HashPassword(newPwd);
                 string insSql = "INSERT INTO UserAcc (UserID, Password, Name, PUnit, Email, LIC, LIC2, Acc_State, LastPwdChangeDate) VALUES (@UserID, @Password, @Name, @PUnit, @Email, 0, 0, 'OK', GETDATE())";
                 var insParams = new SqlParameter[]
                 {
                     new SqlParameter("@UserID", SqlDbType.VarChar) { Value = newId },
-                    new SqlParameter("@Password", SqlDbType.VarChar) { Value = newPwd },
+                    new SqlParameter("@Password", SqlDbType.VarChar) { Value = hashedNewPwd },
                     new SqlParameter("@Name", SqlDbType.NVarChar) { Value = newName },
                     new SqlParameter("@PUnit", SqlDbType.NVarChar) { Value = newPUnit },
                     new SqlParameter("@Email", SqlDbType.VarChar) { Value = (object)newEmail ?? DBNull.Value }

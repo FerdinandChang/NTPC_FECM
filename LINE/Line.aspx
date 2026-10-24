@@ -395,6 +395,214 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
             font-size: 0.9rem;
         }
+
+        /* ==========================================================================
+           小尺寸與行動裝置全載具自適應 (Mobile / Small Screen RWD 極致優化)
+           ========================================================================== */
+        @media (max-width: 767.98px) {
+            /* 1. 訊息卡片標頭與時間垂直堆疊，防止文字橫向互相擠壓破版 */
+            .msg-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 12px;
+                gap: 6px;
+            }
+            .msg-card-title-group {
+                width: 100%;
+                gap: 6px;
+            }
+            .msg-card-title {
+                font-size: 0.94rem;
+                width: 100%;
+                margin-top: 2px;
+            }
+            .msg-time-badge {
+                font-size: 0.78rem;
+                color: #64748b;
+                align-self: flex-start;
+            }
+            .msg-card-body {
+                padding: 12px;
+            }
+            .msg-content-text {
+                font-size: 0.88rem;
+                line-height: 1.6;
+            }
+            /* 2. 訊息卡片底部動作按鈕滿寬排列，觸控友善 */
+            .msg-card-footer {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 12px;
+                gap: 8px;
+            }
+            .msg-action-btns {
+                width: 100%;
+                display: flex;
+                justify-content: flex-end;
+                gap: 6px;
+            }
+            .msg-action-btns .btn {
+                flex: 1;
+                padding: 5px 8px;
+                font-size: 0.8rem;
+                text-align: center;
+                justify-content: center;
+                white-space: nowrap;
+            }
+
+            /* 3. 篩選標籤群：支援平滑橫向滑動 (Touch Scroll) 不佔垂直高度 */
+            .filter-chip-group {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 6px;
+                scrollbar-width: thin;
+            }
+            .filter-chip-group::-webkit-scrollbar {
+                height: 4px;
+            }
+            .filter-chip-group::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 4px;
+            }
+            .filter-chip {
+                flex-shrink: 0;
+                font-size: 0.82rem;
+                padding: 5px 12px;
+                white-space: nowrap;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            /* 4. 頂部導覽列緊湊適應 (iPhone / 小手機尺寸) */
+            .top-navbar {
+                height: 52px;
+                padding: 0 10px;
+            }
+            .top-navbar .brand-title {
+                font-size: 0.95rem;
+                gap: 4px;
+            }
+            .top-navbar .nav-btn {
+                height: 32px;
+                padding: 0 8px;
+                font-size: 0.8rem;
+            }
+            .btn-clear-sample {
+                padding: 4px 8px !important;
+                font-size: 0.8rem !important;
+                white-space: nowrap;
+            }
+
+            /* 5. 容器與邊距極致收斂，杜絕橫向滾動 */
+            .container-fluid-custom {
+                padding: 10px 8px;
+            }
+            .card-modern {
+                border-radius: 10px;
+                margin-bottom: 12px;
+            }
+            .card-modern-header {
+                padding: 10px 12px;
+            }
+            .card-modern-title {
+                font-size: 0.92rem;
+            }
+            .card-modern-body {
+                padding: 12px 10px;
+            }
+
+            /* 6. LINE 官方帳號品牌卡片在小手機緊湊呈現 */
+            .card-line-brand {
+                margin-bottom: 12px;
+                border-radius: 10px;
+            }
+            .card-line-brand-header {
+                padding: 12px 10px;
+                gap: 10px;
+            }
+            .line-avatar {
+                width: 46px;
+                height: 46px;
+                padding: 2px;
+            }
+            .line-brand-name {
+                font-size: 0.92rem;
+                line-height: 1.35;
+                word-break: break-all;
+            }
+            .line-badge-verified {
+                font-size: 0.68rem;
+                padding: 1px 4px;
+            }
+            .line-id-pill {
+                font-size: 0.74rem;
+            }
+            .btn-line-join {
+                font-size: 0.88rem;
+                padding: 8px 12px;
+            }
+            .btn-copy-id {
+                font-size: 0.78rem;
+                padding: 6px 8px;
+            }
+            .qr-display-box {
+                padding: 10px 8px;
+            }
+            .qr-display-box img {
+                max-width: 120px;
+            }
+
+            /* 7. 表單元件文字縮放防破版 */
+            .form-control {
+                font-size: 0.85rem;
+                height: calc(1.5em + 0.75rem + 2px);
+            }
+            .input-group-text {
+                font-size: 0.85rem;
+                padding: 0.375rem 0.5rem;
+            }
+
+            /* 8. 分頁條在小螢幕高度緊湊適應 */
+            .pagination-footer {
+                padding: 10px 6px;
+                gap: 8px;
+            }
+            .pagination-footer-info {
+                font-size: 0.78rem;
+            }
+            .pagination-action-group {
+                gap: 4px;
+            }
+            .btn-page-ctrl {
+                height: 34px;
+                font-size: 0.78rem;
+            }
+            .btn-page-ctrl.btn-step {
+                padding: 0 6px;
+            }
+            .btn-page-ctrl.btn-edge {
+                width: 32px;
+                min-width: 32px;
+            }
+            .page-indicator-pill {
+                height: 34px;
+                padding: 0 6px;
+                font-size: 0.78rem;
+            }
+
+            /* 9. 浮動 Toast 靠中防溢出 */
+            .toast-container {
+                left: 12px;
+                right: 12px;
+                bottom: 16px;
+            }
+            .custom-toast {
+                font-size: 0.84rem;
+                padding: 8px 14px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -406,39 +614,21 @@
                     <i class="fas fa-home"></i>
                     <span class="d-none d-sm-inline">回首頁</span>
                 </a>
-                <div class="d-flex align-items-center ml-1">
-                    <i class="fab fa-line text-white mr-2" style="font-size: 1.4rem;"></i>
-                    <span class="font-weight-bold">LINE 即時通報中心</span>
-                    <span class="badge badge-light text-dark font-weight-bold ml-2 d-none d-md-inline" style="font-size: 0.85rem;">
-                        {{ stats.TotalCount }} 則推播
+                <div class="d-flex align-items-center ml-1 brand-title-text">
+                    <i class="fab fa-line text-white mr-1" style="font-size: 1.3rem;"></i>
+                    <span class="font-weight-bold d-none d-sm-inline">LINE 即時通報中心</span>
+                    <span class="font-weight-bold d-inline d-sm-none">LINE 即時通報</span>
+                    <span class="badge badge-light text-dark font-weight-bold ml-2 d-none d-md-inline" style="font-size: 0.82rem;">
+                        {{ stats.TotalCount }} 則
                     </span>
                 </div>
             </div>
 
-            <!-- 右側功能動作群 -->
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-sm btn-light font-weight-bold shadow-sm mr-2" v-on:click="openQrModal" title="開啟官方帳號 QR Code">
-                    <i class="fab fa-line text-success mr-1"></i>
-                    <span class="d-none d-sm-inline">官方帳號</span> QR Code
-                </button>
-                <a href="../OwnReport/Report_AirQuality.aspx?mode=new" class="btn btn-sm btn-warning text-dark font-weight-bold shadow-sm mr-2" title="線上填寫空品自主應變申報">
-                    <i class="fas fa-clipboard-check mr-1"></i>
-                    <span class="d-none d-md-inline">填報應變紀錄</span>
-                </a>
-                <a href="../OwnReport/AirQuality_List.aspx" class="btn btn-sm btn-outline-light font-weight-bold shadow-sm mr-2" title="查看空品不良應變申報列表">
-                    <i class="fas fa-list-alt mr-1"></i>
-                    <span class="d-none d-md-inline">應變列表</span>
-                </a>
-                <button v-if="initData.CanPost" type="button" class="btn btn-sm btn-success font-weight-bold shadow-sm mr-2" v-on:click="openPostModal" title="發布新推播通知">
-                    <i class="fas fa-paper-plane mr-1"></i>
-                    <span class="d-none d-sm-inline">發布推播</span>
-                </button>
-                <button v-if="initData.IsManager" type="button" class="btn btn-sm btn-outline-light font-weight-bold shadow-sm mr-2" v-on:click="clearSamples" title="一鍵清空系統預載之示範推播訊息">
+            <!-- 右側動作區：依指示僅保留「清空範本」按鈕 -->
+            <div class="d-flex align-items-center">
+                <button type="button" class="btn btn-sm btn-outline-light font-weight-bold shadow-sm btn-clear-sample" v-on:click="clearSamples" title="一鍵清空系統預載之示範推播訊息">
                     <i class="fas fa-eraser mr-1"></i>
-                    <span class="d-none d-lg-inline">清空示範資料</span>
-                </button>
-                <button type="button" class="nav-btn" v-on:click="fetchList" :disabled="loading" title="重新整理">
-                    <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+                    <span>清空範本</span>
                 </button>
             </div>
         </header>
@@ -961,6 +1151,7 @@
     </div>
 
     <!-- 本地靜態 JS 依賴 (符合機房資安規範) -->
+    <script src="../Scripts/jquery.min.js"></script>
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
     <script src="../Scripts/bootstrap.bundle.min.js"></script>

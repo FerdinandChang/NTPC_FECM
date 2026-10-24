@@ -1057,11 +1057,241 @@
 
 
         @keyframes pwdScaleIn {
-
             from { transform: scale(0.95); opacity: 0; }
-
             to { transform: scale(1); opacity: 1; }
+        }
 
+        /* 系統閒置提醒與資安逾時彈窗樣式 */
+        .idle-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: idleFadeIn 0.2s ease-out;
+        }
+
+        .idle-modal-dialog {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 460px;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            animation: idleScaleIn 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .idle-modal-header {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            color: #ffffff;
+            padding: 16px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .idle-modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .idle-modal-body {
+            padding: 24px;
+            text-align: center;
+            color: #374151;
+        }
+
+        .idle-countdown-circle {
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: #fffbeb;
+            border: 3px solid #f59e0b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .idle-countdown-num {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: #dc2626;
+            line-height: 1;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+        }
+
+        .idle-countdown-unit {
+            font-size: 0.75rem;
+            color: #92400e;
+            font-weight: 600;
+            margin-top: 3px;
+        }
+
+        .idle-modal-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 8px;
+            color: #4b5563;
+        }
+
+        .idle-modal-hint {
+            font-size: 0.82rem;
+            color: #6b7280;
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .idle-modal-footer {
+            padding: 14px 24px 20px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            background: #ffffff;
+        }
+
+        .idle-btn {
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            border: none;
+            outline: none;
+        }
+
+        .idle-btn-stay {
+            background: #184b72;
+            color: #ffffff;
+            flex: 1;
+        }
+
+        .idle-btn-stay:hover {
+            background: #133a59;
+            box-shadow: 0 4px 10px rgba(24, 75, 114, 0.3);
+        }
+
+        .idle-btn-logout {
+            background: #f3f4f6;
+            color: #4b5563;
+            border: 1px solid #d1d5db;
+        }
+
+        .idle-btn-logout:hover {
+            background: #e5e7eb;
+            color: #1f2937;
+        }
+
+        @keyframes idleFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes idleScaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* 頂部導航列 Session 倒數計時膠囊 */
+        .session-timer-badge {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 20px;
+            padding: 5px 14px;
+            color: #ffffff;
+            font-size: 0.85rem;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            transition: all 0.25s ease;
+            user-select: none;
+        }
+
+        .session-timer-badge:hover {
+            background: rgba(255, 255, 255, 0.28);
+            border-color: rgba(255, 255, 255, 0.65);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+            transform: translateY(-1px);
+        }
+
+        .session-timer-badge:active {
+            transform: translateY(0);
+        }
+
+        .session-countdown-num {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            min-width: 44px;
+            display: inline-block;
+            text-align: center;
+        }
+
+        /* 心跳狀態指示小圓點 */
+        .keepalive-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #10b981;
+            box-shadow: 0 0 6px #10b981;
+            transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+            display: inline-block;
+        }
+
+        /* 脈衝動畫：當自動延長或手動重置時觸發 */
+        .keepalive-dot.pulse {
+            transform: scale(1.7);
+            background-color: #34d399;
+            box-shadow: 0 0 14px #34d399;
+        }
+
+        .timer-warning {
+            color: #fef08a !important;
+            border-color: rgba(253, 224, 71, 0.65) !important;
+            background: rgba(245, 158, 11, 0.25) !important;
+        }
+
+        .timer-warning .keepalive-dot {
+            background-color: #f59e0b;
+            box-shadow: 0 0 6px #f59e0b;
+        }
+
+        .timer-danger {
+            color: #fca5a5 !important;
+            border-color: rgba(248, 113, 113, 0.85) !important;
+            background: rgba(220, 38, 38, 0.3) !important;
+            animation: timerBlink 1s infinite;
+        }
+
+        .timer-danger .keepalive-dot {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+        }
+
+        @keyframes timerBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .text-light-cyan {
+            color: #a5f3fc;
         }
 
     </style>
@@ -1142,7 +1372,15 @@
 
             <div class="d-flex align-items-center">
 
-
+                <!-- 頂部 Session 連線安全倒數提醒膠囊 (偵測操作自動展延) -->
+                <div id="navSessionTimer" class="session-timer-badge mr-2 mr-md-3 d-flex align-items-center" 
+                     onclick="handleIdleStay();" 
+                     title="資安連線倒數。偵測滑鼠移動或敲擊鍵盤會自動展延，亦可點擊此處立即延長作業時間。">
+                    <span id="navKeepAliveDot" class="keepalive-dot mr-2" aria-hidden="true"></span>
+                    <i class="fas fa-clock mr-1 text-light-cyan"></i>
+                    <span class="d-none d-sm-inline mr-1" style="font-size: 0.8rem; opacity: 0.85;">連線倒數</span>
+                    <span id="navSessionCountdown" class="session-countdown-num">30:00</span>
+                </div>
 
                 <div class="dropdown">
 
@@ -1701,6 +1939,39 @@
         </div>
     </div>
 
+    <!-- 系統閒置安全預警彈窗 (Idle Timeout Modal) -->
+    <div id="idleModalOverlay" class="idle-modal-overlay">
+        <div class="idle-modal-dialog">
+            <div class="idle-modal-header">
+                <h5 class="idle-modal-title">
+                    <i class="fas fa-hourglass-half mr-2"></i>系統閒置提醒
+                </h5>
+                <span class="badge badge-warning" style="background:#fef3c7; color:#92400e; font-size:0.75rem; padding: 4px 8px;">資安防護</span>
+            </div>
+            <div class="idle-modal-body">
+                <div class="idle-countdown-circle">
+                    <span id="idleCountdownNum" class="idle-countdown-num">120</span>
+                    <span class="idle-countdown-unit">秒後登出</span>
+                </div>
+                <div class="idle-modal-text">
+                    您已閒置一段時間未操作。<br>
+                    為維護個人資訊與系統安全，即將自動安全登出。
+                </div>
+                <div class="idle-modal-hint">
+                    <i class="fas fa-mouse mr-1 text-primary"></i><strong>提示：</strong>移動滑鼠、敲擊鍵盤或點擊下方按鈕，即可自動延長連線時間。
+                </div>
+            </div>
+            <div class="idle-modal-footer">
+                <button type="button" class="idle-btn idle-btn-logout" onclick="handleIdleLogout();">
+                    <i class="fas fa-sign-out-alt mr-1"></i>立即登出
+                </button>
+                <button type="button" class="idle-btn idle-btn-stay" onclick="handleIdleStay();">
+                    <i class="fas fa-redo-alt mr-1"></i>繼續操作系統
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 變更密碼互動腳本 -->
     <script>
         window._isPwdModalForced = false;
@@ -1904,6 +2175,204 @@
                 openPasswordModal(true);
             }
         });
+
+        /* ==========================================================================
+           資訊安全規範：全站使用者閒置逾時監控與活動自動展延機制 (Idle Timeout & Session Keep-Alive)
+           - 閒置逾時：依資安規範設定 30 分鐘 (1800 秒)
+           - 預警倒數：逾時前 2 分鐘 (120 秒) 跳出互動提醒彈窗
+           - 自動展延：偵測滑鼠移動、點擊、滾輪、鍵盤輸入，自動延長伺服器端 Session
+           - 節流防護：心跳展延間隔 5 分鐘，避免高頻操作對伺服器造成負擔
+           ========================================================================== */
+        (function () {
+            var IDLE_TIMEOUT_SEC = 1800;       // 總閒置逾時：30 分鐘 (1800 秒)
+            var WARNING_BEFORE_SEC = 120;      // 倒數預警時間：2 分鐘 (120 秒)
+            var HEARTBEAT_INTERVAL_MS = 300000; // 心跳展延節流：5 分鐘 (300,000 毫秒)
+
+            var lastActiveTime = Date.now();
+            var lastKeepAliveTime = Date.now();
+            var isModalVisible = false;
+            var isLoggingOut = false;
+            var pulseTimer = null;
+            var keepAliveUrl = '<%= ResolveUrl("~/KeepAlive.ashx") %>';
+            var logoutUrl = '<%= ResolveUrl("~/Logout.aspx?reason=timeout") %>';
+
+            // 觸發右上角綠色指示燈脈衝發光動畫 (視覺化驗證自動延長)
+            function triggerKeepAlivePulse() {
+                var dot = document.getElementById('navKeepAliveDot');
+                if (!dot) return;
+                dot.classList.add('pulse');
+                if (pulseTimer) clearTimeout(pulseTimer);
+                pulseTimer = setTimeout(function () {
+                    dot.classList.remove('pulse');
+                }, 600);
+            }
+
+            // 更新頂部導航列倒數時間標籤 (格式 mm:ss 與顏色狀態)
+            function updateNavTimerDisplay(remainingSec) {
+                if (remainingSec < 0) remainingSec = 0;
+                var m = Math.floor(remainingSec / 60);
+                var s = remainingSec % 60;
+                var timeText = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+
+                var navCdEl = document.getElementById('navSessionCountdown');
+                if (navCdEl) {
+                    navCdEl.innerText = timeText;
+                }
+
+                var badgeEl = document.getElementById('navSessionTimer');
+                if (badgeEl) {
+                    if (remainingSec <= WARNING_BEFORE_SEC) {
+                        badgeEl.classList.add('timer-danger');
+                        badgeEl.classList.remove('timer-warning');
+                    } else if (remainingSec <= 300) {
+                        badgeEl.classList.add('timer-warning');
+                        badgeEl.classList.remove('timer-danger');
+                    } else {
+                        badgeEl.classList.remove('timer-warning', 'timer-danger');
+                    }
+                }
+            }
+
+            // 向伺服器發送 Keep-Alive 展延 Session (Sliding Expiration)
+            function pingKeepAlive(onSuccess) {
+                lastKeepAliveTime = Date.now();
+                fetch(keepAliveUrl, {
+                    method: 'POST',
+                    headers: { 'Cache-Control': 'no-cache', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data && data.authenticated === false) {
+                        // 伺服器端 Session 已被銷毀，直接跳轉登出
+                        handleIdleLogout();
+                    } else {
+                        triggerKeepAlivePulse();
+                        if (typeof onSuccess === 'function') {
+                            onSuccess();
+                        }
+                    }
+                })
+                .catch(function () {
+                    // 網路瞬斷時不立即登出，由前端計時器持續監管
+                });
+            }
+
+            // 顯示閒置預警彈窗
+            function showIdleModal() {
+                if (isModalVisible || isLoggingOut) return;
+                var overlay = document.getElementById('idleModalOverlay');
+                if (overlay) {
+                    overlay.style.display = 'flex';
+                    isModalVisible = true;
+                }
+            }
+
+            // 隱藏閒置預警彈窗
+            function hideIdleModal() {
+                var overlay = document.getElementById('idleModalOverlay');
+                if (overlay) {
+                    overlay.style.display = 'none';
+                    isModalVisible = false;
+                }
+            }
+
+            // 處理閒置逾時強制登出
+            window.handleIdleLogout = function () {
+                if (isLoggingOut) return;
+                isLoggingOut = true;
+                window.location.href = logoutUrl;
+            };
+
+            // 使用者主動點擊「繼續操作系統」或點擊右上角計時器膠囊
+            window.handleIdleStay = function () {
+                lastActiveTime = Date.now();
+                hideIdleModal();
+                updateNavTimerDisplay(IDLE_TIMEOUT_SEC);
+                pingKeepAlive();
+            };
+
+            // 核心使用者活動監聽器 (滑鼠移動、按鍵、滾輪、點擊、觸控)
+            function onUserActivity() {
+                if (isLoggingOut) return;
+                var now = Date.now();
+                var previousElapsed = Math.floor((now - lastActiveTime) / 1000);
+
+                // 情況一：若預警彈窗已跳出，只要偵測到任何操作，即視為使用者已返回座位操作
+                if (isModalVisible) {
+                    lastActiveTime = now;
+                    hideIdleModal();
+                    updateNavTimerDisplay(IDLE_TIMEOUT_SEC);
+                    pingKeepAlive();
+                    return;
+                }
+
+                // 情況二：平時正常操作，更新最後活動時間
+                lastActiveTime = now;
+
+                // 若剛才已有秒數倒數 (>= 2秒)，使用者一動滑鼠立即重置為 30:00 並微閃綠燈，讓使用者有感
+                if (previousElapsed >= 2) {
+                    updateNavTimerDisplay(IDLE_TIMEOUT_SEC);
+                    triggerKeepAlivePulse();
+                }
+
+                // 若距上次伺服器展延超過節流閥 (5分鐘)，自動發送心跳延長後端 Session
+                if (now - lastKeepAliveTime >= HEARTBEAT_INTERVAL_MS) {
+                    pingKeepAlive();
+                }
+            }
+
+            // 註冊所有全載具活動事件
+            var activityEvents = ['mousemove', 'mousedown', 'keydown', 'keypress', 'touchstart', 'scroll', 'wheel'];
+            for (var i = 0; i < activityEvents.length; i++) {
+                window.addEventListener(activityEvents[i], onUserActivity, { passive: true });
+            }
+
+            // 監聽分頁能見度切換 (防止筆電蓋上休眠後醒來繞過檢查)
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible') {
+                    var elapsedSec = Math.floor((Date.now() - lastActiveTime) / 1000);
+                    if (elapsedSec >= IDLE_TIMEOUT_SEC) {
+                        handleIdleLogout();
+                    } else if (elapsedSec < (IDLE_TIMEOUT_SEC - WARNING_BEFORE_SEC)) {
+                        // 喚醒時若仍在安全時間內，主動延長 Session
+                        onUserActivity();
+                    }
+                }
+            });
+
+            // 初始化導航列倒數時間
+            updateNavTimerDisplay(IDLE_TIMEOUT_SEC);
+
+            // 每秒巡檢定時器
+            setInterval(function () {
+                if (isLoggingOut) return;
+
+                var now = Date.now();
+                var elapsedSec = Math.floor((now - lastActiveTime) / 1000);
+                var remainingSec = IDLE_TIMEOUT_SEC - elapsedSec;
+
+                // 每秒同步更新右上角倒數標籤
+                updateNavTimerDisplay(remainingSec);
+
+                if (remainingSec <= 0) {
+                    // 已達 30 分鐘逾時上限，執行強制登出
+                    handleIdleLogout();
+                } else if (remainingSec <= WARNING_BEFORE_SEC) {
+                    // 進入最後 120 秒預警區間，顯示彈窗並每秒更新倒數數字
+                    showIdleModal();
+                    var cdEl = document.getElementById('idleCountdownNum');
+                    if (cdEl) {
+                        cdEl.innerText = remainingSec;
+                    }
+                } else {
+                    // 尚未進入預警區，確保彈窗關閉
+                    if (isModalVisible) {
+                        hideIdleModal();
+                    }
+                }
+            }, 1000);
+        })();
     </script>
 </body>
 
