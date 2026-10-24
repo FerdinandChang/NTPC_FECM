@@ -73,6 +73,8 @@
             color: #ffffff;
             text-decoration: none;
             letter-spacing: 0.5px;
+            white-space: nowrap !important;
+            flex-shrink: 0;
         }
         .navbar-brand-title:hover {
             color: #ffffff;
@@ -82,7 +84,7 @@
         .nav-btn {
             background: rgba(255, 255, 255, 0.18);
             border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #ffffff !important;
+            color: #ffffff;
             font-size: 0.88rem;
             font-weight: 600;
             cursor: pointer;
@@ -98,7 +100,7 @@
         }
         .nav-btn:hover {
             background-color: rgba(255, 255, 255, 0.32);
-            color: #ffffff !important;
+            color: #ffffff;
             text-decoration: none !important;
         }
 
@@ -363,8 +365,8 @@
                 </a>
                 <a href="FAC_List.aspx" class="navbar-brand-title">
                     <i class="fas fa-industry text-white"></i>
-                    <span>公私場所固定污染源管理</span>
-                    <span class="badge badge-light text-dark font-weight-bold ml-1" style="font-size: 0.8rem;">
+                    <span class="text-nowrap" style="white-space: nowrap; font-size: clamp(0.92rem, 3.6vw, 1.12rem);">公私場所固定污染源管理</span>
+                    <span class="badge badge-light text-dark font-weight-bold ml-1 d-none d-lg-inline" style="font-size: 0.8rem; white-space: nowrap;">
                         {{ stats.Total }} 處場所
                     </span>
                 </a>
@@ -385,9 +387,9 @@
                 </button>
 
                 <!-- 外勤 GPS 定位搜尋周邊場所按鈕 -->
-                <button type="button" class="nav-btn bg-white text-dark shadow-sm mr-2" v-on:click="locateNearby" :disabled="locatingNearby">
+                <button type="button" class="btn btn-sm btn-light font-weight-bold text-dark shadow-sm mr-2 d-inline-flex align-items-center" style="height: 36px; gap: 6px;" v-on:click="locateNearby" :disabled="locatingNearby">
                     <i class="fas fa-crosshairs text-primary" :class="{ 'fa-spin': locatingNearby }"></i>
-                    <span class="d-none d-md-inline">{{ locatingNearby ? '定位中...' : '附近場所' }}</span>
+                    <span class="text-dark font-weight-bold ml-1">{{ locatingNearby ? '定位中...' : '附近場所' }}</span>
                 </button>
 
                 <!-- 地圖收合/展開開關 -->
@@ -1223,6 +1225,15 @@
 
                     axios.post('FAC_List.aspx', params, { responseType: 'blob' })
                         .then(res => {
+                            const contentType = (res.headers && res.headers['content-type']) || '';
+                            if (contentType.indexOf('application/vnd.ms-excel') === -1) {
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                    alert(reader.result || '匯出 Excel 失敗');
+                                };
+                                reader.readAsText(res.data);
+                                return;
+                            }
                             const blob = new Blob([res.data], { type: 'application/vnd.ms-excel' });
                             const link = document.createElement('a');
                             link.href = window.URL.createObjectURL(blob);

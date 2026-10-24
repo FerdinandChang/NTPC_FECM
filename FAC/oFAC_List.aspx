@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="oFAC_List.aspx.cs" Inherits="NTPC_FEC.FAC.oFAC_List" %>
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="oFAC_List.aspx.cs" Inherits="NTPC_FEC.FAC.oFAC_List" %>
 
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -54,6 +54,99 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .card-header-tools {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* 篩選卡片底部工具列 (響應式防重疊) */
+        .filter-footer-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .filter-result-count {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .filter-action-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .filter-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 34px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            white-space: nowrap !important;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            .card-modern-header {
+                padding: 12px 16px;
+            }
+            .card-header-left {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .card-header-tools {
+                width: 100%;
+                justify-content: flex-end;
+                padding-top: 8px;
+                border-top: 1px dashed var(--border-color);
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .filter-footer-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .filter-result-count {
+                text-align: center;
+                white-space: normal;
+            }
+            .filter-action-btns {
+                display: flex;
+                width: 100%;
+                gap: 10px;
+            }
+            .filter-action-btns .filter-btn {
+                flex: 1;
+                width: 50%;
+                height: 38px;
+            }
             padding: 0 20px;
             box-shadow: 0 2px 10px rgba(0, 153, 229, 0.25);
             position: sticky;
@@ -174,6 +267,99 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .card-header-tools {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* 篩選卡片底部工具列 (響應式防重疊) */
+        .filter-footer-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .filter-result-count {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .filter-action-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .filter-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 34px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            white-space: nowrap !important;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            .card-modern-header {
+                padding: 12px 16px;
+            }
+            .card-header-left {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .card-header-tools {
+                width: 100%;
+                justify-content: flex-end;
+                padding-top: 8px;
+                border-top: 1px dashed var(--border-color);
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .filter-footer-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .filter-result-count {
+                text-align: center;
+                white-space: normal;
+            }
+            .filter-action-btns {
+                display: flex;
+                width: 100%;
+                gap: 10px;
+            }
+            .filter-action-btns .filter-btn {
+                flex: 1;
+                width: 50%;
+                height: 38px;
+            }
         }
 
         .card-modern-title {
@@ -352,14 +538,26 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 3px 8px;
-            font-size: 11.5px;
+            width: 88px;
+            min-width: 88px;
+            max-width: 88px;
+            height: 26px;
+            min-height: 26px;
+            padding: 2px 4px;
+            box-sizing: border-box;
+            gap: 4px;
+            font-size: 12px;
             font-weight: 600;
-            border-radius: 4px;
+            border-radius: 5px;
             text-decoration: none !important;
             white-space: nowrap !important;
-            line-height: 1.2;
+            line-height: 1;
             transition: all 0.15s;
+        }
+        .file-chip i {
+            font-size: 12px;
+            margin-right: 0 !important;
+            flex-shrink: 0;
         }
         .file-chip-lic {
             background: #f0f9ff;
@@ -437,6 +635,99 @@
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .card-header-tools {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* 篩選卡片底部工具列 (響應式防重疊) */
+        .filter-footer-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .filter-result-count {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .filter-action-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .filter-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 34px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            white-space: nowrap !important;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            .card-modern-header {
+                padding: 12px 16px;
+            }
+            .card-header-left {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .card-header-tools {
+                width: 100%;
+                justify-content: flex-end;
+                padding-top: 8px;
+                border-top: 1px dashed var(--border-color);
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .filter-footer-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .filter-result-count {
+                text-align: center;
+                white-space: normal;
+            }
+            .filter-action-btns {
+                display: flex;
+                width: 100%;
+                gap: 10px;
+            }
+            .filter-action-btns .filter-btn {
+                flex: 1;
+                width: 50%;
+                height: 38px;
+            }
             margin-bottom: 10px;
             border-bottom: 1px dashed var(--border-color);
             padding-bottom: 8px;
@@ -472,6 +763,99 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .card-header-tools {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* 篩選卡片底部工具列 (響應式防重疊) */
+        .filter-footer-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .filter-result-count {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .filter-action-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .filter-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 34px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            white-space: nowrap !important;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            .card-modern-header {
+                padding: 12px 16px;
+            }
+            .card-header-left {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .card-header-tools {
+                width: 100%;
+                justify-content: flex-end;
+                padding-top: 8px;
+                border-top: 1px dashed var(--border-color);
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .filter-footer-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .filter-result-count {
+                text-align: center;
+                white-space: normal;
+            }
+            .filter-action-btns {
+                display: flex;
+                width: 100%;
+                gap: 10px;
+            }
+            .filter-action-btns .filter-btn {
+                flex: 1;
+                width: 50%;
+                height: 38px;
+            }
             padding: 14px 20px;
             background: #ffffff;
             border-top: 1px solid var(--border-color);
@@ -549,6 +933,99 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .card-header-tools {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* 篩選卡片底部工具列 (響應式防重疊) */
+        .filter-footer-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .filter-result-count {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .filter-action-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .filter-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 34px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            white-space: nowrap !important;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            .card-modern-header {
+                padding: 12px 16px;
+            }
+            .card-header-left {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .card-header-tools {
+                width: 100%;
+                justify-content: flex-end;
+                padding-top: 8px;
+                border-top: 1px dashed var(--border-color);
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .filter-footer-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .filter-result-count {
+                text-align: center;
+                white-space: normal;
+            }
+            .filter-action-btns {
+                display: flex;
+                width: 100%;
+                gap: 10px;
+            }
+            .filter-action-btns .filter-btn {
+                flex: 1;
+                width: 50%;
+                height: 38px;
+            }
         }
 
         .modal-title-custom {
@@ -619,6 +1096,99 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .card-header-tools {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* 篩選卡片底部工具列 (響應式防重疊) */
+        .filter-footer-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .filter-result-count {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .filter-action-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .filter-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 34px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            white-space: nowrap !important;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            .card-modern-header {
+                padding: 12px 16px;
+            }
+            .card-header-left {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .card-header-tools {
+                width: 100%;
+                justify-content: flex-end;
+                padding-top: 8px;
+                border-top: 1px dashed var(--border-color);
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .filter-footer-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .filter-result-count {
+                text-align: center;
+                white-space: normal;
+            }
+            .filter-action-btns {
+                display: flex;
+                width: 100%;
+                gap: 10px;
+            }
+            .filter-action-btns .filter-btn {
+                flex: 1;
+                width: 50%;
+                height: 38px;
+            }
             padding: 12px 16px;
             animation: slideInRight 0.3s ease;
         }
@@ -913,13 +1483,13 @@
                                     <div class="d-inline-flex flex-column align-items-center gap-1">
                                         <!-- 許可證 -->
                                         <a v-if="item.LicFileUrl" :href="item.LicFileUrl" target="_blank" class="file-chip file-chip-lic" title="點擊檢視許可證 PDF">
-                                            <i class="fas fa-file-pdf mr-1 text-danger"></i>許可證
+                                            <i class="fas fa-file-pdf text-danger"></i><span>許可證</span>
                                         </a>
                                         <span v-else class="file-chip file-chip-empty">無許可證</span>
 
                                         <!-- 解列公文 (若有) -->
                                         <a v-if="item.UnlockFileUrl" :href="item.UnlockFileUrl" target="_blank" class="file-chip file-chip-unlock" title="點擊檢視解列公文 PDF">
-                                            <i class="fas fa-file-pdf mr-1 text-danger"></i>解列公文
+                                            <i class="fas fa-file-pdf text-danger"></i><span>解列公文</span>
                                         </a>
                                     </div>
                                 </td>
@@ -1891,3 +2461,4 @@
     </script>
 </body>
 </html>
+

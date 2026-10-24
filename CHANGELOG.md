@@ -7,13 +7,13 @@
 ## [1.2.0] - 2026-10-24
 
 ### 🚀 版本概述
-新北市固定溢散源管理平台（NTPC_FECM）發布 1.2.0 版本。本版本實現了多維度環境保護業務模組的全面整合與標準化，涵蓋施工機具管理、裸露地管制作業、營建工程案件審查、固定污染源稽查、洗車設備監控、業者自主申報及植生綠覆率圖台；同時全新上線即時待辦事項統計服務（`PendingTaskService`）與外部系統單一簽入（SSO）跳轉橋接架構。
+新北市固定溢散源管理平台（NTPC_FECM）發布 1.2.0 版本。本版本實現了多維度環境保護業務模組的全面整合與標準化，涵蓋施工機具管理、裸露地管制作業、營建工程案件審查、固定污染源稽查、洗車設備監控、業者自主申報及 Sentinel-2 衛星 NDVI 植生綠覆率圖台；同時全新上線即時待辦事項統計服務（`PendingTaskService`）與外部系統單一簽入（SSO）跳轉橋接架構。
 
 ### ✨ 主要歷程與改動
 
 #### 1. 全業務功能模組全面整合與上線
 - **施工機具巡查模組 (`Machine/`)**：
-  - `NewMac.aspx` / `macList.aspx`：施工機具設備現場巡查填報、清單管制作業與檢驗履歷追蹤。
+  - `NewMac.aspx` / `macList.aspx`：施工機具設備現場巡查填報、清單管制作業與檢驗履歷追蹤，優化行動端頂部導航列防止文字溢出與折行。
 - **裸露地管理模組 (`BareGround/`)**：
   - `NewBare.aspx` / `Bare_List.aspx` / `BareResult.aspx`：裸露地查核填報、列管清單管理與改善成果查核。
 - **營建工程與案件管理模組 (`Case/`, `Manager/`)**：
@@ -23,7 +23,7 @@
   - `Manager/Check_Step1.aspx` / `Check_Step1_Bare.aspx` / `Check_Step1_Mac.aspx`：多階段案件審核作業介面。
 - **固定污染源稽查管理模組 (`FAC/`)**：
   - `FAC_List.aspx` / `FAC_Detail.aspx`：固定源稽巡查清單、詳細稽查紀錄與現場違規項目標註。
-  - `Charts.aspx`：固定污染源稽巡查成果圖表統計分析。
+  - `Charts.aspx`：固定污染源稽巡查成果圖表統計分析，優化搜尋列與每頁筆數自適應排列。
   - `oFAC_List.aspx`：專案列管固定源清單管制作業。
 - **洗車設備與出入口沖洗監控模組 (`Wash/`)**：
   - `ReportUpload.aspx` / `ReportUpload_List.aspx`：洗車設備自主檢查報告上傳審查與清單。
@@ -31,8 +31,9 @@
 - **業者自主申報與空品惡化通報模組 (`OwnReport/`)**：
   - `PIC_Report.aspx`：業者現場自主防制措施照片申報。
   - `Report_AirQuality.aspx` / `AirQuality_List.aspx`：空品惡化預警應變自主通報填報與案件清單。
-- **植生綠覆率與衛星指標圖台 (`NDVI/`)**：
-  - `NdviMap.aspx`：整合新北市各行政區 GeoJSON 圖資 (`ntpc_towns.json`)，視覺化呈現衛星植生綠覆率指標與裸露地覆蓋分析。
+- **新北市 NDVI 植被監測（Sentinel-2 自動月報） (`NDVI/`, `NdviJob/`)**：
+  - `NDVI/NdviMap.aspx`：Leaflet + Vue 3 獨立頁面，取代舊版靜態圖片。支援期別切換、圖層透明度、圖例、行政區界互動與各區 NDVI 排行、點擊地圖查詢 NDVI 類別、兩期卷簾比對、以及「裸露地列管點 × NDVI 交叉分析」優先查核清單。
+  - `NdviJob/`：每月自動擷取 Sentinel-2 影像、去雲合成並產製統計數據與圖磚，排程自動執行且不干擾正式發布包。
 
 #### 2. 即時待辦事項與案件審查服務體系 (`PendingTaskService.cs`)
 - **待辦統計服務 (`App_Code/Services/PendingTaskService.cs`)**：

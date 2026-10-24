@@ -307,11 +307,19 @@
             color: #dc2626;
         }
 
-        /* 搜尋輸入群組 */
+        /* 搜尋與表格工具列 */
+        .card-tools-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+            margin-left: auto;
+        }
+
         .search-box {
             position: relative;
-            max-width: 280px;
-            width: 100%;
+            width: 250px;
+            flex-shrink: 1;
         }
 
         .search-box input {
@@ -320,6 +328,7 @@
             border: 1px solid var(--border-color);
             font-size: 13px;
             height: 38px;
+            width: 100%;
         }
 
         .search-box input:focus {
@@ -495,6 +504,15 @@
             }
             .chart-wrapper {
                 min-height: 320px;
+            }
+            .card-tools-group {
+                width: 100%;
+                margin-top: 8px;
+            }
+            .search-box {
+                flex: 1;
+                width: auto;
+                min-width: 130px;
             }
         }
     </style>
@@ -677,22 +695,23 @@
                         </div>
                     </div>
 
-                    <!-- 搜尋框與每頁筆數 -->
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- 搜尋框、每頁筆數與匯出按鈕：嚴格同一行水平排列不折行 -->
+                    <div class="card-tools-group">
                         <div class="search-box">
                             <i class="fas fa-search search-icon"></i>
                             <input type="text" class="form-control form-control-sm" 
                                    v-model="searchKeyword" 
                                    placeholder="搜尋管制編號、名稱、地址..." />
                         </div>
-                        <select class="form-control form-control-sm" style="width: 105px; height: 38px;" v-model="pageSize">
+                        <select class="form-control form-control-sm" style="width: 105px; height: 38px; flex-shrink: 0;" v-model="pageSize">
                             <option :value="10">每頁 10 筆</option>
                             <option :value="25">每頁 25 筆</option>
                             <option :value="50">每頁 50 筆</option>
                             <option :value="100">每頁 100 筆</option>
                         </select>
-                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold" style="height: 38px;" v-on:click="exportExcel">
-                            <i class="fas fa-file-excel mr-1"></i>匯出
+                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold text-nowrap d-inline-flex align-items-center justify-content-center" style="height: 38px; flex-shrink: 0; padding: 0 14px; gap: 6px;" v-on:click="exportExcel" title="匯出 Excel 報表">
+                            <i class="fas fa-file-excel"></i>
+                            <span>匯出</span>
                         </button>
                     </div>
                 </div>

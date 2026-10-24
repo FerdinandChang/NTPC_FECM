@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using NTPC_FEC.Models;
 
@@ -40,7 +40,7 @@ namespace NTPC_FEC.Services
                     new MenuSubItem { Title = "許可證資訊", Url = "FAC/oFAC_List.aspx" },
                     new MenuSubItem { Title = "其他資料查詢", Url = "OutLink.aspx" },
                     new MenuSubItem { Title = "工廠統計", Url = "FAC/Charts.aspx" },
-                    new MenuSubItem { Title = "環域查詢", Url = "Case/CaseList.aspx" }
+                    new MenuSubItem { Title = "環域查詢", Url = "javascript:alert('「環域查詢」功能尚未開放！');" }
                 }
             });
 

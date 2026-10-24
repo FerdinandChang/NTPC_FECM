@@ -70,6 +70,80 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
+            min-width: 0;
+        }
+
+        .brand-text {
+            white-space: nowrap;
+            font-weight: 700;
+        }
+
+        .brand-badge {
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        /* 小尺寸螢幕頂部標題防換行與自適應字體縮小 */
+        @media screen and (max-width: 767px) {
+            .top-navbar {
+                padding: 0 12px;
+                height: 52px;
+            }
+
+            .top-navbar .brand-title {
+                font-size: 0.95rem;
+                gap: 6px;
+            }
+
+            .nav-btn {
+                padding: 5px 10px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media screen and (max-width: 575px) {
+            .top-navbar {
+                padding: 0 8px;
+                height: 48px;
+            }
+
+            .top-navbar .brand-title {
+                font-size: 0.86rem;
+                gap: 4px;
+            }
+
+            .brand-text {
+                font-size: 0.86rem;
+                letter-spacing: -0.2px;
+            }
+
+            .nav-btn {
+                padding: 4px 8px;
+                margin-right: 6px !important;
+            }
+
+            .brand-badge {
+                font-size: 0.72rem !important;
+                padding: 2px 6px !important;
+                margin-left: 4px !important;
+            }
+        }
+
+        @media screen and (max-width: 390px) {
+            .top-navbar .brand-title {
+                font-size: 0.78rem;
+            }
+
+            .brand-text {
+                font-size: 0.78rem;
+                letter-spacing: -0.4px;
+            }
+
+            .brand-badge {
+                font-size: 0.68rem !important;
+                padding: 1px 4px !important;
+            }
         }
 
         .nav-btn {
@@ -650,15 +724,15 @@
     <div id="macApp" v-cloak>
         <!-- 頂部置頂導覽列 -->
         <header class="top-navbar">
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center overflow-hidden">
                 <a href="javascript:history.back();" class="nav-btn mr-3">
                     <i class="fas fa-arrow-left"></i>
                     <span class="d-none d-sm-inline">返回清單</span>
                 </a>
                 <div class="brand-title">
-                    <i class="fas fa-truck-monster text-white mr-1"></i>
-                    <span>施工機具自主管理與排煙檢測表</span>
-                    <span class="badge badge-light text-dark font-weight-bold ml-2" style="font-size: 0.82rem;">
+                    <i class="fas fa-truck-monster text-white mr-1 flex-shrink-0"></i>
+                    <span class="brand-text">施工機具自主管理與排煙檢測表</span>
+                    <span class="badge badge-light text-dark font-weight-bold ml-2 brand-badge flex-shrink-0">
                         {{ mode === 'new' ? '新增機具申報' : '機具編號 #' + macId }}
                     </span>
                 </div>
@@ -806,11 +880,13 @@
 
             <!-- 區塊二：施工機具基本資料 -->
             <div class="card-modern">
-                <div class="card-modern-header">
-                    <h5 class="card-modern-title">
+                <div class="card-modern-header flex-column align-items-start py-2">
+                    <h5 class="card-modern-title mb-1">
                         <i class="fas fa-cogs text-info"></i> 二、施工機具基本規格資料
                     </h5>
-                    <span class="text-muted small">點擊晶片快速選擇，提高現場錄案速度</span>
+                    <span class="text-muted small" style="padding-left: 26px;">
+                        支援下拉選單打字搜尋，提高現場錄案速度
+                    </span>
                 </div>
                 <div class="card-modern-body">
                     <!-- 施工機具種類型式 與 機具廠牌 (可搜尋下拉選單) -->
@@ -1096,11 +1172,13 @@
 
                     <!-- 保養資訊 (整齊網格化與無斷行輸入組件) -->
                     <div class="maintenance-box p-3 mb-3">
-                        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-                            <h6 class="font-weight-bold text-dark mb-0">
+                        <div class="mb-3 border-bottom pb-2">
+                            <h6 class="font-weight-bold text-dark mb-1">
                                 <i class="fas fa-wrench text-secondary mr-2"></i>保養維護作業規格
                             </h6>
-                            <span class="text-muted small">落實定期保養可有效維持引擎最佳燃燒效能</span>
+                            <div class="text-muted small" style="padding-left: 24px;">
+                                落實定期保養可有效維持引擎最佳燃燒效能
+                            </div>
                         </div>
 
                         <div class="row">
@@ -1244,13 +1322,25 @@
 
             <!-- 區塊四：不透光率檢測點檢程序 (檢測前必填 8 項) -->
             <div class="card-modern">
-                <div class="card-modern-header">
-                    <h5 class="card-modern-title">
-                        <i class="fas fa-tasks text-success"></i> 四、不透光率檢測點檢程序 (檢測執行前必填)
-                    </h5>
-                    <button type="button" class="btn btn-outline-success btn-sm font-weight-bold" v-on:click="quickPassAllCheckItems">
-                        <i class="fas fa-bolt mr-1"></i> 一鍵全部無異狀
-                    </button>
+                <div class="card-modern-header flex-column align-items-stretch py-2">
+                    <!-- 第一行：主標題與桌機版快捷按鈕 -->
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="card-modern-title mb-0">
+                            <i class="fas fa-tasks text-success mr-1"></i> 四、不透光率檢測點檢程序
+                        </h5>
+                        <button type="button" class="btn btn-outline-success btn-sm font-weight-bold d-none d-sm-inline-block text-nowrap" v-on:click="quickPassAllCheckItems">
+                            <i class="fas fa-bolt mr-1"></i> 一鍵全部無異狀
+                        </button>
+                    </div>
+                    <!-- 第二行：副標說明與手機版快捷按鈕 -->
+                    <div class="d-flex align-items-center justify-content-between mt-1">
+                        <span class="text-muted small" style="padding-left: 24px;">
+                            (檢測執行前必填)
+                        </span>
+                        <button type="button" class="btn btn-outline-success btn-sm font-weight-bold d-sm-none text-nowrap py-1 px-2" v-on:click="quickPassAllCheckItems">
+                            <i class="fas fa-bolt mr-1"></i> 一鍵全部無異狀
+                        </button>
+                    </div>
                 </div>
                 <div class="card-modern-body">
                     <div class="row">

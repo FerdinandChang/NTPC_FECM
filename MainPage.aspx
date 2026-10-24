@@ -543,8 +543,9 @@
 
                             <!-- 子功能項目連結清單 -->
                             <div class="d-flex flex-column gap-2">
-                                <a v-for="sub in items" :key="sub.Url" 
-                                   :href="sub.Url" 
+                                <a v-for="sub in items" :key="sub.Title + '_' + sub.Url" 
+                                   :href="sub.Url || 'javascript:void(0)'" 
+                                   v-on:click="handleSubItemClick($event, sub)"
                                    class="sub-item-link">
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-angle-right text-muted mr-2"></i>
@@ -625,6 +626,13 @@
                 }
             },
             methods: {
+                // 子項目點擊事件處理 (攔截尚未開放之功能並彈出提示方塊)
+                handleSubItemClick(e, sub) {
+                    if (!sub.Url || sub.Url === '#' || sub.Url.indexOf('javascript:') === 0) {
+                        e.preventDefault();
+                        alert('「' + sub.Title + '」功能尚未開放！');
+                    }
+                },
                 // 切換個別模組展開 / 折疊
                 toggleModule(id) {
                     this.expandedMap[id] = !this.expandedMap[id];

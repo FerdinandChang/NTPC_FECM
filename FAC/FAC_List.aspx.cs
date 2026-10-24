@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -279,25 +279,9 @@ namespace NTPC_FEC.FAC
         }
         #endregion
 
-        #region 2. 複合多條件篩選與分頁查詢
-        private void GetList()
+        #region 2. 複合多條件篩選核心方法 (供清單與 Excel 匯出共用)
+        private DataTable QueryFilteredFacDataTable(SearchFilterModel filter)
         {
-            string reqJson = "";
-            using (var reader = new StreamReader(Request.InputStream, Encoding.UTF8))
-            {
-                reqJson = reader.ReadToEnd();
-            }
-
-            SearchFilterModel filter = null;
-            if (!string.IsNullOrEmpty(reqJson))
-            {
-                filter = json.Deserialize<SearchFilterModel>(reqJson);
-            }
-            if (filter == null)
-            {
-                filter = new SearchFilterModel();
-            }
-
             DataTable dt = null;
             bool spExecuted = false;
 
@@ -433,6 +417,29 @@ namespace NTPC_FEC.FAC
                     }
                 }
             }
+
+            return dt;
+        }
+
+        private void GetList()
+        {
+            string reqJson = "";
+            using (var reader = new StreamReader(Request.InputStream, Encoding.UTF8))
+            {
+                reqJson = reader.ReadToEnd();
+            }
+
+            SearchFilterModel filter = null;
+            if (!string.IsNullOrEmpty(reqJson))
+            {
+                filter = json.Deserialize<SearchFilterModel>(reqJson);
+            }
+            if (filter == null)
+            {
+                filter = new SearchFilterModel();
+            }
+
+            DataTable dt = QueryFilteredFacDataTable(filter);
 
             int totalRows = (dt != null) ? dt.Rows.Count : 0;
             int pageIndex = filter.PageIndex <= 0 ? 1 : filter.PageIndex;
@@ -1367,59 +1374,19 @@ namespace NTPC_FEC.FAC
         {
             try
             {
-                string mode = Request["mode"] != null ? Request["mode"].Trim().ToLower() : "read";
-                string cNo = Request["cNo"] != null ? Request["cNo"].Trim() : "";
-                string facName = Request["facName"] != null ? Request["facName"].Trim() : "";
-                string scId = Request["scId"] != null ? Request["scId"].Trim() : "";
-                string town = Request["town"] != null ? Request["town"].Trim() : "";
-                string industrial = Request["industrial"] != null ? Request["industrial"].Trim() : "";
-                string facType = Request["facType"] != null ? Request["facType"].Trim() : "";
+                SearchFilterModel filter = new SearchFilterModel();
+                filter.Mode = Request["mode"] != null ? Request["mode"].Trim().ToLower() : "read";
+                filter.CNo = Request["cNo"] != null ? Request["cNo"].Trim() : "";
+                filter.FacName = Request["facName"] != null ? Request["facName"].Trim() : "";
+                filter.ScId = Request["scId"] != null ? Request["scId"].Trim() : "";
+                filter.Town = Request["town"] != null ? Request["town"].Trim() : "";
+                filter.Industrial = Request["industrial"] != null ? Request["industrial"].Trim() : "";
+                filter.FacGroup = Request["facGroup"] != null ? Request["facGroup"].Trim() : "";
+                filter.ProcessName = Request["processName"] != null ? Request["processName"].Trim() : "";
+                filter.ProcessLic = Request["processLic"] != null ? Request["processLic"].Trim() : "";
+                filter.FacType = Request["facType"] != null ? Request["facType"].Trim() : "";
 
-                StringBuilder sb = new StringBuilder();
-                sb.Append("SELECT m.FAC_ID, m.C_NO, m.FAC_NAME, m.S_C_ID, m.TOWN, m.ADDR, m.Industrial, m.FAC_Type, m.TEL, m.Lat, m.Lng ");
-                sb.Append("FROM FAC_Main m WHERE 1=1 ");
-
-                List<SqlParameter> pList = new List<SqlParameter>();
-
-                if (mode == "edit")
-                {
-                    sb.Append(" AND (m.FAC_Type IS NULL OR RTRIM(LTRIM(m.FAC_Type)) <> '列管') ");
-                }
-
-                if (!string.IsNullOrEmpty(cNo))
-                {
-                    sb.Append(" AND m.C_NO LIKE @C_NO ");
-                    pList.Add(new SqlParameter("@C_NO", "%" + cNo + "%"));
-                }
-                if (!string.IsNullOrEmpty(facName))
-                {
-                    sb.Append(" AND m.FAC_NAME LIKE @FAC_NAME ");
-                    pList.Add(new SqlParameter("@FAC_NAME", "%" + facName + "%"));
-                }
-                if (!string.IsNullOrEmpty(scId))
-                {
-                    sb.Append(" AND m.S_C_ID LIKE @S_C_ID ");
-                    pList.Add(new SqlParameter("@S_C_ID", "%" + scId + "%"));
-                }
-                if (!string.IsNullOrEmpty(town))
-                {
-                    sb.Append(" AND m.TOWN = @TOWN ");
-                    pList.Add(new SqlParameter("@TOWN", town));
-                }
-                if (!string.IsNullOrEmpty(industrial))
-                {
-                    sb.Append(" AND m.Industrial LIKE @Industrial ");
-                    pList.Add(new SqlParameter("@Industrial", "%" + industrial + "%"));
-                }
-                if (!string.IsNullOrEmpty(facType))
-                {
-                    sb.Append(" AND m.FAC_Type LIKE @FAC_Type ");
-                    pList.Add(new SqlParameter("@FAC_Type", "%" + facType + "%"));
-                }
-
-                sb.Append(" ORDER BY m.C_NO ASC, m.FAC_ID ASC");
-
-                DataTable dt = DbHelper.ExecuteDataTable(sb.ToString(), pList.ToArray());
+                DataTable dt = QueryFilteredFacDataTable(filter);
 
                 HSSFWorkbook workbook = new HSSFWorkbook();
                 ISheet sheet = workbook.CreateSheet("固定源場所清單");
@@ -1455,7 +1422,8 @@ namespace NTPC_FEC.FAC
                 string[] headers = new string[]
                 {
                     "序號", "管制編號", "場所內部編號", "公私場所名稱", "統一編號",
-                    "行政區", "廠址地址", "行業別", "管制狀態", "聯絡電話", "緯度 (Lat)", "經度 (Lng)"
+                    "行政區", "廠址地址", "行業別", "巡查分組", "管制狀態", "聯絡電話",
+                    "緯度 (WGS84)", "經度 (WGS84)", "登記製程摘要", "許可證字號", "任務派遣狀態"
                 };
 
                 IRow rowHeader = sheet.CreateRow(0);
@@ -1476,22 +1444,41 @@ namespace NTPC_FEC.FAC
                         row.HeightInPoints = 20;
 
                         string seq = (r + 1).ToString();
-                        string cNoVal = dr["C_NO"] != DBNull.Value ? dr["C_NO"].ToString().Trim() : "";
-                        string facIdVal = dr["FAC_ID"] != DBNull.Value ? dr["FAC_ID"].ToString().Trim() : "";
-                        string nameVal = dr["FAC_NAME"] != DBNull.Value ? dr["FAC_NAME"].ToString().Trim() : "";
-                        string scIdVal = dr["S_C_ID"] != DBNull.Value ? dr["S_C_ID"].ToString().Trim() : "";
-                        string townVal = dr["TOWN"] != DBNull.Value ? dr["TOWN"].ToString().Trim() : "";
-                        string addrVal = dr["ADDR"] != DBNull.Value ? dr["ADDR"].ToString().Trim() : "";
-                        string indVal = dr["Industrial"] != DBNull.Value ? dr["Industrial"].ToString().Trim() : "";
-                        string typeVal = dr["FAC_Type"] != DBNull.Value ? dr["FAC_Type"].ToString().Trim() : "非列管";
-                        string telVal = dr["TEL"] != DBNull.Value ? dr["TEL"].ToString().Trim() : "";
-                        string latVal = dr["Lat"] != DBNull.Value ? dr["Lat"].ToString().Trim() : "";
-                        string lngVal = dr["Lng"] != DBNull.Value ? dr["Lng"].ToString().Trim() : "";
+                        string cNoVal = dr.Table.Columns.Contains("C_NO") && dr["C_NO"] != DBNull.Value ? dr["C_NO"].ToString().Trim() : "";
+                        string facIdVal = dr.Table.Columns.Contains("FAC_ID") && dr["FAC_ID"] != DBNull.Value ? dr["FAC_ID"].ToString().Trim() : "";
+                        string nameVal = dr.Table.Columns.Contains("FAC_NAME") && dr["FAC_NAME"] != DBNull.Value ? dr["FAC_NAME"].ToString().Trim() : "";
+                        string scIdVal = dr.Table.Columns.Contains("S_C_ID") && dr["S_C_ID"] != DBNull.Value ? dr["S_C_ID"].ToString().Trim() : "";
+                        string townVal = dr.Table.Columns.Contains("TOWN") && dr["TOWN"] != DBNull.Value ? dr["TOWN"].ToString().Trim() : "";
+                        string addrVal = dr.Table.Columns.Contains("ADDR") && dr["ADDR"] != DBNull.Value ? dr["ADDR"].ToString().Trim() : "";
+                        string indVal = dr.Table.Columns.Contains("Industrial") && dr["Industrial"] != DBNull.Value ? dr["Industrial"].ToString().Trim() : "-";
+                        string groupVal = dr.Table.Columns.Contains("FAC_Group") && dr["FAC_Group"] != DBNull.Value ? dr["FAC_Group"].ToString().Trim() : "-";
+                        string typeVal = dr.Table.Columns.Contains("FAC_Type") && dr["FAC_Type"] != DBNull.Value ? dr["FAC_Type"].ToString().Trim() : "非列管";
+                        string telVal = dr.Table.Columns.Contains("TEL") && dr["TEL"] != DBNull.Value ? dr["TEL"].ToString().Trim() : "";
+
+                        // 座標轉換 (TWD97 -> WGS84)
+                        double x = 0, y = 0, lat = 0, lng = 0;
+                        if (dr.Table.Columns.Contains("TWD97_X") && double.TryParse(dr["TWD97_X"].ToString(), out x) &&
+                            dr.Table.Columns.Contains("TWD97_Y") && double.TryParse(dr["TWD97_Y"].ToString(), out y))
+                        {
+                            Twd97ToWgs84(x, y, out lat, out lng);
+                        }
+                        else if (dr.Table.Columns.Contains("X") && double.TryParse(dr["X"].ToString(), out x) &&
+                                 dr.Table.Columns.Contains("Y") && double.TryParse(dr["Y"].ToString(), out y))
+                        {
+                            Twd97ToWgs84(x, y, out lat, out lng);
+                        }
+
+                        string latVal = lat != 0 ? lat.ToString("F6") : "";
+                        string lngVal = lng != 0 ? lng.ToString("F6") : "";
+                        string procSummary = dr.Table.Columns.Contains("ProcessSummary") && dr["ProcessSummary"] != DBNull.Value ? dr["ProcessSummary"].ToString().Trim() : "";
+                        string procLics = dr.Table.Columns.Contains("Process_Lic_List") && dr["Process_Lic_List"] != DBNull.Value ? dr["Process_Lic_List"].ToString().Trim() : "";
+                        string missionVal = dr.Table.Columns.Contains("Mission") && dr["Mission"] != DBNull.Value ? dr["Mission"].ToString().Trim() : "";
 
                         string[] vals = new string[]
                         {
                             seq, cNoVal, facIdVal, nameVal, scIdVal,
-                            townVal, addrVal, indVal, typeVal, telVal, latVal, lngVal
+                            townVal, addrVal, indVal, groupVal, typeVal, telVal,
+                            latVal, lngVal, procSummary, procLics, missionVal
                         };
 
                         for (int cIdx = 0; cIdx < vals.Length; cIdx++)
@@ -1510,15 +1497,19 @@ namespace NTPC_FEC.FAC
                 sheet.SetColumnWidth(4, 14 * 256);
                 sheet.SetColumnWidth(5, 12 * 256);
                 sheet.SetColumnWidth(6, 36 * 256);
-                sheet.SetColumnWidth(7, 24 * 256);
-                sheet.SetColumnWidth(8, 12 * 256);
-                sheet.SetColumnWidth(9, 16 * 256);
-                sheet.SetColumnWidth(10, 14 * 256);
+                sheet.SetColumnWidth(7, 26 * 256);
+                sheet.SetColumnWidth(8, 14 * 256);
+                sheet.SetColumnWidth(9, 12 * 256);
+                sheet.SetColumnWidth(10, 16 * 256);
                 sheet.SetColumnWidth(11, 14 * 256);
+                sheet.SetColumnWidth(12, 14 * 256);
+                sheet.SetColumnWidth(13, 36 * 256);
+                sheet.SetColumnWidth(14, 24 * 256);
+                sheet.SetColumnWidth(15, 28 * 256);
 
                 Response.Clear();
                 Response.ContentType = "application/vnd.ms-excel";
-                string filename = "固定源場所清單_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".xls";
+                string filename = "固定源場所清單_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".xls";
                 Response.AddHeader("Content-Disposition", "attachment;filename=" + HttpUtility.UrlEncode(filename, Encoding.UTF8));
 
                 using (MemoryStream ms = new MemoryStream())
@@ -1538,6 +1529,7 @@ namespace NTPC_FEC.FAC
             catch (Exception ex)
             {
                 Response.Clear();
+                Response.StatusCode = 500;
                 Response.ContentType = "text/plain; charset=utf-8";
                 Response.Write("匯出 Excel 失敗：" + ex.Message);
             }

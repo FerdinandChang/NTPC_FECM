@@ -3,7 +3,7 @@
 許可證資訊 -> FAC/oFAC_List.aspx
 其他資料查詢 -> OutLink.aspx
 工廠統計 -> FAC/Charts.aspx
-環域查詢 -> Case/CaseList.aspx
+環域查詢 -> 尚未開放 (跳出提示訊息)
 查核紀錄暫存 -> Case/CaseList.aspx?mode=reject
 退件紀錄 -> Case/CaseList.aspx?mode=back
 案件初審 -> Manager/managerList.aspx?INV_State=INV1
