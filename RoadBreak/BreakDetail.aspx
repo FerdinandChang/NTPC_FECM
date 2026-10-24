@@ -97,6 +97,87 @@
             gap: 8px;
         }
 
+        /* 主容器佈局 */
+        .container-fluid-custom {
+            max-width: 1560px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* 階段時間軸 (Status Stepper) */
+        .stepper-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+            flex: 1;
+        }
+        .step-circle {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: #64748b;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 14px;
+            margin-bottom: 6px;
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 0 2px #cbd5e1;
+            transition: all 0.3s;
+        }
+        .step-item.active .step-circle {
+            background: var(--brand-blue);
+            color: #ffffff;
+            box-shadow: 0 0 0 2px var(--brand-blue);
+        }
+        .step-item.completed .step-circle {
+            background: #10b981;
+            color: #ffffff;
+            box-shadow: 0 0 0 2px #10b981;
+        }
+        .step-title {
+            font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 2px;
+        }
+        .step-item.active .step-title { color: var(--brand-blue); }
+        .step-item.completed .step-title { color: #047857; }
+        .step-time { font-size: 11px; color: #94a3b8; }
+
+        .stepper-line {
+            position: absolute;
+            top: 34px; left: 16%; right: 16%;
+            height: 3px;
+            background: #e2e8f0;
+            z-index: 1;
+        }
+        .stepper-line-fill {
+            height: 100%;
+            background: #10b981;
+            transition: width 0.4s ease;
+        }
+
+        /* 退回醒目警示 */
+        .alert-gback {
+            background-color: #fef2f2;
+            border: 1px solid #f87171;
+            border-left: 6px solid #dc2626;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            color: #991b1b;
+            font-size: 14px;
+        }
+
         /* 現代卡片 */
         .card-modern {
             background: var(--surface);
@@ -597,18 +678,20 @@
                         <span class="d-none d-md-inline">路線導航</span>
                     </button>
 
-                    <!-- 依案件權限與狀態切換操作按鈕 -->
-                    <a v-if="userPerms.CanEdit" :href="'NewBreak.aspx?id=' + encodeURIComponent(caseData.Break_ID)" class="btn btn-warning btn-sm font-weight-bold shadow-sm ml-2" title="編輯案件">
-                        <i class="fas fa-edit mr-1"></i> 編輯案件
-                    </a>
-
-                    <a v-if="userPerms.CanDispatch" :href="'SetSG_Break.aspx?id=' + encodeURIComponent(caseData.Break_ID)" class="btn btn-primary btn-sm font-weight-bold shadow-sm ml-2" title="派工通報">
-                        <i class="fas fa-paper-plane mr-1"></i> 派工通報
-                    </a>
-
-                    <a v-if="userPerms.CanImprove" :href="'ImproveBreak.aspx?id=' + encodeURIComponent(caseData.Break_ID)" class="btn btn-success btn-sm font-weight-bold shadow-sm ml-2" title="改善回報">
-                        <i class="fas fa-tools mr-1"></i> 改善回報
-                    </a>
+                    <!-- 依案件狀態與權限動態切換操作按鈕 (BSCDetail 風格) -->
+                    <template v-if="numericStatusCode === 1">
+                        <a v-if="userPerms.CanEdit" :href="'NewBreak.aspx?id=' + encodeURIComponent(caseData.Break_ID)" class="btn btn-warning btn-sm font-weight-bold shadow-sm ml-2" title="編輯案件">
+                            <i class="fas fa-edit mr-1"></i> 編輯案件
+                        </a>
+                        <a v-if="userPerms.CanDispatch" :href="'SetSG_Break.aspx?id=' + encodeURIComponent(caseData.Break_ID)" class="btn btn-primary btn-sm font-weight-bold shadow-sm ml-2" title="派工通報">
+                            <i class="fas fa-paper-plane mr-1"></i> 派工通報
+                        </a>
+                    </template>
+                    <template v-else-if="numericStatusCode === 2">
+                        <a v-if="userPerms.CanImprove" :href="'ImproveBreak.aspx?id=' + encodeURIComponent(caseData.Break_ID)" class="btn btn-success btn-sm font-weight-bold shadow-sm ml-2" title="改善回報">
+                            <i class="fas fa-tools mr-1"></i> 改善回報
+                        </a>
+                    </template>
                 </div>
             </header>
 
@@ -623,7 +706,7 @@
             </div>
 
             <!-- 主作業容器 -->
-            <div class="container-fluid py-3 px-3 px-lg-4">
+            <main class="container-fluid-custom">
                 <!-- 載入中動畫 -->
                 <div v-if="loading" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
@@ -643,20 +726,51 @@
 
                 <!-- 案件主要內容區 -->
                 <div v-else>
-                    <!-- 退回警示 Banner (若 G_Back === 'Y') -->
-                    <div v-if="caseData.G_Back === 'Y'" class="rejected-banner shadow-sm">
-                        <div class="rejected-banner-title">
-                            <i class="fas fa-ban"></i>
-                            <span>非處理單位權責，本案件已退回</span>
+                    <!-- 案件退回重辦警告卡片 (若 G_Back === 'Y') -->
+                    <div v-if="caseData.G_Back === 'Y'" class="alert-gback shadow-sm">
+                        <div class="font-weight-bold d-flex align-items-center gap-2">
+                            <i class="fas fa-exclamation-circle fa-lg"></i>
+                            <span>非處理單位權責，此案件已被退回！</span>
                         </div>
-                        <div class="d-flex flex-wrap gap-2 text-danger font-weight-bold mb-1">
-                            <span class="mr-3"><i class="fas fa-building mr-1"></i>退回單位：{{ caseData.G_COM_NAME || '未指定' }}</span>
-                            <span class="mr-3"><i class="fas fa-user mr-1"></i>回報人員：{{ caseData.G_UserName || '未填寫' }}</span>
-                            <span><i class="fas fa-clock mr-1"></i>退回日期：{{ caseData.Improve_Date || '未記錄' }}</span>
+                        <div class="mt-2 pl-4" v-if="caseData.G_Memo">
+                            <strong>退回備註說明：</strong> {{ caseData.G_Memo }}
                         </div>
-                        <div class="mt-1 bg-white p-2 rounded border border-danger">
-                            <span class="font-weight-bold text-dark">退回說明備註：</span>
-                            <span class="text-danger">{{ caseData.G_Memo || '無詳細說明' }}</span>
+                    </div>
+
+                    <!-- 2. 通報階段進度時間軸 (Status Stepper) -->
+                    <div class="stepper-container shadow-sm no-print">
+                        <div class="stepper-line">
+                            <div class="stepper-line-fill" :style="{ width: stepperProgress + '%' }"></div>
+                        </div>
+
+                        <!-- 步驟 1: 現場查核立案 -->
+                        <div class="step-item" :class="getStepClass(1)">
+                            <div class="step-circle">
+                                <i v-if="numericStatusCode > 1" class="fas fa-check"></i>
+                                <span v-else>1</span>
+                            </div>
+                            <div class="step-title">現場查核立案</div>
+                            <div class="step-time">{{ caseData.Report_Date || '未填寫' }}</div>
+                        </div>
+
+                        <!-- 步驟 2: 派工改善通報 -->
+                        <div class="step-item" :class="getStepClass(2)">
+                            <div class="step-circle">
+                                <i v-if="numericStatusCode > 2" class="fas fa-check"></i>
+                                <span v-else>2</span>
+                            </div>
+                            <div class="step-title">{{ caseData.G_Back === 'Y' ? '案件退回待重派' : '派工改善通報' }}</div>
+                            <div class="step-time">{{ caseData.SetCOM_Date || '待通報' }}</div>
+                        </div>
+
+                        <!-- 步驟 3: 改善完成結案 -->
+                        <div class="step-item" :class="getStepClass(3)">
+                            <div class="step-circle">
+                                <i v-if="numericStatusCode === 3" class="fas fa-check"></i>
+                                <span v-else>3</span>
+                            </div>
+                            <div class="step-title">改善完成結案</div>
+                            <div class="step-time">{{ caseData.Improve_Date || '待改善' }}</div>
                         </div>
                     </div>
 
@@ -922,7 +1036,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
 
             <!-- 照片放大燈箱 (Lightbox Modal) -->
             <div v-if="lightbox.show" class="lightbox-modal no-print" v-on:click.self="closeLightbox">
@@ -1041,6 +1155,19 @@
                 const pad = n => n.toString().padStart(2, '0');
                 this.currentPrintTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
             },
+            computed: {
+                numericStatusCode() {
+                    if (!this.caseData) return 1;
+                    if (this.caseData.StatusCode === 'IMPROVED' || (this.caseData.Improve_Date && this.caseData.Improve_Date.trim() !== '')) return 3;
+                    if (this.caseData.StatusCode === 'DISPATCHED' || (this.caseData.SetCOM_Date && this.caseData.SetCOM_Date.trim() !== '') || (this.caseData.G_COM && this.caseData.G_COM.trim() !== '')) return 2;
+                    return 1;
+                },
+                stepperProgress() {
+                    if (this.numericStatusCode === 3) return 100;
+                    if (this.numericStatusCode === 2) return 50;
+                    return 0;
+                }
+            },
             mounted() {
                 if (!this.breakId) {
                     this.loading = false;
@@ -1057,6 +1184,11 @@
                 });
             },
             methods: {
+                getStepClass(step) {
+                    if (this.numericStatusCode > step) return 'completed';
+                    if (this.numericStatusCode === step) return 'active';
+                    return '';
+                },
                 // 載入案件明細與照片對比
                 loadCaseDetail() {
                     this.loading = true;

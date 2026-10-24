@@ -61,6 +61,30 @@
             z-index: 1020;
         }
 
+.nav-btn {
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff !important;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            height: 36px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 14px;
+            gap: 6px;
+            transition: all 0.2s ease;
+            text-decoration: none !important;
+        }
+        .nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.32);
+            color: #ffffff !important;
+            text-decoration: none !important;
+        }
+
+
         .navbar-brand-title {
             font-size: 1.15rem;
             font-weight: 700;
@@ -419,20 +443,25 @@
 </head>
 <body>
     <div id="listApp" v-cloak>
-        <!-- 頂部品牌導覽列 -->
+        <!-- 頂部品牌導覽列 (全站標準左側導航、右側主操作) -->
         <header class="top-navbar">
-            <a href="Clean_List.aspx" class="navbar-brand-title">
-                <i class="fas fa-broom"></i>
-                <span>新北市固定溢散源 - 道路潔淨巡檢</span>
-            </a>
-            <div class="d-flex align-items-center gap-2">
-                <a :href="'NewCleanChk.aspx?mode=new&listMode=' + currentMode" class="btn btn-warning font-weight-bold text-dark px-3 shadow-sm mr-2" style="border-radius: 8px;">
-                    <i class="fas fa-plus-circle"></i>
-                    <span class="d-none d-sm-inline ml-1">新增巡檢</span>
+            <div class="d-flex align-items-center">
+                <a href="../MainPage.aspx?sub=menu4" class="nav-btn mr-2" title="返回主選單">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline">回首頁</span>
                 </a>
-                <a href="../MainPage.aspx?sub=menu4" class="btn btn-outline-light font-weight-bold px-3" style="border-radius: 8px;">
-                    <i class="fas fa-chevron-left"></i>
-                    <span class="d-none d-sm-inline ml-1">回選單</span>
+                <a href="Clean_List.aspx" class="navbar-brand-title">
+                    <i class="fas fa-broom text-white"></i>
+                    <span>道路潔淨巡檢管理</span>
+                    <span class="badge badge-light text-dark font-weight-bold ml-1">
+                        {{ counts.Total }} 筆
+                    </span>
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a :href="'NewCleanChk.aspx?mode=new&listMode=' + currentMode" class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2">
+                    <i class="fas fa-plus-circle mr-1"></i>
+                    <span class="d-none d-sm-inline">新增巡檢</span>
                 </a>
             </div>
         </header>
@@ -610,17 +639,41 @@
             <!-- 案件列表主要卡片 -->
             <div class="card-modern">
                 <div class="card-modern-header">
-                    <h2 class="card-modern-title">
-                        <i class="fas fa-list-ul text-primary"></i>
-                        <span>{{ getModeTitle() }}</span>
-                        <span class="badge badge-pill badge-light border text-muted ml-2 font-weight-bold" style="font-size: 12px;">
-                            共 {{ totalCount }} 筆紀錄
+                    <div class="d-flex align-items-center gap-2">
+                        <h2 class="card-modern-title">
+                            <i class="fas fa-list-alt text-primary"></i>
+                            <span>{{ getModeTitle() }}</span>
+                        </h2>
+                        <span class="badge badge-light border text-dark font-weight-bold ml-1">
+                            共 {{ totalCount }} 筆
                         </span>
-                    </h2>
-                    <div>
-                        <button type="button" class="btn btn-sm btn-light border font-weight-bold" v-on:click="loadList" title="重新整理">
-                            <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+                        <span class="badge badge-secondary ml-1 d-none d-sm-inline">
+                            頁次 {{ currentPage }} / {{ totalPages }}
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <!-- 1. 重新整理 -->
+                        <button type="button" class="btn btn-sm btn-outline-secondary mr-2" v-on:click="loadList" :disabled="loading" title="重新整理巡檢紀錄">
+                            <i class="fas fa-sync-alt mr-1" :class="{ 'fa-spin': loading }"></i>
+                            <span class="d-none d-md-inline">重新整理</span>
                         </button>
+
+                        <!-- 2. 匯出 EXCEL -->
+                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold mr-2" v-on:click="exportExcel" :disabled="exporting || totalCount === 0" title="匯出篩選結果為 EXCEL 報表">
+                            <i class="fas fa-file-excel mr-1"></i>
+                            <span class="d-none d-md-inline">{{ exporting ? '匯出中...' : '匯出 EXCEL' }}</span>
+                        </button>
+
+                        <!-- 3. 每頁筆數選擇器 -->
+                        <div class="d-inline-flex align-items-center">
+                            <span class="small text-muted mr-1 d-none d-lg-inline">每頁：</span>
+                            <select class="form-control form-control-sm d-inline-block w-auto" v-model="pageSize" v-on:change="changePageSize">
+                                <option :value="10">10 筆</option>
+                                <option :value="15">15 筆</option>
+                                <option :value="30">30 筆</option>
+                                <option :value="50">50 筆</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 

@@ -36,3 +36,6 @@ favicon_native.ico
 favicon_small.ico
 Scripts/ico_b64.txt
 Scripts/gen_ico.ps1
+__pycache__/
+*.pyc
+*.pyo

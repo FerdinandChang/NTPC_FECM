@@ -8,6 +8,8 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NPOI.HSSF.UserModel;
+using NPOI.SS.UserModel;
 
 namespace NTPC_FEC.RoadClean
 {
@@ -84,6 +86,11 @@ namespace NTPC_FEC.RoadClean
             if (!string.IsNullOrEmpty(action))
             {
                 Response.Clear();
+                if (action.ToLower() == "exportexcel")
+                {
+                    HandleExportExcel();
+                    return;
+                }
                 Response.ContentType = "application/json; charset=utf-8";
                 try
                 {
@@ -1036,5 +1043,188 @@ namespace NTPC_FEC.RoadClean
 
             Response.Write(json.Serialize(new { Success = true, Message = "巡檢草稿紀錄已成功刪除！" }));
         }
-    }
+    
+        #region 匯出 Excel 報表
+        private void HandleExportExcel()
+        {
+            try
+            {
+                string mode = Request["mode"] != null ? Request["mode"].Trim().ToLower() : "apply";
+                string town = Request["town"] != null ? Request["town"].Trim() : "";
+                string roadName = Request["roadName"] != null ? Request["roadName"].Trim() : "";
+                string chkId = Request["chkId"] != null ? Request["chkId"].Trim() : "";
+                string chkDateS = Request["chkDateS"] != null ? Request["chkDateS"].Trim() : "";
+                string chkDateE = Request["chkDateE"] != null ? Request["chkDateE"].Trim() : "";
+
+                StringBuilder sb = new StringBuilder();
+                sb.Append("SELECT c.ChkId, c.Town, c.RoadName, c.ChkDate, c.RoadLevel, c.FloodLevel, c.CState, c.CreateUser, c.Score ");
+                sb.Append("FROM RoadClean_Main c WHERE 1=1 ");
+
+                List<SqlParameter> pList = new List<SqlParameter>();
+
+                if (mode == "apply")
+                {
+                    sb.Append(" AND (c.CState = 'A00' OR c.CState IS NULL) ");
+                }
+                else if (mode == "examine")
+                {
+                    sb.Append(" AND c.CState = 'A01' ");
+                }
+                else if (mode == "back")
+                {
+                    sb.Append(" AND c.CState = 'A00b' ");
+                }
+                else if (mode == "search")
+                {
+                    sb.Append(" AND c.CState = 'A02' ");
+                }
+
+                if (!string.IsNullOrEmpty(town))
+                {
+                    sb.Append(" AND c.Town = @Town ");
+                    pList.Add(new SqlParameter("@Town", town));
+                }
+                if (!string.IsNullOrEmpty(roadName))
+                {
+                    sb.Append(" AND c.RoadName LIKE @RoadName ");
+                    pList.Add(new SqlParameter("@RoadName", "%" + roadName + "%"));
+                }
+                if (!string.IsNullOrEmpty(chkId))
+                {
+                    sb.Append(" AND c.ChkId LIKE @ChkId ");
+                    pList.Add(new SqlParameter("@ChkId", "%" + chkId + "%"));
+                }
+                DateTime dtS;
+                if (DateTime.TryParse(chkDateS, out dtS))
+                {
+                    sb.Append(" AND c.ChkDate >= @DateS ");
+                    pList.Add(new SqlParameter("@DateS", dtS));
+                }
+                DateTime dtE;
+                if (DateTime.TryParse(chkDateE, out dtE))
+                {
+                    sb.Append(" AND c.ChkDate <= @DateE ");
+                    pList.Add(new SqlParameter("@DateE", dtE.AddDays(1).AddSeconds(-1)));
+                }
+
+                sb.Append(" ORDER BY c.ChkDate DESC, c.ChkId DESC");
+
+                DataTable dt = DbHelper.ExecuteDataTable(sb.ToString(), pList.ToArray());
+
+                HSSFWorkbook workbook = new HSSFWorkbook();
+                ISheet sheet = workbook.CreateSheet("道路潔淨巡檢清單");
+
+                // 標題樣式
+                ICellStyle headerStyle = workbook.CreateCellStyle();
+                IFont headerFont = workbook.CreateFont();
+                headerFont.FontName = "微軟正黑體";
+                headerFont.FontHeightInPoints = 11.0;
+                headerFont.IsBold = true;
+                headerStyle.SetFont(headerFont);
+                headerStyle.Alignment = HorizontalAlignment.Center;
+                headerStyle.VerticalAlignment = VerticalAlignment.Center;
+                headerStyle.FillForegroundColor = NPOI.HSSF.Util.HSSFColor.Grey25Percent.Index;
+                headerStyle.FillPattern = FillPattern.SolidForeground;
+                headerStyle.BorderBottom = NPOI.SS.UserModel.BorderStyle.Thin;
+                headerStyle.BorderTop = NPOI.SS.UserModel.BorderStyle.Thin;
+                headerStyle.BorderLeft = NPOI.SS.UserModel.BorderStyle.Thin;
+                headerStyle.BorderRight = NPOI.SS.UserModel.BorderStyle.Thin;
+
+                // 內容樣式
+                ICellStyle dataStyle = workbook.CreateCellStyle();
+                IFont dataFont = workbook.CreateFont();
+                dataFont.FontName = "微軟正黑體";
+                dataFont.FontHeightInPoints = 10.0;
+                dataStyle.SetFont(dataFont);
+                dataStyle.VerticalAlignment = VerticalAlignment.Center;
+                dataStyle.BorderBottom = NPOI.SS.UserModel.BorderStyle.Thin;
+                dataStyle.BorderTop = NPOI.SS.UserModel.BorderStyle.Thin;
+                dataStyle.BorderLeft = NPOI.SS.UserModel.BorderStyle.Thin;
+                dataStyle.BorderRight = NPOI.SS.UserModel.BorderStyle.Thin;
+
+                string[] headers = new string[]
+                {
+                    "序號", "巡檢案號", "行政區", "巡檢道路名稱", "巡檢日期",
+                    "道路評級", "淹水評級", "案件階段", "填報人員", "總分"
+                };
+
+                IRow rowHeader = sheet.CreateRow(0);
+                rowHeader.HeightInPoints = 26;
+                for (int h = 0; h < headers.Length; h++)
+                {
+                    ICell c = rowHeader.CreateCell(h);
+                    c.SetCellValue(headers[h]);
+                    c.CellStyle = headerStyle;
+                }
+
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    for (int r = 0; r < dt.Rows.Count; r++)
+                    {
+                        DataRow dr = dt.Rows[r];
+                        IRow row = sheet.CreateRow(r + 1);
+                        row.HeightInPoints = 20;
+
+                        string seq = (r + 1).ToString();
+                        string chkIdVal = dr["ChkId"] != DBNull.Value ? dr["ChkId"].ToString().Trim() : "";
+                        string townVal = dr["Town"] != DBNull.Value ? dr["Town"].ToString().Trim() : "";
+                        string roadVal = dr["RoadName"] != DBNull.Value ? dr["RoadName"].ToString().Trim() : "";
+                        string dateVal = dr["ChkDate"] != DBNull.Value ? string.Format("{0:yyyy-MM-dd}", dr["ChkDate"]) : "";
+                        string rLvl = dr["RoadLevel"] != DBNull.Value ? dr["RoadLevel"].ToString().Trim() : "";
+                        string fLvl = dr["FloodLevel"] != DBNull.Value ? dr["FloodLevel"].ToString().Trim() : "";
+                        string stateVal = dr["CState"] != DBNull.Value ? dr["CState"].ToString().Trim() : "";
+                        string userVal = dr["CreateUser"] != DBNull.Value ? dr["CreateUser"].ToString().Trim() : "";
+                        string scoreVal = dr["Score"] != DBNull.Value ? dr["Score"].ToString().Trim() : "";
+
+                        string[] vals = new string[]
+                        {
+                            seq, chkIdVal, townVal, roadVal, dateVal,
+                            rLvl, fLvl, stateVal, userVal, scoreVal
+                        };
+
+                        for (int cIdx = 0; cIdx < vals.Length; cIdx++)
+                        {
+                            ICell cell = row.CreateCell(cIdx);
+                            cell.SetCellValue(vals[cIdx]);
+                            cell.CellStyle = dataStyle;
+                        }
+                    }
+                }
+
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    sheet.SetColumnWidth(i, 16 * 256);
+                }
+                sheet.SetColumnWidth(0, 8 * 256);
+                sheet.SetColumnWidth(3, 30 * 256); // 道路名稱放寬
+
+                Response.Clear();
+                Response.ContentType = "application/vnd.ms-excel";
+                string filename = "道路潔淨巡檢清單_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".xls";
+                Response.AddHeader("Content-Disposition", "attachment;filename=" + HttpUtility.UrlEncode(filename, Encoding.UTF8));
+
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    workbook.Write(ms);
+                    Response.BinaryWrite(ms.ToArray());
+                }
+
+                try
+                {
+                    Response.End();
+                }
+                catch (System.Threading.ThreadAbortException)
+                {
+                }
+            }
+            catch (Exception ex)
+            {
+                Response.Clear();
+                Response.ContentType = "text/plain; charset=utf-8";
+                Response.Write("匯出 Excel 失敗：" + ex.Message);
+            }
+        }
+        #endregion
+
+}
 }

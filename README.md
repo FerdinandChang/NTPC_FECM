@@ -5,8 +5,8 @@
 ---
 
 ## 📌 專案簡介
-本平台提供新北市轄內固定溢散源業者及主管機關進行申報、自主管理填報、現場稽巡查、案件管制作業、審查與統計分析。
-自 1.0.0 起全面進行現代化架構重構，1.1.0 版進一步導入三大巡檢核心業務模組（道路洗掃巡檢、道路破壞通報、車行路段查核）、本地化 Leaflet 1.9.4 地圖圖台、權限體系服務與具備語法合規與防 IIS CS0433 衝突的正式機打包自動化機制。
+本平台提供新北市轄內固定溢散源業者及主管機關進行自主管理申報、施工機具查核、裸露地列管、洗車設備監控、道路洗掃巡檢、案件初複三審管制作業、統計分析及衛星植生綠覆率圖台管理。
+自 1.0.0 完成現代化架構重構，1.1.0 建立巡檢規範與本地地圖庫，1.2.0 進一步實現全業務模組標準化整合、即時審核待辦統計服務 (`PendingTaskService`) 與 SSO 外部鏈結跳轉橋接機制。
 
 ---
 
@@ -14,7 +14,7 @@
 - **Runtime / Framework**：.NET Framework 4.8 / ASP.NET Web Forms
 - **Language**：C# 5.0 相容規範（嚴格防止 IIS 編譯不相容）
 - **Database**：Microsoft SQL Server（使用參數化查詢與 `DbHelper`）
-- **Frontend**：Bootstrap 4, jQuery 3.6.4, Vue 3, Leaflet 1.9.4, SweetAlert2, Font Awesome (本地化離線版)
+- **Frontend**：Bootstrap 4, jQuery (3.6.0/3.6.4/3.7.1), Vue 3, Leaflet 1.9.4, SweetAlert2, Font Awesome (本地化離線版)
 - **Deployment Automation**：Python 3 (`deploy_manifest.json` + `Scripts/deploy_pack.py`)
 
 ---
@@ -27,29 +27,23 @@ d:\NTPC_FEC/
 ├── App_Code/               # 核心共用元件與後端服務分層
 │   ├── Helpers/            # 資料庫存取協助工具 (DbHelper.cs)
 │   ├── Models/             # 資料模型 (UserAccount.cs, MenuModule.cs)
-│   └── Services/           # 商業邏輯 (AuthService.cs, MenuService.cs, PermissionService.cs)
+│   └── Services/           # 商業邏輯 (AuthService.cs, MenuService.cs, PermissionService.cs, PendingTaskService.cs)
 │
-├── RoadClean/              # 道路洗掃與髒污巡檢模組
-│   ├── NewCleanChk.aspx    # 洗掃作業現場自主檢核填報
-│   ├── NewDirty.aspx       # 道路髒污巡查通報
-│   ├── ImproveDirty.aspx   # 髒污改善回報
-│   ├── Dirty_List.aspx     # 髒污案件管理清單
-│   ├── DirtyDetail.aspx    # 髒污案件明細與歷程
-│   ├── Clean_List.aspx     # 洗掃作業執行清單
-│   └── RoadClean_Sum.aspx  # 洗掃成果統計分析 (Highcharts 圖表)
+├── Machine/                # 施工機具管理模組 (NewMac.aspx, macList.aspx)
+├── BareGround/             # 裸露地管制作業模組 (NewBare.aspx, Bare_List.aspx, BareResult.aspx)
+├── Case/                   # 營建工程與案件管理模組 (NewCase.aspx, CaseList.aspx, Case_Sum.aspx)
+├── Manager/                # 案件初/複/三審審核作業模組 (managerList.aspx, Check_Step1.aspx 等)
+├── FAC/                    # 固定污染源稽查管理模組 (FAC_List.aspx, FAC_Detail.aspx, Charts.aspx)
+├── Wash/                   # 洗車設備與出入口沖洗監控模組 (ReportUpload.aspx, DataInput.aspx)
+├── OwnReport/              # 業者自主申報與空品惡化應變模組 (PIC_Report.aspx, Report_AirQuality.aspx)
+├── NDVI/                   # 植生指標與衛星綠覆率圖台模組 (NdviMap.aspx, ntpc_towns.json)
 │
-├── RoadBreak/              # 道路破壞與施工巡查模組
-│   ├── NewBreak.aspx       # 道路破壞通報填報
-│   ├── Break_List.aspx     # 道路破壞清單
-│   └── BreakDetail.aspx    # 道路破壞明細檢視
+├── RoadClean/              # 道路洗掃與髒污巡檢模組 (NewCleanChk.aspx, NewDirty.aspx, Clean_List.aspx 等)
+├── RoadBreak/              # 道路破壞與施工巡查模組 (NewBreak.aspx, Break_List.aspx, BreakDetail.aspx)
+├── RoadBSC/                # 車行路段查核模組 (NewBSC.aspx, BSC_List.aspx, BSCDetail.aspx)
 │
-├── RoadBSC/                # 車行路段查核模組
-│   ├── NewBSC.aspx         # 路段巡查作業填報
-│   ├── BSC_List.aspx       # 路段巡查清單
-│   └── BSCDetail.aspx      # 路段查核明細
-│
-├── Modules/                # 各業務功能頁面模組
-│   └── Manager/            # 系統管理模組 (AccountManagement.aspx, PasswordChange.aspx)
+├── Modules/                # 系統維運模組
+│   └── Manager/            # 帳號管理與密碼維護 (AccountManagement.aspx, PasswordChange.aspx)
 │
 ├── Content/                # 樣式檔與本機靜態資源 (Bootstrap, FontAwesome, Leaflet)
 ├── Scripts/                # JavaScript 庫 (Vue 3, Axios, jQuery, Leaflet, Highcharts)
@@ -57,8 +51,9 @@ d:\NTPC_FEC/
 │
 ├── Default.aspx            # 現代化登入首頁 (AJAX 登入 + SweetAlert2)
 ├── ClientLogin.aspx        # 業者端快速登入入口
-├── MainPage.Master         # 平台母版頁 (含響應式導航列與全載具佈局)
-├── MainPage.aspx           # 登入後儀表板 (模組化功能卡片導覽)
+├── MainPage.Master         # 平台母版頁 (全載具自適應導航列與佈局)
+├── MainPage.aspx           # 登入後儀表板 (模組化功能卡片導覽與待辦統計徽章)
+├── OutLink.aspx            # 外部系統單一簽入 (SSO) 安全跳轉橋接
 ├── ValidateCode.ashx       # 安全動態圖形驗證碼產生器
 ├── Logout.aspx             # 安全登出與 Session 註銷處理
 ├── Web.config.template     # 正式機安全設定檔範本 (不含敏感密碼)
@@ -87,7 +82,7 @@ d:\NTPC_FEC/
    ```
 
 ### 2. 正式機安全發布打包 (Release Packaging)
-專案內建 Python 自動化打包腳本，依據 `deploy_manifest.json` 執行編碼檢查、建置編譯、防 CS0433 衝突覆蓋與完整性自檢：
+專案內建自動化打包腳本，依據 `deploy_manifest.json` 執行編碼檢查、建置編譯、防 CS0433 衝突覆蓋與完整性自檢：
 ```powershell
 python Scripts\deploy_pack.py
 ```
@@ -98,4 +93,4 @@ python Scripts\deploy_pack.py
 ## 📝 版本維護與歷程規範
 本專案嚴格遵循語意化版本（Semantic Versioning）與版本歷程紀錄規範：
 - 每次版本更新均於 [CHANGELOG.md](CHANGELOG.md) 詳載版本號、發布日期及重要改動事項。
-- 遵循 Git Tag 標註版本（如 `v1.0.0`、`v1.1.0`）。
+- 遵循 Git Tag 標註版本（如 `v1.0.0`、`v1.1.0`、`v1.2.0`）。

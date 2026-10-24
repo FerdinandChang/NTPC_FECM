@@ -69,6 +69,7 @@
             border-radius: 10px;
             overflow: hidden;
             margin-bottom: 0;
+            width: 100%;
         }
 
         .acc-table thead th {
@@ -158,6 +159,173 @@
             color: #334155;
             border: 1px solid #cbd5e1;
             border-radius: 5px;
+            padding: 2px 4px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .town-all-badge {
+            display: inline-flex;
+            align-items: center;
+            background-color: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .town-full29-badge {
+            display: inline-flex;
+            align-items: center;
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        /* 行動端標籤提示 (預設桌面端隱藏) */
+        .mobile-field-label {
+            display: none;
+        }
+
+        /* ======================================================= */
+        /* 全載具自適應核心 (Mobile RWD Table-to-Card 轉換規範)     */
+        /* 依據 inspection-ui-standard 規範，小螢幕自動轉為卡片清單 */
+        /* ======================================================= */
+        @media screen and (max-width: 991.98px) {
+            /* 1. 單位篩選藥丸列：手機端支援橫向平滑滑動，不折行占用垂直高度 */
+            .punit-nav {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                padding-bottom: 8px;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .punit-pill {
+                flex-shrink: 0;
+            }
+
+            /* 2. 移除水平溢出限制，容器改為 100% 流動 */
+            .table-responsive {
+                overflow-x: visible !important;
+                display: block;
+            }
+
+            .acc-table {
+                border: none !important;
+                background: transparent !important;
+                display: block !important;
+                width: 100% !important;
+            }
+
+            /* 3. 隱藏桌面端擠壓破版的表頭 */
+            .acc-table thead {
+                display: none !important;
+            }
+
+            .acc-table tbody {
+                display: block !important;
+                width: 100% !important;
+            }
+
+            /* 4. 每筆帳號轉化為獨立高質感卡片 (Mobile User Card) */
+            .acc-table tbody tr {
+                display: block !important;
+                background: #ffffff !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 14px !important;
+                margin-bottom: 14px !important;
+                padding: 14px 16px !important;
+                box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05) !important;
+                position: relative;
+            }
+
+            .acc-table tbody tr:hover {
+                box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+            }
+
+            .acc-table tbody td {
+                display: block !important;
+                width: 100% !important;
+                padding: 5px 0 !important;
+                border-top: none !important;
+                min-width: 0 !important;
+            }
+
+            /* 第一欄：帳號與啟用狀態 (整合為卡片頂部標題列) */
+            .acc-table tbody td.col-user {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                border-bottom: 1px solid #f1f5f9 !important;
+                padding-bottom: 8px !important;
+                margin-bottom: 8px !important;
+            }
+
+            .acc-table tbody td.col-user .user-id-title {
+                font-size: 1.05rem !important;
+                color: #0f172a !important;
+            }
+
+            /* 第二欄：姓名與管制編號 */
+            .acc-table tbody td.col-name {
+                padding-bottom: 6px !important;
+            }
+
+            /* 第三欄：所屬單位 (在手機端以行內標籤展示) */
+            .acc-table tbody td.col-unit {
+                display: inline-block !important;
+                width: auto !important;
+                margin-bottom: 8px !important;
+            }
+
+            /* 行動端小標題提示 */
+            .mobile-field-label {
+                display: block;
+                font-size: 0.78rem;
+                font-weight: 700;
+                color: #64748b;
+                margin-bottom: 4px;
+                margin-top: 6px;
+            }
+
+            /* 權限網格自適應單欄/雙欄 */
+            .perm-summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* 行政區網格自適應 */
+            .user-town-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            /* 第六欄：操作按鈕區 (轉為卡片底部並排大觸控按鈕) */
+            .acc-table tbody td.col-action {
+                border-top: 1px solid #f1f5f9 !important;
+                padding-top: 10px !important;
+                margin-top: 8px !important;
+            }
+
+            .acc-table tbody td.col-action .action-btn-group {
+                flex-direction: row !important;
+                gap: 8px !important;
+            }
+
+            .acc-table tbody td.col-action .action-btn-group .btn {
+                flex: 1;
+                min-height: 38px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.85rem;
+            }
+        }
             padding: 2px 4px;
             font-size: 0.78rem;
             font-weight: 500;
@@ -493,7 +661,7 @@
                                 </div>
                             </div>
                             <div class="mt-2 mt-md-0 text-muted small">
-                                目前顯示：<span class="font-weight-bold text-primary"><asp:Literal ID="litTotalCount" runat="server" Text="0"></asp:Literal></span> 筆帳號
+                                目前顯示：<span id="spnTotalCount" class="font-weight-bold text-primary"><asp:Literal ID="litTotalCount" runat="server" Text="0"></asp:Literal></span> 筆帳號
                             </div>
                         </div>
                     </div>
@@ -515,40 +683,45 @@
                                 <asp:Repeater ID="repUserList" runat="server" OnItemCommand="repUserList_ItemCommand">
                                     <ItemTemplate>
                                         <tr>
-                                            <!-- 帳號 -->
-                                            <td class="text-nowrap">
-                                                <div class="font-weight-bold text-dark" style="font-size: 0.95rem;"><%# Eval("UserID") %></div>
+                                            <!-- 帳號與啟用狀態 -->
+                                            <td class="text-nowrap col-user">
+                                                <div class="font-weight-bold text-dark user-id-title" style="font-size: 0.95rem;">
+                                                    <i class="fas fa-user-circle text-primary mr-1 opacity-75"></i><%# Eval("UserID") %>
+                                                </div>
                                                 <span class='<%# Convert.ToString(Eval("Acc_State")) == "OK" ? "badge-active" : "badge-inactive" %>'>
                                                     <%# Convert.ToString(Eval("Acc_State")) == "OK" ? "正常啟用" : "已停用" %>
                                                 </span>
                                             </td>
 
                                             <!-- 姓名 / 單位名稱與管編 -->
-                                            <td>
+                                            <td class="col-name">
                                                 <div class="user-name-title"><%# Eval("Name") %></div>
                                                 <%# !string.IsNullOrEmpty(Convert.ToString(Eval("FAC_ID"))) ? "<span class='fac-id-badge'><i class='fas fa-industry mr-1 text-secondary'></i>管編: " + Eval("FAC_ID") + "</span>" : "" %>
                                             </td>
 
                                             <!-- 單位 PUnit -->
-                                            <td class="text-nowrap">
+                                            <td class="text-nowrap col-unit">
+                                                <span class="mobile-field-label">所屬單位：</span>
                                                 <span class='<%# string.IsNullOrEmpty(Convert.ToString(Eval("PUnit"))) ? "badge-unit-empty" : "badge-unit" %>'>
                                                     <%# string.IsNullOrEmpty(Convert.ToString(Eval("PUnit"))) ? "未指定" : Eval("PUnit") %>
                                                 </span>
                                             </td>
 
                                             <!-- 權限結構 (多欄緊湊卡片網格) -->
-                                            <td>
+                                            <td class="col-perm">
+                                                <span class="mobile-field-label"><i class="fas fa-shield-alt mr-1"></i>配置業務權限：</span>
                                                 <%# RenderUserPermissions(Eval("LIC"), Eval("LIC2")) %>
                                             </td>
 
                                             <!-- 行政區 (全區智慧折疊 / 3欄緊湊網格) -->
-                                            <td>
+                                            <td class="col-town">
+                                                <span class="mobile-field-label"><i class="fas fa-map-marker-alt mr-1"></i>可瀏覽轄區：</span>
                                                 <%# RenderUserTowns(Convert.ToString(Eval("UserID"))) %>
                                             </td>
 
                                             <!-- 功能操作 -->
-                                            <td class="text-center">
-                                                <div class="d-flex flex-column" style="gap: 5px;">
+                                            <td class="text-center col-action">
+                                                <div class="d-flex flex-column action-btn-group" style="gap: 5px;">
                                                     <asp:LinkButton ID="btnSetLic" runat="server" CssClass="btn btn-info btn-sm shadow-sm w-100 font-weight-bold"
                                                         CommandName="SetLic" CommandArgument='<%# Eval("UserID") %>'>
                                                         <i class="fas fa-sliders-h mr-1"></i>權限設定
@@ -605,6 +778,7 @@
                                             <asp:TextBox ID="txtEditingPUnit" runat="server" CssClass="form-control form-control-sm mr-2" style="width: 140px; font-weight: 600;" placeholder="未指定 (可輸入)"></asp:TextBox>
                                             <div class="d-flex flex-wrap align-items-center mt-1 mt-sm-0" id="editUnitQuickTags">
                                                 <span class="text-muted small mr-1">快選：</span>
+                                                <span class="unit-quick-tag" onclick="setEditPUnit('空噪')">空噪</span>
                                                 <span class="unit-quick-tag" onclick="setEditPUnit('空品')">空品</span>
                                                 <span class="unit-quick-tag" onclick="setEditPUnit('區公所')">區公所</span>
                                                 <span class="unit-quick-tag" onclick="setEditPUnit('康廷')">康廷</span>
@@ -720,8 +894,9 @@
                             </div>
                             <div class="form-group mb-3">
                                 <label class="font-weight-bold small text-muted">所屬單位分類 (PUnit)</label>
-                                <asp:TextBox ID="txtNewPUnit" runat="server" CssClass="form-control" placeholder="例如: 空品、區公所、康廷、環科..."></asp:TextBox>
+                                <asp:TextBox ID="txtNewPUnit" runat="server" CssClass="form-control" placeholder="例如: 空噪、區公所、康廷、環科..."></asp:TextBox>
                                 <div class="mt-2">
+                                    <span class="unit-quick-tag" onclick="setNewPUnit('空噪')">空噪</span>
                                     <span class="unit-quick-tag" onclick="setNewPUnit('空品')">空品</span>
                                     <span class="unit-quick-tag" onclick="setNewPUnit('區公所')">區公所</span>
                                     <span class="unit-quick-tag" onclick="setNewPUnit('康廷')">康廷</span>
@@ -814,6 +989,30 @@
                 highlightUnitQuickTag($.trim($editUnitInput.val()));
                 $editUnitInput.on('input change', function () {
                     highlightUnitQuickTag($.trim($(this).val()));
+                });
+            }
+
+            // 即時快速鍵盤過濾 (提供行動端 427 筆即搜即現，免等 PostBack 重新整理)
+            var $kwInput = $('#<%= txtKeyword.ClientID %>');
+            if ($kwInput.length > 0) {
+                $kwInput.on('input', function () {
+                    var kw = $.trim($(this).val()).toLowerCase();
+                    var count = 0;
+                    $('.acc-table tbody tr').each(function () {
+                        if (!kw) {
+                            $(this).show();
+                            count++;
+                            return;
+                        }
+                        var rowText = $(this).text().toLowerCase();
+                        if (rowText.indexOf(kw) >= 0) {
+                            $(this).show();
+                            count++;
+                        } else {
+                            $(this).hide();
+                        }
+                    });
+                    $('#spnTotalCount').text(count);
                 });
             }
         });

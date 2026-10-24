@@ -64,5 +64,13 @@ namespace NTPC_FEC
                 }
             }
         }
+
+        public bool MustChangePassword
+        {
+            get
+            {
+                return Session["MustChangePassword"] != null && (bool)Session["MustChangePassword"];
+            }
+        }
     }
 }

@@ -106,7 +106,13 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fas fa-shield-alt text-muted"></i></span>
                             </div>
-                            <asp:TextBox ID="txtNewPwd" runat="server" TextMode="Password" CssClass="form-control" placeholder="請設定 6 位數以上密碼" Required="true"></asp:TextBox>
+                            <asp:TextBox ID="txtNewPwd" runat="server" TextMode="Password" CssClass="form-control" placeholder="8-20 碼，含英文大小寫、數字與符號" Required="true"></asp:TextBox>
+                        </div>
+                        <div class="mt-2 p-2 bg-light rounded text-muted" style="font-size: 0.8rem; line-height: 1.5; border: 1px dashed #cbd5e1;">
+                            <i class="fas fa-shield-alt text-info mr-1"></i><strong>密碼安全原則：</strong><br/>
+                            • 長度介於 8 至 20 碼，同時包含<strong>英文大寫、英文小寫、數字與特殊符號</strong><br/>
+                            • 不可與<strong>目前密碼及前三次歷史密碼</strong>相同<br/>
+                            • 系統安全控管：<strong>單日僅限變更一次密碼，每 90 天定期更換</strong>
                         </div>
                     </div>
 

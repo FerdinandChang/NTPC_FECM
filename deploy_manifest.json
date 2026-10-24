@@ -1,4 +1,4 @@
-﻿{
+{
   "description": "新北市固定溢散源管理平台 (NTPC_FEC) 正式機打包清單與強制自檢配置",
   "root_include_files": [
     "Default.aspx",
@@ -11,7 +11,8 @@
     "自主管理平台操作手冊R8.pdf",
     "favicon.ico",
     "apple-touch-icon.png",
-    "deploy_manifest.json"
+    "deploy_manifest.json",
+    "OutLink.aspx"
   ],
   "exclude_dirs": [
     "backup",
@@ -21,7 +22,10 @@
     ".vs",
     ".idea",
     ".agents",
-    "packages"
+    "packages",
+    "scratch",
+    "tiles",
+    "ndvijob"
   ],
   "exclude_extensions": [
     ".pdb",
@@ -86,6 +90,36 @@
     "RoadBreak/BreakDetail.aspx",
     "RoadBSC/NewBSC.aspx",
     "RoadBSC/BSC_List.aspx",
-    "RoadBSC/BSCDetail.aspx"
+    "RoadBSC/BSCDetail.aspx",
+    "Machine/NewMac.aspx",
+    "Machine/macList.aspx",
+    "Manager/managerList.aspx",
+    "BareGround/NewBare.aspx",
+    "BareGround/Bare_List.aspx",
+    "BareGround/BareResult.aspx",
+    "Manager/managerList_Bare.aspx",
+    "Manager/Check_Step1.aspx",
+    "Manager/Check_Step1_Bare.aspx",
+    "Manager/Check_Step1_Mac.aspx",
+    "OutLink.aspx",
+    "NDVI/NdviMap.aspx",
+    "NDVI/Data/ntpc_towns.json",
+    "FAC/Charts.aspx",
+    "FAC/FAC_List.aspx",
+    "FAC/FAC_Detail.aspx",
+    "FAC/oFAC_List.aspx",
+    "OwnReport/PIC_Report.aspx",
+    "Wash/ReportUpload.aspx",
+    "Wash/ReportUpload_List.aspx",
+    "Wash/DataInput.aspx",
+    "OwnReport/Report_AirQuality.aspx",
+    "OwnReport/AirQuality_List.aspx",
+    "Case/Case_Sum.aspx",
+    "Case/Case_Sum_1.aspx",
+    "Case/CaseList.aspx",
+    "Case/NewCase.aspx",
+    "Case/CaseResult.aspx",
+    "Scripts/jquery-3.6.0.min.js",
+    "Scripts/jquery-3.7.1.min.js"
   ]
 }

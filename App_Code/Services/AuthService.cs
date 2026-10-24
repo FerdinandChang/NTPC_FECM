@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Text.RegularExpressions;
 using System.Web;
 using NTPC_FEC.Helpers;
 using NTPC_FEC.Models;
@@ -9,6 +10,32 @@ namespace NTPC_FEC.Services
 {
     public class AuthService
     {
+        /// <summary>
+        /// 驗證密碼強度（必須 8-20 碼，包含英文大寫、英文小寫、數字及特殊符號）
+        /// </summary>
+        public static bool CheckStrongPassword(string pwd, out string errorMsg)
+        {
+            if (string.IsNullOrEmpty(pwd) || pwd.Length < 8 || pwd.Length > 20)
+            {
+                errorMsg = "新密碼長度必須介於 8 至 20 個字元之間！";
+                return false;
+            }
+
+            bool hasUpper = Regex.IsMatch(pwd, @"[A-Z]");
+            bool hasLower = Regex.IsMatch(pwd, @"[a-z]");
+            bool hasDigit = Regex.IsMatch(pwd, @"[0-9]");
+            bool hasSpecial = Regex.IsMatch(pwd, @"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?~`]");
+
+            if (!hasUpper || !hasLower || !hasDigit || !hasSpecial)
+            {
+                errorMsg = "新密碼必須同時包含：英文大寫字母、英文小寫字母、數字及特殊符號！";
+                return false;
+            }
+
+            errorMsg = "";
+            return true;
+        }
+
         public static LoginResult ValidateLogin(string userId, string password, string inputValidateCode, HttpContext context)
         {
             var result = new LoginResult();
@@ -39,8 +66,8 @@ namespace NTPC_FEC.Services
                 return result;
             }
 
-            // 2. 查詢資料庫使用者
-            string sql = "SELECT UID, UserID, Password, PUnit, Name, Acc_State, LIC, LIC2, FAC_ID, LastLogin FROM UserAcc WHERE UserID = @UserID";
+            // 2. 查詢資料庫使用者 (含 LastPwdChangeDate)
+            string sql = "SELECT UID, UserID, Password, PUnit, Name, Acc_State, LIC, LIC2, FAC_ID, LastLogin, LastPwdChangeDate FROM UserAcc WHERE UserID = @UserID";
             var parameters = new SqlParameter[]
             {
                 new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId.Trim() }
@@ -106,6 +133,12 @@ namespace NTPC_FEC.Services
             int uid = 0;
             int.TryParse((row["UID"] != null ? row["UID"].ToString() : ""), out uid);
 
+            DateTime? lastPwdDate = null;
+            if (row.Table.Columns.Contains("LastPwdChangeDate") && row["LastPwdChangeDate"] != DBNull.Value)
+            {
+                lastPwdDate = (DateTime?)Convert.ToDateTime(row["LastPwdChangeDate"]);
+            }
+
             var user = new UserAccount
             {
                 UID = uid,
@@ -116,13 +149,22 @@ namespace NTPC_FEC.Services
                 Lic = lic,
                 Lic2 = lic2,
                 FacID = ((row["FAC_ID"] != null && row["FAC_ID"] != DBNull.Value) ? row["FAC_ID"].ToString() : ""),
-                LastLogin = row["LastLogin"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(row["LastLogin"]) : null
+                LastLogin = row["LastLogin"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(row["LastLogin"]) : null,
+                LastPwdChangeDate = lastPwdDate
             };
 
-            // 6. 寫入 Session 與更新最後登入時間
+            // 6. 檢核 90 天更換密碼規範
+            bool mustChangePwd = false;
+            if (!lastPwdDate.HasValue || (DateTime.Now - lastPwdDate.Value).TotalDays >= 90)
+            {
+                mustChangePwd = true;
+            }
+
+            // 7. 寫入 Session 與更新最後登入時間
             context.Session["LoginUser"] = user.UserID;
             context.Session["UserName"] = user.Name;
             context.Session["UserAccount"] = user;
+            context.Session["MustChangePassword"] = mustChangePwd;
 
             try
             {
@@ -140,6 +182,7 @@ namespace NTPC_FEC.Services
             }
 
             result.Success = true;
+            result.RequirePwdChange = mustChangePwd;
             result.Message = string.Format("{0} 您好，歡迎登入新北市固定溢散源管理平台！", userName);
             result.RedirectUrl = "MainPage.aspx";
             result.User = user;
@@ -208,16 +251,19 @@ namespace NTPC_FEC.Services
                 return result;
             }
 
-            if (newPwd.Length < 4)
+            // 1. 強密碼驗證
+            string pwdError;
+            if (!CheckStrongPassword(newPwd, out pwdError))
             {
                 result.Success = false;
-                result.Message = "新密碼長度過短，請至少輸入 4 個字元以上！";
+                result.Message = pwdError;
                 return result;
             }
 
             try
             {
-                string querySql = "SELECT Password FROM UserAcc WHERE UserID = @UserID";
+                // 2. 查詢當前密碼與最後修改時間
+                string querySql = "SELECT Password, LastPwdChangeDate FROM UserAcc WHERE UserID = @UserID";
                 var queryParams = new SqlParameter[]
                 {
                     new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId }
@@ -231,7 +277,15 @@ namespace NTPC_FEC.Services
                     return result;
                 }
 
-                string currentDbPwd = dt.Rows[0]["Password"] != null ? dt.Rows[0]["Password"].ToString() : "";
+                DataRow row = dt.Rows[0];
+                string currentDbPwd = row["Password"] != null ? row["Password"].ToString() : "";
+                DateTime? lastPwdChangeDate = null;
+                if (row.Table.Columns.Contains("LastPwdChangeDate") && row["LastPwdChangeDate"] != DBNull.Value)
+                {
+                    lastPwdChangeDate = (DateTime?)Convert.ToDateTime(row["LastPwdChangeDate"]);
+                }
+
+                // 3. 檢查目前舊密碼是否吻合
                 if (currentDbPwd != oldPwd)
                 {
                     result.Success = false;
@@ -239,14 +293,66 @@ namespace NTPC_FEC.Services
                     return result;
                 }
 
-                string updateSql = "UPDATE UserAcc SET Password = @NewPassword WHERE UserID = @UserID";
+                // 4. 新舊密碼不可相同
+                if (currentDbPwd == newPwd)
+                {
+                    result.Success = false;
+                    result.Message = "新密碼不可與目前使用之舊密碼相同！";
+                    return result;
+                }
+
+                // 5. 單日只能更換一次密碼
+                if (lastPwdChangeDate.HasValue && lastPwdChangeDate.Value.Date == DateTime.Today)
+                {
+                    result.Success = false;
+                    result.Message = "基於資安考量，單日僅限更換密碼一次！您今日已變更過密碼，請於明日再試。";
+                    return result;
+                }
+
+                // 6. 不得與前三次歷史密碼相同
+                string histSql = "SELECT TOP 3 Password FROM UserPwdHistory WHERE UserID = @UserID ORDER BY ChangeDate DESC, HistID DESC";
+                var histParams = new SqlParameter[]
+                {
+                    new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId }
+                };
+                DataTable histDt = DbHelper.ExecuteDataTable(histSql, histParams);
+                if (histDt != null && histDt.Rows.Count > 0)
+                {
+                    foreach (DataRow hRow in histDt.Rows)
+                    {
+                        string histPwd = hRow["Password"] != null ? hRow["Password"].ToString() : "";
+                        if (histPwd == newPwd)
+                        {
+                            result.Success = false;
+                            result.Message = "新密碼不得與前三次使用過之歷史密碼相同！";
+                            return result;
+                        }
+                    }
+                }
+
+                // 7. 將舊密碼寫入歷史記錄表
+                string insHistSql = "INSERT INTO UserPwdHistory (UserID, Password, ChangeDate) VALUES (@UserID, @Password, GETDATE())";
+                var insHistParams = new SqlParameter[]
+                {
+                    new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId },
+                    new SqlParameter("@Password", SqlDbType.VarChar) { Value = currentDbPwd }
+                };
+                DbHelper.ExecuteNonQuery(insHistSql, insHistParams);
+
+                // 8. 更新使用者密碼與最後更換時間
+                string updateSql = "UPDATE UserAcc SET Password = @NewPassword, LastPwdChangeDate = GETDATE() WHERE UserID = @UserID";
                 var updateParams = new SqlParameter[]
                 {
                     new SqlParameter("@NewPassword", SqlDbType.VarChar) { Value = newPwd },
                     new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId }
                 };
-
                 DbHelper.ExecuteNonQuery(updateSql, updateParams);
+
+                // 9. 更新 Session 狀態
+                if (HttpContext.Current != null && HttpContext.Current.Session != null)
+                {
+                    HttpContext.Current.Session["MustChangePassword"] = false;
+                }
 
                 result.Success = true;
                 result.Message = "密碼變更成功！請牢記您的新密碼。";

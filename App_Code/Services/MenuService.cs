@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using NTPC_FEC.Models;
 
@@ -19,6 +19,9 @@ namespace NTPC_FEC.Services
             long lic2 = user != null ? user.Lic2 : 0L;
             int uid = user != null ? user.UID : 0;
             string userId = user != null ? user.UserID : "";
+
+            // 取得各業務模組待辦真實統計數量
+            PendingTaskCounts pending = PendingTaskService.GetPendingCounts(user);
 
             // 1. 工廠基本資料 (深海軍藍)
             list.Add(new MenuModule
@@ -42,6 +45,7 @@ namespace NTPC_FEC.Services
             });
 
             // 2. 巡查任務派遣 (青藍灰)
+            int caseTotalBadge = pending.CaseInv1 + pending.CaseInv2 + pending.CaseInv3 + pending.CaseMission7Day + pending.CaseMission2Times + pending.CaseBack;
             list.Add(new MenuModule
             {
                 Id = "Case",
@@ -49,27 +53,28 @@ namespace NTPC_FEC.Services
                 SubTitle = "現場稽查任務派工、歷程初複三審與統計",
                 Url = "Case/Mission.aspx",
                 BgColor = "#497E82",
-                BadgeCount = 3,
+                BadgeCount = caseTotalBadge,
                 IconSvg = @"<svg viewBox='0 0 24 24' width='64' height='64' fill='currentColor'><path d='M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14zm-4.2-7.8l-1.4-1.4-2.1 2.1 4.2 4.2 7.1-7.1-1.4-1.4-5.7 5.7z'/></svg>",
                 SubItems = new List<MenuSubItem>
                 {
-                    new MenuSubItem { Title = "防制設施查核", Url = "Case/NewCase.aspx?mode=new" },
-                    new MenuSubItem { Title = "查核紀錄暫存", Url = "Case/CaseList.aspx?mode=reject" },
-                    new MenuSubItem { Title = "退件紀錄", Url = "Case/CaseList.aspx?mode=back" },
-                    new MenuSubItem { Title = "案件初審", Url = "Manager/managerList.aspx?INV_State=INV1" },
-                    new MenuSubItem { Title = "案件複審", Url = "Manager/managerList.aspx?INV_State=INV2" },
-                    new MenuSubItem { Title = "案件三審", Url = "Manager/managerList.aspx?INV_State=INV3" },
+                    new MenuSubItem { Title = "防制設施查核", Url = "Case/CaseList.aspx" },
+                    new MenuSubItem { Title = "查核紀錄暫存", Url = "Case/CaseList.aspx?mode=reject", BadgeCount = pending.CaseDraft },
+                    new MenuSubItem { Title = "退件紀錄", Url = "Case/CaseList.aspx?mode=back", BadgeCount = pending.CaseBack, ShowZero = true },
+                    new MenuSubItem { Title = "案件初審", Url = "Manager/managerList.aspx?INV_State=INV1", BadgeCount = pending.CaseInv1, ShowZero = true },
+                    new MenuSubItem { Title = "案件複審", Url = "Manager/managerList.aspx?INV_State=INV2", BadgeCount = pending.CaseInv2, ShowZero = true },
+                    new MenuSubItem { Title = "案件三審", Url = "Manager/managerList.aspx?INV_State=INV3", BadgeCount = pending.CaseInv3, ShowZero = true },
                     new MenuSubItem { Title = "查核紀錄列表", Url = "Case/CaseList.aspx?mode=search" },
                     new MenuSubItem { Title = "臺北港專區", Url = "Case/CaseList.aspx?mode=project" },
                     new MenuSubItem { Title = "案件派遣設定", Url = "FAC/FAC_List.aspx?mode=mission" },
-                    new MenuSubItem { Title = "巡查派遣", Url = "Case/CaseList.aspx?mode=mission7day", BadgeCount = 3 },
-                    new MenuSubItem { Title = "提報稽查", Url = "Case/CaseList.aspx?mode=mission2times" },
+                    new MenuSubItem { Title = "巡查派遣", Url = "Case/CaseList.aspx?mode=mission7day", BadgeCount = pending.CaseMission7Day },
+                    new MenuSubItem { Title = "提報稽查", Url = "Case/CaseList.aspx?mode=mission2times", BadgeCount = pending.CaseMission2Times },
                     new MenuSubItem { Title = "查核統計", Url = "Case/Case_Sum.aspx" },
                     new MenuSubItem { Title = "管辧狀況統計", Url = "Case/Case_Sum_1.aspx" }
                 }
             });
 
             // 3. 作業機具調查 (紫色)
+            int machineTotalBadge = pending.MachineInv1 + pending.MachineInv2 + pending.MachineInv3;
             list.Add(new MenuModule
             {
                 Id = "Machine",
@@ -77,18 +82,21 @@ namespace NTPC_FEC.Services
                 SubTitle = "施工機具列管、排煙檢測與審核列表",
                 Url = "Machine/macList.aspx",
                 BgColor = "#9334AF",
-                BadgeCount = 0,
+                BadgeCount = machineTotalBadge,
                 IconSvg = @"<svg viewBox='0 0 24 24' width='64' height='64' fill='currentColor'><path d='M20 18v-4h-3v1h-2v-1H9v1H7v-1H4v4h16M22 6h-8V4h-4v2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2m-8 6H4V8h10v4m6 0h-4V8h4v4z'/></svg>",
                 SubItems = new List<MenuSubItem>
                 {
                     new MenuSubItem { Title = "作業機具調查", Url = "Machine/NewMac.aspx" },
-                    new MenuSubItem { Title = "查核紀錄暫存", Url = "Machine/macList.aspx?mode=reject" },
-                    new MenuSubItem { Title = "案件審核", Url = "Manager/managerList.aspx?INV_State=MAC1" },
+                    new MenuSubItem { Title = "查核紀錄暫存", Url = "Machine/macList.aspx?mode=reject", BadgeCount = pending.MachineDraft },
+                    new MenuSubItem { Title = "案件初審", Url = "Manager/managerList.aspx?INV_State=MAC1", BadgeCount = pending.MachineInv1 },
+                    new MenuSubItem { Title = "案件複審", Url = "Manager/managerList.aspx?INV_State=MAC2", BadgeCount = pending.MachineInv2 },
+                    new MenuSubItem { Title = "案件三審", Url = "Manager/managerList.aspx?INV_State=MAC3", BadgeCount = pending.MachineInv3 },
                     new MenuSubItem { Title = "調查成果列表", Url = "Machine/macList.aspx?mode=search" }
                 }
             });
 
             // 4. 裸露地調查 (金黃土褐)
+            int bareTotalBadge = pending.BareInv1 + pending.BareInv2 + pending.BareInv3 + pending.BareBack;
             list.Add(new MenuModule
             {
                 Id = "BareGround",
@@ -96,21 +104,34 @@ namespace NTPC_FEC.Services
                 SubTitle = "裸露地建檔、衛星巡查與初複三審管考",
                 Url = "BareGround/Bare_List.aspx",
                 BgColor = "#9B741E",
-                BadgeCount = 0,
+                BadgeCount = bareTotalBadge,
                 IconSvg = @"<svg viewBox='0 0 24 24' width='64' height='64' fill='currentColor'><path d='M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z'/></svg>",
                 SubItems = new List<MenuSubItem>
                 {
                     new MenuSubItem { Title = "裸露地調查", Url = "BareGround/NewBare.aspx?mode=new" },
-                    new MenuSubItem { Title = "查核紀錄暫存", Url = "BareGround/Bare_List.aspx?mode=reject" },
-                    new MenuSubItem { Title = "退件紀錄", Url = "BareGround/Bare_List.aspx?mode=back" },
-                    new MenuSubItem { Title = "案件初審", Url = "Manager/managerList_Bare.aspx?mode=INV1" },
-                    new MenuSubItem { Title = "案件複審", Url = "Manager/managerList_Bare.aspx?mode=INV2" },
-                    new MenuSubItem { Title = "案件三審", Url = "Manager/managerList_Bare.aspx?mode=INV3" },
+                    new MenuSubItem { Title = "查核紀錄暫存", Url = "BareGround/Bare_List.aspx?mode=reject", BadgeCount = pending.BareDraft },
+                    new MenuSubItem { Title = "退件紀錄", Url = "BareGround/Bare_List.aspx?mode=back", BadgeCount = pending.BareBack, ShowZero = true },
+                    new MenuSubItem { Title = "案件初審", Url = "Manager/managerList_Bare.aspx?mode=INV1", BadgeCount = pending.BareInv1, ShowZero = true },
+                    new MenuSubItem { Title = "案件複審", Url = "Manager/managerList_Bare.aspx?mode=INV2", BadgeCount = pending.BareInv2, ShowZero = true },
+                    new MenuSubItem { Title = "案件三審", Url = "Manager/managerList_Bare.aspx?mode=INV3", BadgeCount = pending.BareInv3, ShowZero = true },
                     new MenuSubItem { Title = "調查成果列表", Url = "BareGround/Bare_List.aspx?mode=identify" }
                 }
             });
 
-            // 5. 自主管理回報 (紅棕色) - 比照舊版系統精確分為 4 大業務分類
+            // 5. 自主管理回報 (紅棕色) - 動態帶入當前登入者所屬公私場所 ID 與安全 Token
+            string userFacId = (user != null && !string.IsNullOrEmpty(user.FacID)) ? user.FacID.Trim() : "";
+            string facToken = !string.IsNullOrEmpty(userFacId) ? ("MD5:" + userFacId + DateTime.Now.ToString("yyyyMMddHH")).ToMD5() : "";
+            string ownReportUrl = !string.IsNullOrEmpty(userFacId)
+                ? string.Format("OwnReport/PIC_Report.aspx?id={0}&id1={1}&mode=own", userFacId, facToken)
+                : "OwnReport/PIC_Report.aspx?mode=own";
+            string wrongReportUrl = !string.IsNullOrEmpty(userFacId)
+                ? string.Format("OwnReport/PIC_Report.aspx?id={0}&id1={1}&mode=wrong", userFacId, facToken)
+                : "OwnReport/PIC_Report.aspx?mode=wrong";
+            string washInputUrl = !string.IsNullOrEmpty(userFacId)
+                ? string.Format("Wash/DataInput.aspx?id={0}&id1={1}", userFacId, facToken)
+                : "Wash/DataInput.aspx";
+
+            int ownTotalBadge = pending.OwnReportCount + pending.WrongReportCount;
             list.Add(new MenuModule
             {
                 Id = "OwnReport",
@@ -118,22 +139,22 @@ namespace NTPC_FEC.Services
                 SubTitle = "自主巡報、洗車台用水電、缺失改善與空品應變",
                 Url = "OwnReport/PIC_Report_List.aspx",
                 BgColor = "#733B31",
-                BadgeCount = 5,
+                BadgeCount = ownTotalBadge,
                 IconSvg = @"<svg viewBox='0 0 24 24' width='64' height='64' fill='currentColor'><path d='M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z'/></svg>",
                 SubItems = new List<MenuSubItem>
                 {
                     // 分類一：自主回報管理
-                    new MenuSubItem { Category = "自主回報管理", Title = "自主維護回報", Url = "OwnReport/PIC_Report.aspx?id=" },
-                    new MenuSubItem { Category = "自主回報管理", Title = "維護紀錄列表", Url = "OwnReport/PIC_Report_List.aspx?mode=own", BadgeCount = 3 },
+                    new MenuSubItem { Category = "自主回報管理", Title = "自主維護回報", Url = ownReportUrl },
+                    new MenuSubItem { Category = "自主回報管理", Title = "維護紀錄列表", Url = "OwnReport/PIC_Report_List.aspx?mode=own", BadgeCount = pending.OwnReportCount },
 
                     // 分類二：道路洗掃認養管理
-                    new MenuSubItem { Category = "道路洗掃認養管理", Title = "道路洗掃回報", Url = "Wash/DataInput.aspx?id=" },
+                    new MenuSubItem { Category = "道路洗掃認養管理", Title = "道路洗掃回報", Url = washInputUrl },
                     new MenuSubItem { Category = "道路洗掃認養管理", Title = "洗掃報表回傳", Url = "Wash/ReportUpload.aspx" },
                     new MenuSubItem { Category = "道路洗掃認養管理", Title = "洗掃紀錄列表", Url = "Wash/ReportUpload_List.aspx" },
 
                     // 分類三：防制設施缺失改善管理
-                    new MenuSubItem { Category = "防制設施缺失改善管理", Title = "缺失改善回報", Url = "OwnReport/PIC_Report.aspx?id=" },
-                    new MenuSubItem { Category = "防制設施缺失改善管理", Title = "改善紀錄列表", Url = "OwnReport/PIC_Report_List.aspx?mode=wrong", BadgeCount = 2 },
+                    new MenuSubItem { Category = "防制設施缺失改善管理", Title = "缺失改善回報", Url = wrongReportUrl },
+                    new MenuSubItem { Category = "防制設施缺失改善管理", Title = "改善紀錄列表", Url = "OwnReport/PIC_Report_List.aspx?mode=wrong", BadgeCount = pending.WrongReportCount },
 
                     // 分類四：空品不良應變管理
                     new MenuSubItem { Category = "空品不良應變管理", Title = "LINE即時通報", Url = "LINE/Line.aspx" },
@@ -155,11 +176,12 @@ namespace NTPC_FEC.Services
                 SubItems = new List<MenuSubItem>
                 {
                     new MenuSubItem { Title = "空間資訊地圖 (GIS)", Url = "https://pollution.epd.ntpc.gov.tw/ntpcepd/map/map.aspx" },
-                    new MenuSubItem { Title = "NDVI 植被衛星影像", Url = "NDVI/main.html" }
+                    new MenuSubItem { Title = "NDVI 植被衛星影像", Url = "NDVI/NdviMap.aspx" }
                 }
             });
 
             // 7. 道路潔淨巡檢 (亮橘色) - 依舊版業務精確分為 4 大分類
+            int roadTotalBadge = pending.RoadCleanExamine + pending.RoadCleanBack + pending.RoadDirtyImprove + pending.RoadBreakImprove + pending.RoadBSCImprove;
             list.Add(new MenuModule
             {
                 Id = "RoadClean",
@@ -167,34 +189,34 @@ namespace NTPC_FEC.Services
                 SubTitle = "洗掃查核、道路髒污、路面破損開挖與覆土管考",
                 Url = "RoadClean/Clean_List.aspx",
                 BgColor = "#CE4F19",
-                BadgeCount = 12,
+                BadgeCount = roadTotalBadge,
                 IconSvg = @"<svg viewBox='0 0 24 24' width='64' height='64' fill='currentColor'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z'/></svg>",
                 SubItems = new List<MenuSubItem>
                 {
                     // 分類一：道路潔淨巡檢
                     new MenuSubItem { Category = "道路潔淨巡檢", Title = "道路潔淨查核 (新增)", Url = "RoadClean/NewCleanChk.aspx?mode=new" },
-                    new MenuSubItem { Category = "道路潔淨巡檢", Title = "查核紀錄暫存", Url = "RoadClean/Clean_List.aspx?mode=apply" },
-                    new MenuSubItem { Category = "道路潔淨巡檢", Title = "退回補正案件", Url = "RoadClean/Clean_List.aspx?mode=back" },
-                    new MenuSubItem { Category = "道路潔淨巡檢", Title = "案件審核", Url = "RoadClean/Clean_List.aspx?mode=examine", BadgeCount = 12 },
+                    new MenuSubItem { Category = "道路潔淨巡檢", Title = "查核紀錄暫存", Url = "RoadClean/Clean_List.aspx?mode=apply", BadgeCount = pending.RoadCleanDraft },
+                    new MenuSubItem { Category = "道路潔淨巡檢", Title = "退回補正案件", Url = "RoadClean/Clean_List.aspx?mode=back", BadgeCount = pending.RoadCleanBack },
+                    new MenuSubItem { Category = "道路潔淨巡檢", Title = "案件審核", Url = "RoadClean/Clean_List.aspx?mode=examine", BadgeCount = pending.RoadCleanExamine },
                     new MenuSubItem { Category = "道路潔淨巡檢", Title = "調查成果列表", Url = "RoadClean/Clean_List.aspx?mode=search" },
                     new MenuSubItem { Category = "道路潔淨巡檢", Title = "道路潔淨統計", Url = "RoadClean/RoadClean_Sum.aspx" },
 
                     // 分類二：道路髒污管理
                     new MenuSubItem { Category = "道路髒污管理", Title = "道路髒污通報", Url = "RoadClean/NewDirty.aspx?mode=new" },
                     new MenuSubItem { Category = "道路髒污管理", Title = "查核紀錄暫存", Url = "RoadClean/Dirty_List.aspx?mode=DirtyEdit" },
-                    new MenuSubItem { Category = "道路髒污管理", Title = "路污改善回報", Url = "RoadClean/Dirty_List.aspx?mode=DirtyImprove" },
+                    new MenuSubItem { Category = "道路髒污管理", Title = "路污改善回報", Url = "RoadClean/Dirty_List.aspx?mode=DirtyImprove", BadgeCount = pending.RoadDirtyImprove },
                     new MenuSubItem { Category = "道路髒污管理", Title = "路污改善成果", Url = "RoadClean/Dirty_List.aspx?mode=Finish" },
 
                     // 分類三：道路破損管理
                     new MenuSubItem { Category = "道路破損管理", Title = "道路破損通報", Url = "RoadBreak/NewBreak.aspx?mode=new" },
                     new MenuSubItem { Category = "道路破損管理", Title = "查核紀錄暫存", Url = "RoadBreak/Break_List.aspx?mode=BreakEdit" },
-                    new MenuSubItem { Category = "道路破損管理", Title = "破損改善回報", Url = "RoadBreak/Break_List.aspx?mode=BreakImprove" },
+                    new MenuSubItem { Category = "道路破損管理", Title = "破損改善回報", Url = "RoadBreak/Break_List.aspx?mode=BreakImprove", BadgeCount = pending.RoadBreakImprove },
                     new MenuSubItem { Category = "道路破損管理", Title = "破損改善成果", Url = "RoadBreak/Break_List.aspx?mode=Finish" },
 
                     // 分類四：人行道與交通島管理
                     new MenuSubItem { Category = "人行道與交通島管理", Title = "裸露覆土通報", Url = "RoadBSC/NewBSC.aspx?mode=new" },
                     new MenuSubItem { Category = "人行道與交通島管理", Title = "查核紀錄暫存", Url = "RoadBSC/BSC_List.aspx?mode=BSCEdit" },
-                    new MenuSubItem { Category = "人行道與交通島管理", Title = "覆土改善回報", Url = "RoadBSC/BSC_List.aspx?mode=BSCImprove" },
+                    new MenuSubItem { Category = "人行道與交通島管理", Title = "覆土改善回報", Url = "RoadBSC/BSC_List.aspx?mode=BSCImprove", BadgeCount = pending.RoadBSCImprove },
                     new MenuSubItem { Category = "人行道與交通島管理", Title = "覆土改善成果", Url = "RoadBSC/BSC_List.aspx?mode=Finish" }
                 }
             });
@@ -248,16 +270,14 @@ namespace NTPC_FEC.Services
                 {
                     Id = "SystemAdmin",
                     Title = "系統維運管理",
-                    SubTitle = "使用者帳號管理、權限角色設定與任務派遣配置",
+                    SubTitle = "使用者帳號管理與權限角色維護",
                     Url = "Modules/Manager/AccountManagement.aspx",
                     BgColor = "#334155",
                     BadgeCount = 0,
                     IconSvg = @"<svg viewBox='0 0 24 24' width='64' height='64' fill='currentColor'><path d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z'/></svg>",
                     SubItems = new List<MenuSubItem>
                     {
-                        new MenuSubItem { Title = "帳號權限管理", Url = "Modules/Manager/AccountManagement.aspx" },
-                        new MenuSubItem { Title = "巡查派遣設定", Url = "FAC/FAC_List.aspx?mode=mission" },
-                        new MenuSubItem { Title = "審核流程管理 (初/複/三審)", Url = "Manager/managerList.aspx?INV_State=INV1" }
+                        new MenuSubItem { Title = "帳號權限管理", Url = "Modules/Manager/AccountManagement.aspx" }
                     }
                 });
             }

@@ -4,6 +4,63 @@
 
 ---
 
+## [1.2.0] - 2026-10-24
+
+### 🚀 版本概述
+新北市固定溢散源管理平台（NTPC_FECM）發布 1.2.0 版本。本版本實現了多維度環境保護業務模組的全面整合與標準化，涵蓋施工機具管理、裸露地管制作業、營建工程案件審查、固定污染源稽查、洗車設備監控、業者自主申報及植生綠覆率圖台；同時全新上線即時待辦事項統計服務（`PendingTaskService`）與外部系統單一簽入（SSO）跳轉橋接架構。
+
+### ✨ 主要歷程與改動
+
+#### 1. 全業務功能模組全面整合與上線
+- **施工機具巡查模組 (`Machine/`)**：
+  - `NewMac.aspx` / `macList.aspx`：施工機具設備現場巡查填報、清單管制作業與檢驗履歷追蹤。
+- **裸露地管理模組 (`BareGround/`)**：
+  - `NewBare.aspx` / `Bare_List.aspx` / `BareResult.aspx`：裸露地查核填報、列管清單管理與改善成果查核。
+- **營建工程與案件管理模組 (`Case/`, `Manager/`)**：
+  - `CaseList.aspx` / `NewCase.aspx` / `CaseResult.aspx`：營建工地防制設施查核、申報案件管理與歷程檢視。
+  - `Case_Sum.aspx` / `Case_Sum_1.aspx`：查核成果統計與管辦狀況多維度交叉分析。
+  - `Manager/managerList.aspx` / `managerList_Bare.aspx`：案件初審、複審、三審綜合管制作業與裸露地審核。
+  - `Manager/Check_Step1.aspx` / `Check_Step1_Bare.aspx` / `Check_Step1_Mac.aspx`：多階段案件審核作業介面。
+- **固定污染源稽查管理模組 (`FAC/`)**：
+  - `FAC_List.aspx` / `FAC_Detail.aspx`：固定源稽巡查清單、詳細稽查紀錄與現場違規項目標註。
+  - `Charts.aspx`：固定污染源稽巡查成果圖表統計分析。
+  - `oFAC_List.aspx`：專案列管固定源清單管制作業。
+- **洗車設備與出入口沖洗監控模組 (`Wash/`)**：
+  - `ReportUpload.aspx` / `ReportUpload_List.aspx`：洗車設備自主檢查報告上傳審查與清單。
+  - `DataInput.aspx`：洗車台運作數據巡查登錄。
+- **業者自主申報與空品惡化通報模組 (`OwnReport/`)**：
+  - `PIC_Report.aspx`：業者現場自主防制措施照片申報。
+  - `Report_AirQuality.aspx` / `AirQuality_List.aspx`：空品惡化預警應變自主通報填報與案件清單。
+- **植生綠覆率與衛星指標圖台 (`NDVI/`)**：
+  - `NdviMap.aspx`：整合新北市各行政區 GeoJSON 圖資 (`ntpc_towns.json`)，視覺化呈現衛星植生綠覆率指標與裸露地覆蓋分析。
+
+#### 2. 即時待辦事項與案件審查服務體系 (`PendingTaskService.cs`)
+- **待辦統計服務 (`App_Code/Services/PendingTaskService.cs`)**：
+  - 封裝高效率參數化 SQL 查詢，即時計算當前登入者所屬角色之待辦件數。
+  - 涵蓋初審 (`INV1`)、複審 (`INV2`)、三審 (`INV3`)、7日內巡查派遣、2次以上提報稽查、退件紀錄、暫存草稿及道路破損/覆土改善回報。
+- **首頁選單與儀表板動態徽章 (`MenuService.cs`, `MainPage.aspx`)**：
+  - 模組卡片自動動態累計顯示待辦總件數徽章。
+  - 次選單支援真實案件數量提示；當案件數為 0 時支援優雅的灰色 `0 件` 徽章呈現 (`ShowZero`)，審查進度一目瞭然。
+
+#### 3. 外部系統單一簽入 (SSO) 跳轉橋接 (`OutLink.aspx`)
+- **安全外部跳轉機制 (`OutLink.aspx`, `OutLink.aspx.cs`)**：
+  - 實作防竄改之單一簽入外部跳轉，安全導向環境部空氣品質監測、中央系統及地政地理資訊圖台。
+  - 納入 `deploy_manifest.json` 與發布清單，確保正式機跳轉功能正常運行。
+
+#### 4. 全載具自適應外勤與管理端介面擴展
+- **UI/UX 標準全面擴展**：
+  - 依據 `inspection-ui-standard` 規範重構所有清單、明細與統計匯總頁面。
+  - 優化導航列外勤操作按鈕與浮動工具列（浮動返回、儲存、提交等）。
+  - 全站表格、卡片與地圖在各解析度（手機、平板、桌機）皆具備流暢滾動與自適應佈局。
+
+#### 5. 正式機打包清單與版本維護升級
+- **發布清單升級 (`deploy_manifest.json`)**：
+  - 將 1.2.0 所有新模組完整納入 `required_in_zip`。
+  - 將未使用的龐大圖資暫存（如 `tiles/`, `ndvijob/`）排除，確保發布壓縮包輕量高效率。
+  - 補充引入本地 jQuery 資源庫版本 (`jquery-3.6.0.min.js`, `jquery-3.7.1.min.js`)。
+
+---
+
 ## [1.1.0] - 2026-10-22
 
 ### 🚀 版本概述

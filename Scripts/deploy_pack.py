@@ -115,7 +115,9 @@ def create_package(manifest):
         for item in PROJECT_ROOT.iterdir():
             if item.is_dir() and item.name.lower() not in exclude_dirs:
                 is_app_code = (item.name.lower() == "app_code")
-                for root, _, files in os.walk(item):
+                for root, dirs, files in os.walk(item):
+                    # 巢狀排除目錄 (例如 NDVI/Tiles 為排程產生之資料，不可被發布包覆蓋或刪除)
+                    dirs[:] = [d for d in dirs if d.lower() not in exclude_dirs]
                     for file in files:
                         low_file = file.lower()
                         if low_file.endswith(exclude_exts) or low_file in exclude_specific:

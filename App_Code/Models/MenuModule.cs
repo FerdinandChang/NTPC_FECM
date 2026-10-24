@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace NTPC_FEC.Models
@@ -27,5 +27,6 @@ namespace NTPC_FEC.Models
         public string Url { get; set; }
         public int BadgeCount { get; set; }
         public string Category { get; set; } // 子分類分組 (如: 道路潔淨巡檢、道路髒污管理...)
+        public bool ShowZero { get; set; }   // 是否在 0 件時亦明確顯示 0 件標籤
     }
 }

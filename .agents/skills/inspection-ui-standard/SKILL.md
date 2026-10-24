@@ -351,12 +351,212 @@ private static void Twd97ToWgs84(double x, double y, out double lat, out double 
 
 ---
 
-## 五、專案鐵律自檢清單 (Checklist)
+## 五、案件詳情檢視頁面 (Detail View) 置頂端與階段進度時間軸標準規範
 
-在新巡查頁面發布或套用時，務必執行以下檢查：
+本規範提煉自 [`RoadBSC/BSCDetail.aspx`](file:///d:/NTPC_FEC/RoadBSC/BSCDetail.aspx)、[`RoadBreak/BreakDetail.aspx`](file:///d:/NTPC_FEC/RoadBreak/BreakDetail.aspx) 與 [`RoadClean/DirtyDetail.aspx`](file:///d:/NTPC_FEC/RoadClean/DirtyDetail.aspx)，所有通報單/案件詳情檢視頁面的置頂端佈局與階段進度展示必須嚴格統一。
+
+### 1. 置頂端四層視覺架構 (Visual Hierarchy)
+```html
+<!-- 1. 置頂深青藍漸層導覽列 (Sticky Top Navbar) -->
+<header class="top-navbar no-print"> ... </header>
+
+<!-- 2. 列印專用報表頁首 (螢幕隱藏，列印時顯現) -->
+<div class="print-only-header"> ... </div>
+
+<!-- 3. 主作業容器 (固定最大寬度 1560px 居中) -->
+<main class="container-fluid-custom">
+    <!-- A. 案件退回重辦警告卡片 (若 G_Back === 'Y' / IsBack 觸發) -->
+    <div v-if="detail.IsBack || detail.G_Back === 'Y'" class="alert-gback shadow-sm"> ... </div>
+
+    <!-- B. 通報階段進度時間軸 (Status Stepper) -->
+    <div class="stepper-container shadow-sm no-print"> ... </div>
+
+    <!-- C. 雙欄卡片佈局 (左欄基本設定與地圖 40%，右欄照片成果對照 60%) -->
+    <div class="row"> ... </div>
+</main>
+```
+
+### 2. 置頂導覽列 (Top Navbar) 標準規範
+- **外層標籤**：一律使用 `<header class="top-navbar no-print">`（列印時自動隱藏）。
+- **左側品牌區塊 (`.brand-title`)**：
+  - **返回按鈕**：統一使用 `.nav-btn.mr-2`，文案統一為「`返回清單`」（手機端使用 `<span class="d-none d-sm-inline">返回清單</span>` 自適應收合為純箭頭）。
+  - **模組圖示**：一律為純白 `text-white`（如 `<i class="fas fa-road text-white"></i>`），嚴禁刺眼黃色或雜色。
+  - **標題文字**：純白粗體 `1.08rem`，如 `人行道與交通島裸露覆土通報單`。
+  - **案號徽章**：一律使用標準白底黑字徽章 `<span v-if="detail.Show_ID" class="badge badge-light text-dark font-weight-bold ml-2" style="font-size: 0.85rem;">{{ detail.Show_ID }}</span>`，只放純案號，嚴禁在頂部塞入狀態標籤或深色底。
+- **右側功能動作區塊 (`.d-flex.align-items-center.gap-2`)**：
+  - **列印案件按鈕**：統一使用白底黑字陰影膠囊按鈕 `<button type="button" class="nav-btn bg-white text-dark shadow-sm" v-on:click="printCase"><i class="fas fa-print"></i><span class="d-none d-md-inline">列印案件</span></button>`。
+  - **路線導航按鈕**（若有點位坐標）：`<button v-if="detail.Lat && detail.Lng" type="button" class="nav-btn bg-white text-dark shadow-sm ml-2" v-on:click="openGoogleMaps"><i class="fas fa-location-arrow text-success"></i><span class="d-none d-md-inline">路線導航</span></button>`。
+  - **狀態動作按鈕**：必須依 `numericStatusCode` 案件狀態動態切換（**結案時嚴禁顯示派工或回報按鈕**）：
+    - **待派工 (狀態 1)**：顯示 `btn-warning`「`<i class="fas fa-edit mr-1"></i> 編輯案件`」與 `btn-primary`「`<i class="fas fa-paper-plane mr-1"></i> 派工通報`」。
+    - **待改善 (狀態 2)**：顯示 `btn-success`「`<i class="fas fa-tools mr-1"></i> 改善回報`」。
+    - **已結案 (狀態 3)**：不顯示派工或改善按鈕，維持界面乾淨。
+
+### 3. 通報階段進度時間軸 (Status Stepper) 標準樣板
+```html
+<div class="stepper-container shadow-sm no-print">
+    <div class="stepper-line">
+        <div class="stepper-line-fill" :style="{ width: stepperProgress + '%' }"></div>
+    </div>
+
+    <!-- 步驟 1: 現場查核立案 -->
+    <div class="step-item" :class="getStepClass(1)">
+        <div class="step-circle">
+            <i v-if="numericStatusCode > 1" class="fas fa-check"></i>
+            <span v-else>1</span>
+        </div>
+        <div class="step-title">現場查核立案</div>
+        <div class="step-time">{{ detail.Report_Date || '未填寫' }}</div>
+    </div>
+
+    <!-- 步驟 2: 派工改善通報 -->
+    <div class="step-item" :class="getStepClass(2)">
+        <div class="step-circle">
+            <i v-if="numericStatusCode > 2" class="fas fa-check"></i>
+            <span v-else>2</span>
+        </div>
+        <div class="step-title">{{ (detail.IsBack || detail.G_Back === 'Y') ? '案件退回待重派' : '派工改善通報' }}</div>
+        <div class="step-time">{{ detail.SetCOM_Date || '待通報' }}</div>
+    </div>
+
+    <!-- 步驟 3: 改善完成結案 -->
+    <div class="step-item" :class="getStepClass(3)">
+        <div class="step-circle">
+            <i v-if="numericStatusCode === 3" class="fas fa-check"></i>
+            <span v-else>3</span>
+        </div>
+        <div class="step-title">改善完成結案</div>
+        <div class="step-time">{{ detail.Improve_Date || '待改善' }}</div>
+    </div>
+</div>
+```
+
+### 4. 前端 Vue 響應邏輯核心範本
+```javascript
+computed: {
+    // 狀態數值歸一化 (1: 待派工, 2: 待改善, 3: 已結案)
+    numericStatusCode() {
+        if (!this.detail) return 1;
+        if (this.detail.StatusCode === 3 || this.detail.StatusCode === 'IMPROVED' || (this.detail.Improve_Date && this.detail.Improve_Date.trim() !== '')) return 3;
+        if (this.detail.StatusCode === 2 || this.detail.StatusCode === 'DISPATCHED' || (this.detail.SetCOM_Date && this.detail.SetCOM_Date.trim() !== '')) return 2;
+        return 1;
+    },
+    // 時間軸進度條百分比
+    stepperProgress() {
+        if (this.numericStatusCode === 3) return 100;
+        if (this.numericStatusCode === 2) return 50;
+        return 0;
+    }
+},
+methods: {
+    // 時間軸各節點樣式計算
+    getStepClass(step) {
+        if (this.numericStatusCode > step) return 'completed';
+        if (this.numericStatusCode === step) return 'active';
+        return '';
+    }
+}
+```
+
+### 5. 必備 CSS 樣式 Tokens
+```css
+/* 主容器佈局 */
+.container-fluid-custom {
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+/* 頂部導覽列按鈕 */
+.nav-btn {
+    background: rgba(255, 255, 255, 0.18);
+    border: none; color: #ffffff;
+    font-size: 0.92rem; font-weight: 600; cursor: pointer;
+    height: 36px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 14px; gap: 6px;
+    transition: all 0.2s; text-decoration: none;
+}
+.nav-btn:hover { background-color: rgba(255, 255, 255, 0.32); color: #ffffff; text-decoration: none; }
+.top-navbar .brand-title {
+    font-size: 1.08rem; font-weight: 700; margin: 0;
+    display: flex; align-items: center; gap: 8px;
+}
+
+/* 階段時間軸 (Status Stepper) */
+.stepper-container {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #ffffff; border-radius: 12px;
+    padding: 16px 24px; margin-bottom: 16px;
+    border: 1px solid var(--border-color); position: relative;
+}
+.step-item {
+    display: flex; flex-direction: column; align-items: center;
+    position: relative; z-index: 2; flex: 1;
+}
+.step-circle {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #e2e8f0; color: #64748b;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; margin-bottom: 6px;
+    border: 3px solid #ffffff; box-shadow: 0 0 0 2px #cbd5e1;
+    transition: all 0.3s;
+}
+.step-item.active .step-circle { background: var(--brand-blue); color: #ffffff; box-shadow: 0 0 0 2px var(--brand-blue); }
+.step-item.completed .step-circle { background: #10b981; color: #ffffff; box-shadow: 0 0 0 2px #10b981; }
+.step-title { font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 2px; }
+.step-item.active .step-title { color: var(--brand-blue); }
+.step-item.completed .step-title { color: #047857; }
+.step-time { font-size: 11px; color: #94a3b8; }
+
+.stepper-line { position: absolute; top: 34px; left: 16%; right: 16%; height: 3px; background: #e2e8f0; z-index: 1; }
+.stepper-line-fill { height: 100%; background: #10b981; transition: width 0.4s ease; }
+
+/* 退回醒目警示 */
+.alert-gback {
+    background-color: #fef2f2; border: 1px solid #f87171;
+    border-left: 6px solid #dc2626; border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 16px;
+    color: #991b1b; font-size: 14px;
+}
+```
+
+---
+
+## 六、全站清單管理與至頂標頭標準規範 (List & Top Navbar Standard)
+
+本標準適用於所有管制清單、任務清單與巡查成果列表（如 `FAC_List.aspx`、`Bare_List.aspx`、`CaseList.aspx`、`Clean_List.aspx`、`BSC_List.aspx`、`Break_List.aspx` 等）：
+
+### 1. 置頂深青藍導覽列 (Sticky Top Navbar, 高度 56~60px)
+- **左側固定導航**：
+  - 清單頁面一律為「回首頁」或「回選單」：`<a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單"><i class="fas fa-home"></i><span class="d-none d-sm-inline">回首頁</span></a>`。
+  - 詳情/編輯頁面一律為「返回清單」：`<button type="button" class="nav-btn mr-2" v-on:click="goBack" title="返回清單"><i class="fas fa-arrow-left"></i><span class="d-none d-sm-inline">返回清單</span></button>`。
+  - 模組標題與母體數據 Badge：`<a class="navbar-brand-title"><i class="fas fa-[icon] text-white"></i><span>模組標題</span><span class="badge badge-light text-dark font-weight-bold ml-1">{{ stats.Total }} 處</span></a>`。
+- **右側功能動作**：
+  - 主要動作（如「新增調查/場所」）：一律使用綠色 `<button class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2"><i class="fas fa-plus-circle mr-1"></i>新增...</button>`。
+  - 外勤特有功能（「附近場所」或「收合/展開地圖」）：使用白底或透明 `nav-btn`。
+
+### 2. 複合多條件篩選卡片 (Card Modern - Filter)
+- 點擊卡片標題列可直接折疊/展開，右側具備 `<i class="fas" :class="filterCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'"></i>`。
+- 底部狀態與操作列固定：
+  - 左側顯示：`共查詢到 <strong class="text-primary">{{ totalCount }}</strong> 筆符合資料`。
+  - 右側依序為：`[重設條件]`（`btn-outline-secondary btn-sm mr-2`，圖示 `fa-undo`）與 `[立即查詢]`（`btn-primary btn-sm px-3`，圖示 `fa-search`）。
+
+### 3. 清單卡片標題列之「大四元標準工具列」
+卡片 Header 右側統一配置標準工具組：
+1. **重新整理**：`<button type="button" class="btn btn-sm btn-outline-secondary mr-2" v-on:click="fetchList" :disabled="loading"><i class="fas fa-sync-alt mr-1" :class="{ 'fa-spin': loading }"></i><span class="d-none d-md-inline">重新整理</span></button>`。
+2. **匯出 EXCEL**：`<button type="button" class="btn btn-sm btn-outline-success font-weight-bold mr-2" v-on:click="exportExcel" :disabled="exporting || totalCount === 0"><i class="fas fa-file-excel mr-1"></i><span class="d-none d-md-inline">{{ exporting ? '匯出中...' : '匯出 EXCEL' }}</span></button>`。
+3. **每頁筆數選擇器**：支援 10 / 15 / 30 / 50 筆切換。
+
+---
+
+## 七、專案鐵律自檢清單 (Checklist)
+
+在任何新頁面發布或重構套用時，務必執行以下檢查：
 1. [ ] **檔案編碼**：`.aspx`、`.aspx.cs` 必須存為 `UTF-8 with BOM`。
 2. [ ] **Vue 語法限制**：禁止使用 `@click`、`@submit` 等，一律使用完整 `v-on:click`，容器須掛上 `v-cloak`。
-3. [ ] **Vue 3 與 Leaflet 物件隔離 (防 project 崩潰)**：嚴禁將 Leaflet 實例（`map`、`tileLayer`、`marker`）宣告在 `data()` 響應式中，必須使用 `markRaw(instance)` 並指派給非響應式原生屬性（如 `this.leafletMap`），以避免觸發 `Uncaught TypeError: Cannot read properties of null (reading 'project')`。
+3. [ ] **Vue 3 與 Leaflet 物件隔離 (防 project 崩潰)**：嚴禁將 Leaflet 實例宣告在 `data()` 響應式中，必須使用 `markRaw(instance)` 並指派給非響應式原生屬性。
 4. [ ] **靜態資源本地化**：嚴禁外部 CDN，引用本地 `Scripts/vue.global.prod.js`、`Scripts/leaflet/leaflet.js`、`Content/leaflet/leaflet.css`。
 5. [ ] **C# 5.0 語法合規**：嚴禁使用字串插值 `$"..."`、Null 條件運算子 `?.`、區域函式。
-6. [ ] **打包自檢**：執行 `python Scripts/deploy_pack.py` 確保冒煙驗證 100% 通過。
+6. [ ] **清單頁大四元工具列齊備**：清單標題列必須包含「重新整理」、「匯出 EXCEL」與「每頁筆數選擇器」。
+7. [ ] **打包自檢**：執行 `python Scripts/deploy_pack.py` 確保冒煙驗證 100% 通過。
+

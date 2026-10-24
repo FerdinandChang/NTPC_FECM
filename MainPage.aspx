@@ -285,6 +285,13 @@
             margin-left: 8px;
         }
 
+        .sub-item-link .sub-badge-zero {
+            background-color: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+            font-weight: 600;
+        }
+
         .sub-item-link .link-arrow {
             color: #94a3b8;
             font-size: 0.85rem;
@@ -544,6 +551,9 @@
                                         <span>{{ sub.Title }}</span>
                                         <span v-if="sub.BadgeCount > 0" class="sub-badge">
                                             {{ sub.BadgeCount }} 件
+                                        </span>
+                                        <span v-else-if="sub.ShowZero" class="sub-badge sub-badge-zero">
+                                            0 件
                                         </span>
                                     </div>
                                     <i class="fas fa-arrow-right link-arrow"></i>

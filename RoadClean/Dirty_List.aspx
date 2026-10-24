@@ -63,6 +63,30 @@
             z-index: 1020;
         }
 
+.nav-btn {
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff !important;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            height: 36px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 14px;
+            gap: 6px;
+            transition: all 0.2s ease;
+            text-decoration: none !important;
+        }
+        .nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.32);
+            color: #ffffff !important;
+            text-decoration: none !important;
+        }
+
+
         .navbar-brand-title {
             font-size: 1.15rem;
             font-weight: 700;
@@ -590,19 +614,22 @@
 <body>
     <div id="dirtyListApp" v-cloak>
         <!-- 頂部品牌導覽列 -->
+                <!-- 頂部品牌導覽列 (全站標準左側導航、右側主操作) -->
         <header class="top-navbar">
-            <a href="Dirty_List.aspx" class="navbar-brand-title">
-                <i class="fas fa-trash-alt"></i>
-                <span>新北市固定溢散源 - 道路髒污管理清單</span>
-            </a>
-            <div class="d-flex align-items-center gap-2">
-                <a href="NewDirty.aspx?mode=new" class="btn btn-warning font-weight-bold text-dark px-3 shadow-sm mr-2" style="border-radius: 8px;">
-                    <i class="fas fa-plus-circle"></i>
-                    <span class="d-none d-sm-inline ml-1">新增髒污通報</span>
+            <div class="d-flex align-items-center">
+                <a href="../MainPage.aspx?sub=menu4" class="nav-btn mr-2" title="返回主選單">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline">回首頁</span>
                 </a>
-                <a href="../MainPage.aspx?sub=menu4" class="btn btn-outline-light font-weight-bold px-3" style="border-radius: 8px;">
-                    <i class="fas fa-chevron-left"></i>
-                    <span class="d-none d-sm-inline ml-1">回選單</span>
+                <a href="Dirty_List.aspx" class="navbar-brand-title">
+                    <i class="fas fa-trash-alt text-white"></i>
+                    <span>路面髒污查核與通報管理</span>
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="NewDirty.aspx?mode=new" class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2">
+                    <i class="fas fa-plus-circle mr-1"></i>
+                    <span class="d-none d-sm-inline">新增髒污通報</span>
                 </a>
             </div>
         </header>

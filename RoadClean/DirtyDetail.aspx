@@ -473,50 +473,50 @@
 
                 <!-- 資料展示主體 -->
                 <div v-else>
-                    <!-- 1. 案件退回顯眼警示列 (若 G_Back === 'Y') -->
+                    <!-- 案件退回重辦警告卡片 -->
                     <div v-if="detail.G_Back === 'Y'" class="alert-gback shadow-sm">
-                        <i class="fas fa-ban fa-2x"></i>
-                        <div>
-                            <div style="font-size: 15px;">【案件退回通報】非處理單位權責，本案件已由權責單位退回！</div>
-                            <div class="small font-weight-normal mt-1" v-if="detail.G_Memo">
-                                <strong>退回原因/備註：</strong> {{ detail.G_Memo }}
-                            </div>
+                        <div class="font-weight-bold d-flex align-items-center gap-2">
+                            <i class="fas fa-exclamation-circle fa-lg"></i>
+                            <span>非處理單位權責，此案件已被退回！</span>
+                        </div>
+                        <div class="mt-2 pl-4" v-if="detail.G_Memo">
+                            <strong>退回備註說明：</strong> {{ detail.G_Memo }}
                         </div>
                     </div>
 
-                    <!-- 2. 階段進度時間軸 (Stepper) -->
+                    <!-- 2. 通報階段進度時間軸 (Status Stepper) -->
                     <div class="stepper-container shadow-sm no-print">
                         <div class="stepper-line">
                             <div class="stepper-line-fill" :style="{ width: stepperProgress + '%' }"></div>
                         </div>
 
-                        <!-- Step 1: 查核通報 -->
+                        <!-- 步驟 1: 現場查核立案 -->
                         <div class="step-item" :class="getStepClass(1)">
                             <div class="step-circle">
                                 <i v-if="detail.StatusCode > 1" class="fas fa-check"></i>
                                 <span v-else>1</span>
                             </div>
-                            <div class="step-title">1. 查核通報</div>
-                            <div class="step-time">{{ detail.ReportDate || '---' }}</div>
+                            <div class="step-title">現場查核立案</div>
+                            <div class="step-time">{{ detail.ReportDate || '未填寫' }}</div>
                         </div>
 
-                        <!-- Step 2: 派工通報 -->
+                        <!-- 步驟 2: 派工改善通報 -->
                         <div class="step-item" :class="getStepClass(2)">
                             <div class="step-circle">
                                 <i v-if="detail.StatusCode > 2" class="fas fa-check"></i>
                                 <span v-else>2</span>
                             </div>
-                            <div class="step-title">2. 派工通報</div>
+                            <div class="step-title">{{ detail.G_Back === 'Y' ? '案件退回待重派' : '派工改善通報' }}</div>
                             <div class="step-time">{{ detail.SetComDate || '待通報' }}</div>
                         </div>
 
-                        <!-- Step 3: 改善結案 -->
+                        <!-- 步驟 3: 改善完成結案 -->
                         <div class="step-item" :class="getStepClass(3)">
                             <div class="step-circle">
                                 <i v-if="detail.StatusCode === 3" class="fas fa-check"></i>
                                 <span v-else>3</span>
                             </div>
-                            <div class="step-title">3. 改善結案</div>
+                            <div class="step-title">改善完成結案</div>
                             <div class="step-time">{{ detail.ImproveDate || '待改善' }}</div>
                         </div>
                     </div>

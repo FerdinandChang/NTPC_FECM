@@ -84,7 +84,7 @@ namespace NTPC_FEC.Modules.Manager
             }
         }
 
-        // 載入單位分類標籤 (康廷、空品等)
+        // 載入單位分類標籤 (康廷、空噪、空品等)
         private void LoadPUnitTabs()
         {
             try
@@ -522,6 +522,13 @@ namespace NTPC_FEC.Modules.Manager
                 return;
             }
 
+            string pwdErr;
+            if (!AuthService.CheckStrongPassword(newPwd, out pwdErr))
+            {
+                ShowAlert(pwdErr, "alert-danger");
+                return;
+            }
+
             try
             {
                 string chkSql = "SELECT COUNT(*) FROM UserAcc WHERE UserID = @UserID";
@@ -533,7 +540,7 @@ namespace NTPC_FEC.Modules.Manager
                     return;
                 }
 
-                string insSql = "INSERT INTO UserAcc (UserID, Password, Name, PUnit, LIC, LIC2, Acc_State) VALUES (@UserID, @Password, @Name, @PUnit, 0, 0, 'OK')";
+                string insSql = "INSERT INTO UserAcc (UserID, Password, Name, PUnit, LIC, LIC2, Acc_State, LastPwdChangeDate) VALUES (@UserID, @Password, @Name, @PUnit, 0, 0, 'OK', GETDATE())";
                 var insParams = new SqlParameter[]
                 {
                     new SqlParameter("@UserID", SqlDbType.VarChar) { Value = newId },

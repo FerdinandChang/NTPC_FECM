@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace NTPC_FEC.Models
 {
@@ -13,6 +13,7 @@ namespace NTPC_FEC.Models
         public long Lic2 { get; set; }
         public string FacID { get; set; }
         public DateTime? LastLogin { get; set; }
+        public DateTime? LastPwdChangeDate { get; set; }
     }
 
     public class LoginResult
@@ -21,6 +22,7 @@ namespace NTPC_FEC.Models
         public string Message { get; set; }
         public string RedirectUrl { get; set; }
         public UserAccount User { get; set; }
+        public bool RequirePwdChange { get; set; }
     }
 
     public class OperationResult
