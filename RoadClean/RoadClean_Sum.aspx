@@ -47,6 +47,28 @@
         }
 
         /* 頂部品牌導覽列 (對齊 Clean_List.aspx) */
+                .nav-btn {
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff !important;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            height: 36px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 14px;
+            gap: 6px;
+            transition: all 0.2s ease;
+            text-decoration: none !important;
+        }
+        .nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.32);
+            color: #ffffff !important;
+            text-decoration: none !important;
+        }
         .top-navbar {
             background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
             color: #ffffff;
@@ -519,18 +541,20 @@
     <div id="sumApp" v-cloak>
         <!-- 頂部品牌導覽列 (對齊 Clean_List.aspx) -->
         <header class="top-navbar">
-            <a href="RoadClean_Sum.aspx" class="navbar-brand-title">
-                <i class="fas fa-chart-pie"></i>
-                <span>新北市固定溢散源 - 道路潔淨統計</span>
-            </a>
-            <div class="d-flex align-items-center gap-2">
-                <a href="Clean_List.aspx" class="btn btn-warning font-weight-bold text-dark px-3 shadow-sm mr-2" style="border-radius: 8px;">
-                    <i class="fas fa-list-ul"></i>
-                    <span class="d-none d-sm-inline ml-1">巡檢列表</span>
+            <div class="d-flex align-items-center">
+                <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline">回首頁</span>
                 </a>
-                <a href="../MainPage.aspx?sub=menu4" class="btn btn-outline-light font-weight-bold px-3" style="border-radius: 8px;">
-                    <i class="fas fa-chevron-left"></i>
-                    <span class="d-none d-sm-inline ml-1">回選單</span>
+                <a href="RoadClean_Sum.aspx" class="navbar-brand-title">
+                    <i class="fas fa-chart-pie text-white"></i>
+                    <span>道路潔淨統計分析</span>
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="Clean_List.aspx" class="btn btn-outline-light btn-sm font-weight-bold shadow-sm mr-2" style="border-radius: 8px;">
+                    <i class="fas fa-list-ul mr-1"></i>
+                    <span class="d-none d-sm-inline">巡檢列表</span>
                 </a>
             </div>
         </header>

@@ -73,7 +73,7 @@ namespace NTPC_FEC.FAC
                         Response.ContentType = "text/plain; charset=utf-8";
                         Response.Write("匯出 Excel 失敗：" + ex.Message);
                     }
-                    Response.End();
+                    AjaxResponseHelper.CompleteRequest(Response, Context);
                     return;
                 }
 
@@ -86,7 +86,7 @@ namespace NTPC_FEC.FAC
                 {
                     Response.Write(json.Serialize(new { Success = false, Message = ex.Message }));
                 }
-                Response.End();
+                AjaxResponseHelper.CompleteRequest(Response, Context);
                 return;
             }
         }

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
   新北市固定溢散源管理平台 (NTPC_FEC / NTPC_FECM) 標準設定範本
   適用情境：部署至正式機或測試機 IIS 站台（特別是 IIS 虛擬子應用程式環境）
@@ -35,15 +35,25 @@
     <httpRuntime targetFramework="4.8" maxRequestLength="102400" executionTimeout="600" />
   </system.web>
   <system.webServer>
+    <!-- 全域效能優化：啟用 IIS 動態與靜態內容 Gzip/Deflate 壓縮 (節省 80% 傳輸體積與下載時間) -->
+    <urlCompression doStaticCompression="true" doDynamicCompression="true" />
     <validation validateIntegratedModeConfiguration="false" />
     <modules>
       <!-- 全域資安控管模組：自動進行 Session 驗證、防暴力破解、目錄遍歷攔截與 CSRF 雙重防禦 -->
       <add name="AuthModule" type="NTPC_FEC.Security.AuthModule, NTPC_FEC" />
     </modules>
     <security>
-      <requestFiltering>
+      <!-- allowDoubleEscaping 啟用以支援含中文、括號與空格之檔案路徑 -->
+      <requestFiltering allowDoubleEscaping="true">
         <requestLimits maxAllowedContentLength="104857600" />
-        <fileExtensions>
+        <fileExtensions allowUnlisted="true">
+          <add fileExtension=".jpg" allowed="true" />
+          <add fileExtension=".jpeg" allowed="true" />
+          <add fileExtension=".png" allowed="true" />
+          <add fileExtension=".gif" allowed="true" />
+          <add fileExtension=".bmp" allowed="true" />
+          <add fileExtension=".webp" allowed="true" />
+          <add fileExtension=".pdf" allowed="true" />
           <add fileExtension=".woff" allowed="true" />
           <add fileExtension=".woff2" allowed="true" />
           <add fileExtension=".ttf" allowed="true" />
@@ -53,6 +63,8 @@
       </requestFiltering>
     </security>
     <staticContent>
+      <!-- 外勤行動載具效能優化：靜態字型、CSS、圖片與核心庫啟用 7 天用戶端快取 (搭配 ?v= 版號機制安全更新) -->
+      <clientCache cacheControlMode="UseMaxAge" cacheControlMaxAge="7.00:00:00" />
       <remove fileExtension=".json" />
       <mimeMap fileExtension=".json" mimeType="application/json" />
       <remove fileExtension=".webp" />

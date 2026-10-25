@@ -41,7 +41,7 @@ namespace NTPC_FEC.Machine
                         Message = "系統處理錯誤：" + ex.Message
                     }));
                 }
-                Response.End();
+                AjaxResponseHelper.CompleteRequest(Response, Context);
                 return;
             }
         }
@@ -220,7 +220,7 @@ namespace NTPC_FEC.Machine
             // 讀取既有 6 類照片資訊
             var photoCategories = new string[] { "檢測結果", "檢測過程", "機具全貌", "機身編號、引擎編號", "核發標章", "其他佐證" };
             var photos = new Dictionary<string, object>();
-            string dirPath = Server.MapPath("~/Upload/MAC/" + facId + "/" + macId);
+            string dirPath = PathHelper.FindDirectory("Upload/MAC/" + facId + "/" + macId);
             if (Directory.Exists(dirPath))
             {
                 DirectoryInfo dir = new DirectoryInfo(dirPath);
@@ -233,7 +233,7 @@ namespace NTPC_FEC.Machine
                         {
                             Exists = true,
                             FileName = files[0].Name,
-                            Url = "../Upload/MAC/" + facId + "/" + macId + "/" + HttpUtility.UrlEncode(files[0].Name) + "?t=" + DateTime.Now.Ticks
+                            Url = PathHelper.ResolveUrl(string.Format("~/Upload/MAC/{0}/{1}/{2}?t={3}", facId, macId, files[0].Name, DateTime.Now.Ticks))
                         };
                     }
                     else
@@ -650,3 +650,5 @@ namespace NTPC_FEC.Machine
         }
     }
 }
+
+

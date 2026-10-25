@@ -493,8 +493,8 @@ namespace NTPC_FEC.Wash
                 PhotoInfoModel beforePic = new PhotoInfoModel();
                 PhotoInfoModel afterPic = new PhotoInfoModel();
 
-                string picVirtualDir = "/NTPC_FEC/Upload/WashPIC/" + facId + "/" + pIndex;
-                string picPhysicalDir = Server.MapPath(picVirtualDir);
+                string picVirtualDir = "~/Upload/WashPIC/" + facId + "/" + pIndex;
+                string picPhysicalDir = PathHelper.FindDirectory(picVirtualDir);
                 if (Directory.Exists(picPhysicalDir))
                 {
                     DirectoryInfo di = new DirectoryInfo(picPhysicalDir);
@@ -503,7 +503,7 @@ namespace NTPC_FEC.Wash
                     {
                         beforePic.Exists = true;
                         beforePic.FileName = bFiles[0].Name;
-                        beforePic.Url = picVirtualDir + "/" + bFiles[0].Name + "?t=" + bFiles[0].LastWriteTime.Ticks;
+                        beforePic.Url = PathHelper.ResolveUrl(picVirtualDir + "/" + bFiles[0].Name + "?t=" + bFiles[0].LastWriteTime.Ticks);
                         beforePic.FileSize = bFiles[0].Length;
                         kpi.BeforePhotoCount++;
                     }
@@ -513,7 +513,7 @@ namespace NTPC_FEC.Wash
                     {
                         afterPic.Exists = true;
                         afterPic.FileName = aFiles[0].Name;
-                        afterPic.Url = picVirtualDir + "/" + aFiles[0].Name + "?t=" + aFiles[0].LastWriteTime.Ticks;
+                        afterPic.Url = PathHelper.ResolveUrl(picVirtualDir + "/" + aFiles[0].Name + "?t=" + aFiles[0].LastWriteTime.Ticks);
                         afterPic.FileSize = aFiles[0].Length;
                         kpi.AfterPhotoCount++;
                     }
@@ -710,7 +710,7 @@ namespace NTPC_FEC.Wash
             // 2. 刪除實體檔案資料夾
             try
             {
-                string targetDirVirtual = "/NTPC_FEC/Upload/WashPIC/" + facId + "/" + pIndex;
+                string targetDirVirtual = "~/Upload/WashPIC/" + facId + "/" + pIndex;
                 string targetDirPhysical = Server.MapPath(targetDirVirtual);
                 if (Directory.Exists(targetDirPhysical))
                 {
@@ -961,8 +961,8 @@ namespace NTPC_FEC.Wash
 
                 // 檢查相片
                 string photoStatus = "無照片";
-                string picVirtualDir = "/NTPC_FEC/Upload/WashPIC/" + facId + "/" + pIndex;
-                string picPhysicalDir = Server.MapPath(picVirtualDir);
+                string picVirtualDir = "~/Upload/WashPIC/" + facId + "/" + pIndex;
+                string picPhysicalDir = PathHelper.FindDirectory(picVirtualDir);
                 if (Directory.Exists(picPhysicalDir))
                 {
                     DirectoryInfo di = new DirectoryInfo(picPhysicalDir);
@@ -1055,3 +1055,5 @@ namespace NTPC_FEC.Wash
         #endregion
     }
 }
+
+

@@ -41,7 +41,7 @@ namespace NTPC_FEC.BareGround
                         Message = "伺服器處理失敗：" + ex.Message
                     }));
                 }
-                Response.End();
+                AjaxResponseHelper.CompleteRequest(Response, Context);
                 return;
             }
         }
@@ -244,7 +244,7 @@ namespace NTPC_FEC.BareGround
 
             // 讀取現場照片 (一) ~ (四)
             var photos = new List<object>();
-            string targetDir = Server.MapPath(string.Format("~/Upload/BareGround/{0}/{1}", bareId.Trim(), invNo));
+            string targetDir = PathHelper.FindDirectory(string.Format("Upload/BareGround/{0}/{1}", bareId.Trim(), invNo));
             string[] photoTitles = new string[] { "裸露地現場照片(一)", "裸露地現場照片(二)", "裸露地現場照片(三)", "裸露地現場照片(四)" };
 
             for (int i = 0; i < 4; i++)
@@ -261,8 +261,8 @@ namespace NTPC_FEC.BareGround
                     if (matched.Length > 0 && File.Exists(matched[0]))
                     {
                         FileInfo fi = new FileInfo(matched[0]);
-                        fileUrl = string.Format("../Upload/BareGround/{0}/{1}/{2}?t={3}",
-                            bareId.Trim(), invNo, fi.Name, fi.LastWriteTime.Ticks);
+                        fileUrl = PathHelper.ResolveUrl(string.Format("~/Upload/BareGround/{0}/{1}/{2}?t={3}",
+                            bareId.Trim(), invNo, fi.Name, fi.LastWriteTime.Ticks));
                         hasFile = true;
                         fileSizeText = (fi.Length / 1024).ToString("N0") + " KB";
                         updateTimeText = fi.LastWriteTime.ToString("yyyy-MM-dd HH:mm");
@@ -295,8 +295,8 @@ namespace NTPC_FEC.BareGround
                     {
                         byte[] bytes = File.ReadAllBytes(sigPath);
                         sigBase64 = "data:image/png;base64," + Convert.ToBase64String(bytes);
-                        sigUrl = string.Format("../Upload/BareGround/{0}/{1}/Sig1.png?t={2}",
-                            bareId.Trim(), invNo, File.GetLastWriteTime(sigPath).Ticks);
+                        sigUrl = PathHelper.ResolveUrl(string.Format("~/Upload/BareGround/{0}/{1}/Sig1.png?t={2}",
+                            bareId.Trim(), invNo, File.GetLastWriteTime(sigPath).Ticks));
                         hasSig = true;
                         sigUpdateTime = File.GetLastWriteTime(sigPath).ToString("yyyy-MM-dd HH:mm");
                     }
@@ -417,8 +417,8 @@ namespace NTPC_FEC.BareGround
                 string sigPath = Path.Combine(targetDir, "Sig1.png");
                 File.WriteAllBytes(sigPath, imageBytes);
 
-                string sigUrl = string.Format("../Upload/BareGround/{0}/{1}/Sig1.png?t={2}",
-                    bareId, invNo, DateTime.Now.Ticks);
+                string sigUrl = PathHelper.ResolveUrl(string.Format("~/Upload/BareGround/{0}/{1}/Sig1.png?t={2}",
+                    bareId, invNo, DateTime.Now.Ticks));
 
                 Response.Write(jsonSerializer.Serialize(new
                 {
@@ -473,44 +473,13 @@ namespace NTPC_FEC.BareGround
             return "";
         }
 
-        #region TWD97 轉 WGS84 標準演算法 (C# 5.0 合規)
+        #region TWD97 轉 WGS84 標準演算法 (委派至 GeoCoordHelper)
         private static void Twd97ToWgs84(double x, double y, out double lat, out double lon)
         {
-            if (x <= 0 || y <= 0) { lat = 0; lon = 0; return; }
-
-            double a = 6378137.0;
-            double b = 6356752.314245;
-            double lon0 = 121.0 * Math.PI / 180.0;
-            double k0 = 0.9999;
-            double dx = 250000.0;
-
-            double e = Math.Sqrt(1.0 - (b * b) / (a * a));
-            double e2 = e * e / (1.0 - e * e);
-            x -= dx;
-
-            double M = y / k0;
-            double mu = M / (a * (1.0 - Math.Pow(e, 2) / 4.0 - 3.0 * Math.Pow(e, 4) / 64.0 - 5.0 * Math.Pow(e, 6) / 256.0));
-            double e1 = (1.0 - Math.Sqrt(1.0 - Math.Pow(e, 2))) / (1.0 + Math.Sqrt(1.0 - Math.Pow(e, 2)));
-
-            double J1 = (3.0 * e1 / 2.0 - 27.0 * Math.Pow(e1, 3) / 32.0);
-            double J2 = (21.0 * Math.Pow(e1, 2) / 16.0 - 55.0 * Math.Pow(e1, 4) / 32.0);
-            double J3 = (151.0 * Math.Pow(e1, 3) / 96.0);
-            double J4 = (1097.0 * Math.Pow(e1, 4) / 512.0);
-
-            double fp = mu + J1 * Math.Sin(2.0 * mu) + J2 * Math.Sin(4.0 * mu) + J3 * Math.Sin(6.0 * mu) + J4 * Math.Sin(8.0 * mu);
-
-            double C1 = e2 * Math.Pow(Math.Cos(fp), 2);
-            double T1 = Math.Pow(Math.Tan(fp), 2);
-            double R1 = a * (1.0 - Math.Pow(e, 2)) / Math.Pow(1.0 - Math.Pow(e, 2) * Math.Pow(Math.Sin(fp), 2), 1.5);
-            double N1 = a / Math.Sqrt(1.0 - Math.Pow(e, 2) * Math.Pow(Math.Sin(fp), 2));
-            double D = x / (N1 * k0);
-
-            double latRad = fp - (N1 * Math.Tan(fp) / R1) * (Math.Pow(D, 2) / 2.0 - (5.0 + 3.0 * T1 + 10.0 * C1 - 4.0 * Math.Pow(C1, 2) - 9.0 * e2) * Math.Pow(D, 4) / 24.0 + (61.0 + 90.0 * T1 + 298.0 * C1 + 45.0 * Math.Pow(T1, 2) - 252.0 * e2 - 3.0 * Math.Pow(C1, 2)) * Math.Pow(D, 6) / 720.0);
-            double lonRad = lon0 + (D - (1.0 + 2.0 * T1 + C1) * Math.Pow(D, 3) / 6.0 + (5.0 - 2.0 * C1 + 28.0 * T1 - 3.0 * Math.Pow(C1, 2) + 8.0 * e2 + 24.0 * Math.Pow(T1, 2)) * Math.Pow(D, 5) / 120.0) / Math.Cos(fp);
-
-            lat = latRad * 180.0 / Math.PI;
-            lon = lonRad * 180.0 / Math.PI;
+            GeoCoordHelper.Twd97ToWgs84(x, y, out lat, out lon);
         }
         #endregion
     }
 }
+
+

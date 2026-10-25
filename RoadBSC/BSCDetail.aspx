@@ -442,6 +442,10 @@
             <!-- 1. 頂部導覽列 -->
             <header class="top-navbar no-print">
                 <div class="brand-title">
+                    <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                        <i class="fas fa-home"></i>
+                        <span class="d-none d-sm-inline">回首頁</span>
+                    </a>
                     <a :href="detail.BackListUrl || 'BSC_List.aspx'" class="nav-btn mr-2" title="返回清單">
                         <i class="fas fa-arrow-left"></i>
                         <span class="d-none d-sm-inline">返回清單</span>

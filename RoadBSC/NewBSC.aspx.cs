@@ -285,7 +285,7 @@ namespace NTPC_FEC.RoadBSC
 
             // 讀取既有佐證照片
             var photos = new List<object>();
-            string picDir = Server.MapPath("~/Upload/RoadBSCPIC/" + bscId);
+            string picDir = PathHelper.FindDirectory("Upload/RoadBSCPIC/" + bscId);
             if (Directory.Exists(picDir))
             {
                 DirectoryInfo dir = new DirectoryInfo(picDir);
@@ -298,7 +298,7 @@ namespace NTPC_FEC.RoadBSC
                     {
                         Index = idx,
                         FileName = f.Name,
-                        Url = "../Upload/RoadBSCPIC/" + bscId + "/" + f.Name,
+                        Url = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBSCPIC/{0}/{1}", bscId, f.Name)),
                         Size = f.Length
                     });
                     idx++;
@@ -600,3 +600,5 @@ namespace NTPC_FEC.RoadBSC
         }
     }
 }
+
+

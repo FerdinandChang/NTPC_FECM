@@ -322,7 +322,7 @@ namespace NTPC_FEC.RoadBSC
                 pair.PairIndex = pairIndex;
                 pair.Title = "查核點位照片 #" + pairIndex;
                 pair.BeforeFileName = bf.Name;
-                pair.BeforeUrl = ".." + relDir + bf.Name;
+                pair.BeforeUrl = PathHelper.ResolveUrl(relDir + bf.Name);
                 pair.BeforeExists = true;
                 pair.BeforeSize = bf.Length;
 
@@ -354,7 +354,7 @@ namespace NTPC_FEC.RoadBSC
                 {
                     matchedAfterNames.Add(matchedAfter.Name);
                     pair.AfterFileName = matchedAfter.Name;
-                    pair.AfterUrl = ".." + relDir + matchedAfter.Name;
+                    pair.AfterUrl = PathHelper.ResolveUrl(relDir + matchedAfter.Name);
                     pair.AfterExists = true;
                     pair.AfterSize = matchedAfter.Length;
                 }
@@ -386,7 +386,7 @@ namespace NTPC_FEC.RoadBSC
                     extraPair.BeforeExists = false;
                     extraPair.BeforeSize = 0;
                     extraPair.AfterFileName = af.Name;
-                    extraPair.AfterUrl = ".." + relDir + af.Name;
+                    extraPair.AfterUrl = PathHelper.ResolveUrl(relDir + af.Name);
                     extraPair.AfterExists = true;
                     extraPair.AfterSize = af.Length;
 

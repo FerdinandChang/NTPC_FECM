@@ -1012,7 +1012,7 @@ namespace NTPC_FEC.OwnReport
 
             if (invNo <= 0 || string.IsNullOrEmpty(facId))
             {
-                p.Url = "../images/nophoto.jpg";
+                p.Url = PathHelper.ResolveUrl("~/images/nophoto.jpg");
                 p.Exists = false;
                 return p;
             }
@@ -1033,13 +1033,13 @@ namespace NTPC_FEC.OwnReport
                 if (files.Length > 0)
                 {
                     p.FileName = files[0].Name;
-                    p.Url = string.Format("../Upload/{0}/{1}/{2}/{3}", dirName, facId, invNo, files[0].Name);
+                    p.Url = PathHelper.ResolveUrl(string.Format("~/Upload/{0}/{1}/{2}/{3}", dirName, facId, invNo, files[0].Name));
                     p.Exists = true;
                     return p;
                 }
             }
 
-            p.Url = "../images/nophoto.jpg";
+            p.Url = PathHelper.ResolveUrl("~/images/nophoto.jpg");
             p.Exists = false;
             return p;
         }
@@ -1078,7 +1078,7 @@ namespace NTPC_FEC.OwnReport
                 if (files.Length > 0)
                 {
                     p.FileName = files[0].Name;
-                    p.Url = string.Format("../Upload/ReportPIC/{0}/{1}/{2}", facId, repNo, files[0].Name);
+                    p.Url = PathHelper.ResolveUrl(string.Format("~/Upload/ReportPIC/{0}/{1}/{2}", facId, repNo, files[0].Name));
                     p.Exists = true;
                     return p;
                 }
@@ -1265,3 +1265,4 @@ namespace NTPC_FEC.OwnReport
         #endregion
     }
 }
+

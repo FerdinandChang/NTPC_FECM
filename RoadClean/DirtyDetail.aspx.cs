@@ -222,7 +222,7 @@ namespace NTPC_FEC.RoadClean
         {
             var pairs = new List<PhotoPairModel>();
             string relDir = "/Upload/RoadDirtyPIC/" + dirtyId + "/";
-            string physDir = Server.MapPath("~" + relDir);
+            string physDir = PathHelper.FindDirectory(relDir);
 
             if (!Directory.Exists(physDir))
             {
@@ -245,7 +245,7 @@ namespace NTPC_FEC.RoadClean
                 pair.PairIndex = pairIndex;
                 pair.Title = beforePrefix + " #" + pairIndex;
                 pair.BeforeFileName = bf.Name;
-                pair.BeforeUrl = relDir + bf.Name;
+                pair.BeforeUrl = PathHelper.ResolveUrl(relDir + bf.Name);
                 pair.BeforeExists = true;
 
                 // 嘗試尋找對應的改善後照片
@@ -266,7 +266,7 @@ namespace NTPC_FEC.RoadClean
                 if (matchedAfter != null)
                 {
                     pair.AfterFileName = matchedAfter.Name;
-                    pair.AfterUrl = relDir + matchedAfter.Name;
+                    pair.AfterUrl = PathHelper.ResolveUrl(relDir + matchedAfter.Name);
                     pair.AfterExists = true;
                 }
                 else
@@ -335,3 +335,4 @@ namespace NTPC_FEC.RoadClean
         }
     }
 }
+

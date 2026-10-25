@@ -1,4 +1,4 @@
-﻿{
+{
   "description": "新北市固定溢散源管理平台 (NTPC_FEC) 正式機打包清單與強制自檢配置",
   "root_include_files": [
     "Default.aspx",
@@ -7,6 +7,7 @@
     "MainPage.Master",
     "ValidateCode.ashx",
     "KeepAlive.ashx",
+    "ViewImage.ashx",
     "Logout.aspx",
     "Error.aspx",
     "Web.config",
@@ -61,6 +62,7 @@
     "Error.aspx",
     "ValidateCode.ashx",
     "KeepAlive.ashx",
+    "ViewImage.ashx",
     "Web.config",
     "Web.config.template",
     "Upload/Web.config",
@@ -81,6 +83,7 @@
     "Scripts/jquery.min.js",
     "Scripts/leaflet/leaflet.js",
     "Scripts/fec-offline-sentinel.js",
+    "Scripts/fec-image-compressor.js",
     "images/background1.png",
     "images/First_picture.png",
     "Modules/Manager/AccountManagement.aspx",
@@ -133,6 +136,8 @@
     "Case/CaseList.aspx",
     "Case/NewCase.aspx",
     "Case/CaseResult.aspx",
+    "BufferAnalysis/BufferMap.aspx",
+    "BufferAnalysis/BufferHandler.ashx",
     "Scripts/jquery-3.6.0.min.js",
     "Scripts/jquery-3.7.1.min.js"
   ]

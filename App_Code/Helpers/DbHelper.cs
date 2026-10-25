@@ -282,5 +282,115 @@ namespace NTPC_FEC.Helpers
             }
             return null;
         }
+
+        /// <summary>
+        /// 安全事務執行器：自動建立連線、開啟 Transaction、呼叫委派，並於發生例外時自動 Rollback
+        /// 相容 C# 5.0 規範
+        /// </summary>
+        public static bool ExecuteTransaction(Func<SqlConnection, SqlTransaction, bool> action, string connectionName)
+        {
+            if (action == null) return false;
+
+            using (var conn = GetOpenConnection(connectionName))
+            {
+                using (var trans = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        bool success = action(conn, trans);
+                        if (success)
+                        {
+                            trans.Commit();
+                            return true;
+                        }
+                        else
+                        {
+                            trans.Rollback();
+                            return false;
+                        }
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            trans.Rollback();
+                        }
+                        catch
+                        {
+                        }
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public static bool ExecuteTransaction(Func<SqlConnection, SqlTransaction, bool> action)
+        {
+            return ExecuteTransaction(action, null);
+        }
+
+        /// <summary>
+        /// 標準高效 SQL 分頁查詢器 (消除清單頁面重複手寫 ROW_NUMBER 與總頁數計算)
+        /// 相容 C# 5.0 規範
+        /// </summary>
+        public static DataTable ExecutePagedDataTable(
+            string selectFields, 
+            string fromClause, 
+            string whereClause, 
+            string orderBy, 
+            int pageIndex, 
+            int pageSize, 
+            SqlParameter[] parameters, 
+            out int totalCount, 
+            string connectionName)
+        {
+            totalCount = 0;
+            int page = pageIndex > 0 ? pageIndex : 1;
+            int size = pageSize > 0 ? pageSize : 20;
+            int startRow = (page - 1) * size + 1;
+            int endRow = page * size;
+
+            string cleanWhere = string.IsNullOrWhiteSpace(whereClause) ? "1=1" : whereClause.Trim();
+            string cleanOrder = string.IsNullOrWhiteSpace(orderBy) ? "(SELECT 1)" : orderBy.Trim();
+
+            // 1. 查詢總筆數
+            string countSql = string.Format("SELECT COUNT(*) FROM {0} WHERE {1}", fromClause, cleanWhere);
+            object countObj = ExecuteScalar(countSql, parameters, connectionName);
+            if (countObj != null && countObj != DBNull.Value)
+            {
+                int.TryParse(countObj.ToString(), out totalCount);
+            }
+
+            if (totalCount == 0)
+            {
+                return new DataTable();
+            }
+
+            // 2. 查詢分頁資料
+            string pagedSql = string.Format(@"
+WITH PagedData AS (
+    SELECT {0}, ROW_NUMBER() OVER (ORDER BY {1}) AS _RowNum
+    FROM {2}
+    WHERE {3}
+)
+SELECT * FROM PagedData
+WHERE _RowNum BETWEEN {4} AND {5}
+ORDER BY _RowNum ASC", selectFields, cleanOrder, fromClause, cleanWhere, startRow, endRow);
+
+            return ExecuteDataTable(pagedSql, parameters, connectionName);
+        }
+
+        public static DataTable ExecutePagedDataTable(
+            string selectFields, 
+            string fromClause, 
+            string whereClause, 
+            string orderBy, 
+            int pageIndex, 
+            int pageSize, 
+            SqlParameter[] parameters, 
+            out int totalCount)
+        {
+            return ExecutePagedDataTable(selectFields, fromClause, whereClause, orderBy, pageIndex, pageSize, parameters, out totalCount, null);
+        }
     }
 }

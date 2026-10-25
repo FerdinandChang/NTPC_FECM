@@ -314,7 +314,7 @@ namespace NTPC_FEC.RoadClean
         {
             var list = new List<PhotoItemDto>();
             string relDir = "/Upload/RoadDirtyPIC/" + dirtyId + "/";
-            string physDir = Server.MapPath("~" + relDir);
+            string physDir = PathHelper.FindDirectory(relDir);
 
             if (!Directory.Exists(physDir))
             {
@@ -333,7 +333,7 @@ namespace NTPC_FEC.RoadClean
                     PhotoItemDto item = new PhotoItemDto();
                     item.FileName = f.Name;
                     item.Title = Path.GetFileNameWithoutExtension(f.Name);
-                    item.Url = relDir + f.Name;
+                    item.Url = PathHelper.ResolveUrl(relDir + f.Name);
                     item.Size = f.Length;
                     item.LastModified = f.LastWriteTime.ToString("yyyy-MM-dd HH:mm");
                     list.Add(item);
@@ -393,7 +393,7 @@ namespace NTPC_FEC.RoadClean
 
             // 實體照片儲存目錄
             string relDir = "/Upload/RoadDirtyPIC/" + dirtyId + "/";
-            string physDir = Server.MapPath("~" + relDir);
+            string physDir = PathHelper.FindDirectory(relDir);
             if (!Directory.Exists(physDir))
             {
                 Directory.CreateDirectory(physDir);
@@ -800,3 +800,5 @@ namespace NTPC_FEC.RoadClean
         }
     }
 }
+
+

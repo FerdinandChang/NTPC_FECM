@@ -240,6 +240,101 @@ namespace NTPC_FEC.Services
             string key = GetLockCacheKey(userId);
             HttpRuntime.Cache.Remove(key);
         }
+
+        private static string GetIpLockCacheKey(string ip)
+        {
+            return "LoginIpLock_" + (ip != null ? ip.Trim() : "");
+        }
+
+        public static bool IsIpBlocked(string ip, out int remainingMinutes)
+        {
+            remainingMinutes = 0;
+            if (string.IsNullOrEmpty(ip)) return false;
+
+            string key = GetIpLockCacheKey(ip);
+            LoginFailRecord record = HttpRuntime.Cache != null ? HttpRuntime.Cache[key] as LoginFailRecord : null;
+            if (record != null && record.LockUntil.HasValue && record.LockUntil.Value > DateTime.Now)
+            {
+                remainingMinutes = (int)Math.Ceiling((record.LockUntil.Value - DateTime.Now).TotalMinutes);
+                if (remainingMinutes < 1) remainingMinutes = 1;
+                return true;
+            }
+            return false;
+        }
+
+        public static bool RecordIpLoginFailure(string ip)
+        {
+            if (string.IsNullOrEmpty(ip)) return false;
+
+            string key = GetIpLockCacheKey(ip);
+            LoginFailRecord record = HttpRuntime.Cache != null ? HttpRuntime.Cache[key] as LoginFailRecord : null;
+            if (record == null)
+            {
+                record = new LoginFailRecord { FailCount = 1 };
+            }
+            else
+            {
+                record.FailCount++;
+            }
+
+            // 同一 IP 於 1 分鐘內累積 15 次失敗，冷卻封鎖 10 分鐘
+            if (record.FailCount >= 15)
+            {
+                record.LockUntil = DateTime.Now.AddMinutes(10);
+                if (HttpRuntime.Cache != null)
+                {
+                    HttpRuntime.Cache.Insert(key, record, null, DateTime.Now.AddMinutes(10), System.Web.Caching.Cache.NoSlidingExpiration);
+                }
+                return true;
+            }
+            else
+            {
+                if (HttpRuntime.Cache != null)
+                {
+                    HttpRuntime.Cache.Insert(key, record, null, DateTime.Now.AddMinutes(5), System.Web.Caching.Cache.NoSlidingExpiration);
+                }
+                return false;
+            }
+        }
+
+        public static void ClearIpLoginFailure(string ip)
+        {
+            if (string.IsNullOrEmpty(ip) || HttpRuntime.Cache == null) return;
+            string key = GetIpLockCacheKey(ip);
+            HttpRuntime.Cache.Remove(key);
+        }
+
+        /// <summary>
+        /// 計算當前 Client 的 Session 防劫持特徵指紋 (基於 User-Agent 與 IP 網段)
+        /// 相容 C# 5.0 規範
+        /// </summary>
+        public static string GenerateSessionFingerprint(HttpContext context)
+        {
+            if (context == null || context.Request == null) return string.Empty;
+
+            string ua = context.Request.UserAgent != null ? context.Request.UserAgent : string.Empty;
+            string ip = context.Request.UserHostAddress != null ? context.Request.UserHostAddress : string.Empty;
+
+            // IP 網段截取 (前三段，相容行動外勤 4G 基地台浮動切換)
+            string ipSubnet = ip;
+            int lastDot = ip.LastIndexOf('.');
+            if (lastDot > 0)
+            {
+                ipSubnet = ip.Substring(0, lastDot);
+            }
+
+            string raw = string.Format("FINGERPRINT_{0}_{1}_NTPC_SEC", ua, ipSubnet);
+            using (var sha = SHA256.Create())
+            {
+                byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    sb.Append(bytes[i].ToString("x2"));
+                }
+                return sb.ToString();
+            }
+        }
         #endregion
 
         #region 4. 登入驗證 (含防爆破阻斷與漸進式雜湊升級)
@@ -255,6 +350,16 @@ namespace NTPC_FEC.Services
             }
 
             string cleanUserId = userId.Trim();
+
+            // 0. 檢查來源 IP 頻率防爆破鎖定
+            string clientIp = (context != null && context.Request != null) ? context.Request.UserHostAddress : string.Empty;
+            int ipLockMins;
+            if (IsIpBlocked(clientIp, out ipLockMins))
+            {
+                result.Success = false;
+                result.Message = string.Format("此連線來源 IP 累積失敗次數過多，目前處於安全冷卻鎖定中！請於約 {0} 分鐘後再試。", ipLockMins);
+                return result;
+            }
 
             // 1. 檢查帳號是否正處於連續失敗鎖定中
             int lockMins;
@@ -309,6 +414,7 @@ namespace NTPC_FEC.Services
 
             if (dt.Rows.Count == 0)
             {
+                RecordIpLoginFailure(clientIp);
                 result.Success = false;
                 result.Message = RecordLoginFailure(cleanUserId);
                 return result;
@@ -339,6 +445,7 @@ namespace NTPC_FEC.Services
 
             if (!isPasswordCorrect)
             {
+                RecordIpLoginFailure(clientIp);
                 result.Success = false;
                 result.Message = RecordLoginFailure(cleanUserId);
                 return result;
@@ -346,6 +453,7 @@ namespace NTPC_FEC.Services
 
             // 密碼正確，立即清除連續失敗累計
             ClearLoginFailure(cleanUserId);
+            ClearIpLoginFailure(clientIp);
 
             // 5. 漸進式雜湊升級 (僅寫入 PasswordHash 獨立欄位，絕對不更動舊 Password 欄位以保證舊版系統正常運作)
             if (needUpgradeToHash || string.IsNullOrEmpty(dbPasswordHash))
@@ -430,6 +538,7 @@ namespace NTPC_FEC.Services
                 context.Session["UserName"] = user.Name;
                 context.Session["UserAccount"] = user;
                 context.Session["MustChangePassword"] = mustChangePwd;
+                context.Session["AuthFingerprint"] = GenerateSessionFingerprint(context);
             }
 
             // 核發 Anti-CSRF 雙重防禦 Token
@@ -480,6 +589,18 @@ namespace NTPC_FEC.Services
 
             string cleanUserId = userId.Trim();
 
+            // 0. 檢查來源 IP 頻率防爆破鎖定
+            string clientIp = (context != null && context.Request != null) ? context.Request.UserHostAddress : string.Empty;
+            int ipLockMins;
+            if (IsIpBlocked(clientIp, out ipLockMins))
+            {
+                result.Success = false;
+                result.IsLocked = true;
+                result.LockMinutes = ipLockMins;
+                result.Message = string.Format("此連線來源 IP 累積失敗次數過多，目前處於安全冷卻鎖定中！請於約 {0} 分鐘後再試。", ipLockMins);
+                return result;
+            }
+
             // 1. 檢查帳號防爆破鎖定
             int lockMinutes;
             if (IsAccountLocked(cleanUserId, out lockMinutes))
@@ -513,6 +634,7 @@ namespace NTPC_FEC.Services
 
             if (dt == null || dt.Rows.Count == 0)
             {
+                RecordIpLoginFailure(clientIp);
                 result.Success = false;
                 result.Message = RecordLoginFailure(cleanUserId);
                 return result;
@@ -543,6 +665,7 @@ namespace NTPC_FEC.Services
 
             if (!isPasswordCorrect)
             {
+                RecordIpLoginFailure(clientIp);
                 result.Success = false;
                 result.Message = RecordLoginFailure(cleanUserId);
                 return result;
@@ -550,6 +673,7 @@ namespace NTPC_FEC.Services
 
             // 密碼正確，清除失敗計數
             ClearLoginFailure(cleanUserId);
+            ClearIpLoginFailure(clientIp);
 
             // 4. 漸進式寫入 PasswordHash (絕對不覆蓋 Password 欄位)
             if (needUpgradeToHash || string.IsNullOrEmpty(dbPasswordHash))
@@ -603,6 +727,7 @@ namespace NTPC_FEC.Services
                 context.Session["UserName"] = user.Name;
                 context.Session["UserAccount"] = user;
                 context.Session["LoginMode"] = "client";
+                context.Session["AuthFingerprint"] = GenerateSessionFingerprint(context);
             }
 
             // 核發 Anti-CSRF Cookie

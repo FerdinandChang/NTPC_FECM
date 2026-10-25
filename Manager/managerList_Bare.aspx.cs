@@ -571,7 +571,7 @@ namespace NTPC_FEC.Manager
                         {
                             addedFiles.Add(targetFi.Name);
                             // 重要：使用相對路徑 ../Upload/BareGround/...，相對於 /Manager/ 頁面能完美適應站台子目錄 (/NTPC_FECM 或 /NTPC_FEC)
-                            photos.Add("../Upload/BareGround/" + bareId + "/" + invNo + "/" + targetFi.Name);
+                            photos.Add(PathHelper.ResolveUrl(string.Format("~/Upload/BareGround/{0}/{1}/{2}", bareId, invNo, targetFi.Name)));
                         }
                     }
 
@@ -588,7 +588,7 @@ namespace NTPC_FEC.Manager
                                 if (!addedFiles.Contains(fi.Name))
                                 {
                                     addedFiles.Add(fi.Name);
-                                    photos.Add("../Upload/BareGround/" + bareId + "/" + invNo + "/" + fi.Name);
+                                    photos.Add(PathHelper.ResolveUrl(string.Format("~/Upload/BareGround/{0}/{1}/{2}", bareId, invNo, fi.Name)));
                                 }
                             }
                         }
@@ -902,3 +902,4 @@ namespace NTPC_FEC.Manager
         }
     }
 }
+

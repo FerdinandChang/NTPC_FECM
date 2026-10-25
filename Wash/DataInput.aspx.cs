@@ -245,7 +245,7 @@ namespace NTPC_FEC.Wash
 
                     // 檢查伺服器儲存的現場照片
                     string picDirVirtual = "/NTPC_FEC/Upload/WashPIC/" + facId + "/" + pIndex;
-                    string picDirPhysical = Server.MapPath(picDirVirtual);
+                    string picDirPhysical = PathHelper.FindDirectory(picDirVirtual);
                     if (Directory.Exists(picDirPhysical))
                     {
                         DirectoryInfo di = new DirectoryInfo(picDirPhysical);
@@ -256,7 +256,7 @@ namespace NTPC_FEC.Wash
                             {
                                 Exists = true,
                                 FileName = beforeFiles[0].Name,
-                                Url = picDirVirtual + "/" + beforeFiles[0].Name + "?t=" + beforeFiles[0].LastWriteTime.Ticks,
+                                Url = PathHelper.ResolveUrl(picDirVirtual + "/" + beforeFiles[0].Name + "?t=" + beforeFiles[0].LastWriteTime.Ticks),
                                 Size = beforeFiles[0].Length
                             };
                         }
@@ -268,7 +268,7 @@ namespace NTPC_FEC.Wash
                             {
                                 Exists = true,
                                 FileName = afterFiles[0].Name,
-                                Url = picDirVirtual + "/" + afterFiles[0].Name + "?t=" + afterFiles[0].LastWriteTime.Ticks,
+                                Url = PathHelper.ResolveUrl(picDirVirtual + "/" + afterFiles[0].Name + "?t=" + afterFiles[0].LastWriteTime.Ticks),
                                 Size = afterFiles[0].Length
                             };
                         }
@@ -462,7 +462,7 @@ namespace NTPC_FEC.Wash
             }
 
             // 處理照片儲存與刪除
-            string targetDirVirtual = "/NTPC_FEC/Upload/WashPIC/" + facId + "/" + pIndex;
+            string targetDirVirtual = "~/Upload/WashPIC/" + facId + "/" + pIndex;
             string targetDirPhysical = Server.MapPath(targetDirVirtual);
             if (!Directory.Exists(targetDirPhysical))
             {
@@ -546,3 +546,5 @@ namespace NTPC_FEC.Wash
         }
     }
 }
+
+

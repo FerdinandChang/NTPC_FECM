@@ -435,14 +435,14 @@ namespace NTPC_FEC.RoadBSC
                 {
                     if (!string.IsNullOrEmpty(bscId) && bscId.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
                     {
-                        string picDir = Server.MapPath("~/Upload/RoadBSCPIC/" + bscId);
+                        string picDir = PathHelper.FindDirectory("Upload/RoadBSCPIC/" + bscId);
                         if (Directory.Exists(picDir))
                         {
                             string[] files = Directory.GetFiles(picDir, "佐證照片*.*");
                             photoCount = files.Length;
                             foreach (string f in files)
                             {
-                                photoUrls.Add("../Upload/RoadBSCPIC/" + bscId + "/" + Path.GetFileName(f));
+                                photoUrls.Add(PathHelper.ResolveUrl(string.Format("~/Upload/RoadBSCPIC/{0}/{1}", bscId, Path.GetFileName(f))));
                             }
                         }
                     }
@@ -657,7 +657,7 @@ namespace NTPC_FEC.RoadBSC
             {
                 if (!string.IsNullOrEmpty(bscId) && bscId.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
                 {
-                    string picDir = Server.MapPath("~/Upload/RoadBSCPIC/" + bscId);
+                    string picDir = PathHelper.FindDirectory("Upload/RoadBSCPIC/" + bscId);
                     if (Directory.Exists(picDir))
                     {
                         Directory.Delete(picDir, true);
@@ -793,3 +793,5 @@ namespace NTPC_FEC.RoadBSC
         }
     }
 }
+
+

@@ -40,7 +40,7 @@ namespace NTPC_FEC.BareGround
                         Message = "系統發生例外：" + ex.Message
                     }));
                 }
-                Response.End();
+                AjaxResponseHelper.CompleteRequest(Response, Context);
                 return;
             }
         }
@@ -242,7 +242,7 @@ namespace NTPC_FEC.BareGround
 
             // 讀取現場照片 (一) ~ (四)
             var photos = new List<object>();
-            string targetDir = Server.MapPath(string.Format("~/Upload/BareGround/{0}/{1}", bareId.Trim(), invNo));
+            string targetDir = PathHelper.FindDirectory(string.Format("Upload/BareGround/{0}/{1}", bareId.Trim(), invNo));
             string[] photoTitles = new string[] { "裸露地現場照片(一)", "裸露地現場照片(二)", "裸露地現場照片(三)", "裸露地現場照片(四)" };
 
             for (int i = 0; i < 4; i++)
@@ -257,8 +257,8 @@ namespace NTPC_FEC.BareGround
                     if (matched.Length > 0 && File.Exists(matched[0]))
                     {
                         FileInfo fi = new FileInfo(matched[0]);
-                        fileUrl = string.Format("../Upload/BareGround/{0}/{1}/{2}?t={3}",
-                            bareId.Trim(), invNo, fi.Name, fi.LastWriteTime.Ticks);
+                        fileUrl = PathHelper.ResolveUrl(string.Format("~/Upload/BareGround/{0}/{1}/{2}?t={3}",
+                            bareId.Trim(), invNo, fi.Name, fi.LastWriteTime.Ticks));
                         hasFile = true;
                     }
                 }
@@ -284,8 +284,8 @@ namespace NTPC_FEC.BareGround
                     {
                         byte[] bytes = File.ReadAllBytes(sigPath);
                         sigBase64 = "data:image/png;base64," + Convert.ToBase64String(bytes);
-                        sigUrl = string.Format("../Upload/BareGround/{0}/{1}/Sig1.png?t={2}",
-                            bareId.Trim(), invNo, File.GetLastWriteTime(sigPath).Ticks);
+                        sigUrl = PathHelper.ResolveUrl(string.Format("~/Upload/BareGround/{0}/{1}/Sig1.png?t={2}",
+                            bareId.Trim(), invNo, File.GetLastWriteTime(sigPath).Ticks));
                     }
                     catch
                     {
@@ -575,3 +575,5 @@ namespace NTPC_FEC.BareGround
         }
     }
 }
+
+

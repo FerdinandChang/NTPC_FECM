@@ -32,6 +32,10 @@ namespace NTPC_FEC.Security
                 var headers = context.Response.Headers;
                 if (headers != null)
                 {
+                    if (string.IsNullOrEmpty(headers["X-Frame-Options"]))
+                    {
+                        headers["X-Frame-Options"] = "SAMEORIGIN";
+                    }
                     if (string.IsNullOrEmpty(headers["X-Content-Type-Options"]))
                     {
                         headers["X-Content-Type-Options"] = "nosniff";
@@ -148,6 +152,29 @@ namespace NTPC_FEC.Security
             {
                 DenyUnauthenticated(context);
                 return;
+            }
+
+            // 1.1 檢核 Session 防劫持特徵指紋 (Session Hijacking Defense)
+            string savedFingerprint = context.Session["AuthFingerprint"] as string;
+            if (!string.IsNullOrEmpty(savedFingerprint))
+            {
+                string currentFingerprint = AuthService.GenerateSessionFingerprint(context);
+                if (!string.Equals(savedFingerprint, currentFingerprint, StringComparison.OrdinalIgnoreCase))
+                {
+                    AuditLogger.Log(
+                        "SYSTEM",
+                        "SESSION_HIJACK_BLOCKED",
+                        context.Session["LoginUser"] != null ? context.Session["LoginUser"].ToString() : "Unknown",
+                        context.Request != null ? context.Request.UserHostAddress : "127.0.0.1",
+                        "偵測到不同來源載具或 IP 網段試圖盜用登入作業階段！系統已強制註銷連線。",
+                        null,
+                        null
+                    );
+                    context.Session.Clear();
+                    context.Session.Abandon();
+                    DenyUnauthenticated(context);
+                    return;
+                }
             }
 
             // 2. 取得當前使用者實體

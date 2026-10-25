@@ -348,7 +348,9 @@ namespace NTPC_FEC.Modules.Manager
                     {
                         AuthService.ClearLoginFailure(targetUserId);
                     }
-                    AuditLogger.Log("USER_STATE_CHANGE", targetUserId, string.Format("狀態變更為：{0}", (newState == "OK" ? "正常啟用" : "停用")));
+                    string oldStateText = (currentState == "OK" ? "正常啟用" : "停用");
+                    string newStateText = (newState == "OK" ? "正常啟用" : "停用");
+                    AuditLogger.Log("USER_STATE_CHANGE", targetUserId, string.Format("狀態變更為：{0}", newStateText), oldStateText, newStateText);
                     ShowAlert(string.Format("帳號 [{0}] 狀態已更新為：{1}", targetUserId, (newState == "OK" ? "正常啟用" : "停用")), "alert-success");
                     LoadUsers();
                 }
@@ -401,7 +403,7 @@ namespace NTPC_FEC.Modules.Manager
             OperationResult res = AuthService.ResetUserTempPasswordAndSendEmail(targetUserId, targetEmail);
             if (res.Success)
             {
-                AuditLogger.Log("USER_PWD_RESET", targetUserId, string.Format("重設臨時密碼並發信至：{0}", targetEmail));
+                AuditLogger.Log("USER_PWD_RESET", targetUserId, string.Format("重設臨時密碼並發信至：{0}", targetEmail), "原密碼/已失效", "發行隨機臨時密碼");
                 pnlResetPwdModal.Visible = false;
                 ShowAlert(res.Message, "alert-success");
                 LoadUsers();
@@ -565,7 +567,7 @@ namespace NTPC_FEC.Modules.Manager
 
                 pnlSetLicModal.Visible = false;
                 string unitLabel = string.IsNullOrEmpty(newPUnit) ? "未指定" : newPUnit;
-                AuditLogger.Log("USER_PERM_CHANGE", editUserId, string.Format("單位：{0}, LIC：{1}, LIC2：{2}", unitLabel, newLic, newLic2));
+                AuditLogger.Log("USER_PERM_CHANGE", editUserId, string.Format("單位：{0}, LIC：{1}, LIC2：{2}", unitLabel, newLic, newLic2), null, string.Format("單位：{0}, LIC：{1}, LIC2：{2}", unitLabel, newLic, newLic2));
                 ShowAlert(string.Format("帳號 [{0}] 的所屬單位（{1}）、業務權限與轄區配置已儲存成功！", editUserId, unitLabel), "alert-success");
                 LoadPUnitTabs();
                 LoadUsers();
@@ -635,7 +637,8 @@ namespace NTPC_FEC.Modules.Manager
                 };
 
                 DbHelper.ExecuteNonQuery(insSql, insParams);
-                AuditLogger.Log("USER_CREATE", newId, string.Format("建立新帳號，姓名：{0}，單位：{1}", newName, newPUnit));
+                string newAccountInfo = string.Format("姓名：{0}, 單位：{1}, 信箱：{2}", newName, newPUnit, string.IsNullOrEmpty(newEmail) ? "無" : newEmail);
+                AuditLogger.Log("USER_CREATE", newId, string.Format("建立新帳號，姓名：{0}，單位：{1}", newName, newPUnit), null, newAccountInfo);
                 pnlNewAccModal.Visible = false;
                 ShowAlert(string.Format("帳號 [{0}] 已成功建立！請立即點選【權限設定】為其配置業務模組權限。", newId), "alert-success");
                 LoadPUnitTabs();

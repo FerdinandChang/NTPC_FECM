@@ -50,14 +50,38 @@
             position: sticky; top: 0; z-index: 1020;
         }
         .nav-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: none; color: #ffffff;
-            font-size: 1.1rem; cursor: pointer;
-            width: 38px; height: 38px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #ffffff !important;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            height: 36px;
+            min-width: 36px;
+            width: auto;
+            padding: 0 12px;
+            gap: 6px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            text-decoration: none !important;
+            white-space: nowrap !important;
+            box-sizing: border-box;
         }
-        .nav-btn:hover { background-color: rgba(255, 255, 255, 0.3); }
+        .nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.32);
+            color: #ffffff !important;
+            text-decoration: none !important;
+            transform: translateY(-1px);
+        }
+        @media (max-width: 575.98px) {
+            .nav-btn {
+                width: 36px;
+                padding: 0;
+            }
+        }
         .top-navbar .brand-title {
             font-size: 1.1rem; font-weight: 700; margin: 0;
             display: flex; align-items: center; gap: 8px;
@@ -318,24 +342,26 @@
 <body>
     <div id="app" v-cloak>
         <!-- 頂部現代導覽列 -->
-        <header class="top-navbar">
+        <header class="top-navbar no-print">
             <div class="d-flex align-items-center">
-                <a href="Dirty_List.aspx?mode=DirtyImprove" class="nav-btn mr-3" title="返回案件清單">
+                <a href="../MainPage.aspx?sub=menu4" class="nav-btn mr-2" title="返回主選單">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline">回首頁</span>
+                </a>
+                <a href="Dirty_List.aspx?mode=DirtyImprove" class="nav-btn mr-2" title="返回案件清單">
                     <i class="fas fa-arrow-left"></i>
+                    <span class="d-none d-sm-inline">返回清單</span>
                 </a>
                 <h1 class="brand-title">
-                    <i class="fas fa-broom"></i>
+                    <i class="fas fa-broom text-white mr-1"></i>
                     <span>道路污染改善回報</span>
-                    <span v-if="caseData.ShowId" class="badge badge-light text-primary font-weight-bold ml-2">
+                    <span v-if="caseData.ShowId" class="badge badge-light text-dark font-weight-bold ml-2" style="font-size: 0.85rem;">
                         {{ caseData.ShowId }}
                     </span>
                 </h1>
             </div>
-            <div class="d-flex align-items-center">
-                <span class="badge badge-pill badge-light font-weight-bold d-none d-sm-inline-block mr-2">
-                    <i class="fas fa-user-circle mr-1"></i> {{ caseData.CurrentUserName }}
-                </span>
-                <span class="badge badge-pill" :class="caseData.StatusBadgeClass">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge badge-pill font-weight-bold" :class="caseData.StatusBadgeClass">
                     {{ caseData.StatusText }}
                 </span>
             </div>

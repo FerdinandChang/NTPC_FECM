@@ -546,25 +546,16 @@ namespace NTPC_FEC.Case
                 }
 
                 string fileName = string.Format("公私場所巡查案件統計_{0}.xls", DateTime.Now.ToString("yyyyMMddHHmmss"));
-                Response.Clear();
-                Response.Buffer = true;
-                Response.ContentType = "application/vnd.ms-excel";
-                Response.AddHeader("Content-Disposition", string.Format("attachment;filename={0}", HttpUtility.UrlEncode(fileName, Encoding.UTF8)));
-
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    workbook.Write(ms);
-                    Response.BinaryWrite(ms.ToArray());
-                }
-                Response.Flush();
+                ExcelExportHelper.ExportToResponse(workbook, fileName, Response);
+                return;
             }
             catch (Exception ex)
             {
                 Response.Clear();
                 Response.ContentType = "text/html; charset=utf-8";
                 Response.Write("<script>alert('匯出失敗: " + HttpUtility.JavaScriptStringEncode(ex.Message) + "'); window.close();</script>");
+                HttpContext.Current.ApplicationInstance.CompleteRequest();
             }
-            Response.End();
         }
 
         #endregion

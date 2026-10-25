@@ -47,7 +47,7 @@ namespace NTPC_FEC.Services
             AddSubItemIfAllowed(facItems, isAdmin || CheckLicense(lic, 41) || CheckLicense(lic, 10), "許可證資訊", "FAC/oFAC_List.aspx");
             AddSubItemIfAllowed(facItems, isAdmin || CheckLicense(lic, 41) || CheckLicense(lic, 11), "其他資料查詢", "OutLink.aspx");
             AddSubItemIfAllowed(facItems, isAdmin || CheckLicense(lic, 41), "工廠統計", "FAC/Charts.aspx");
-            AddSubItemIfAllowed(facItems, isAdmin || CheckLicense(lic, 41), "環域查詢", "javascript:alert('「環域查詢」功能尚未開放！');");
+            AddSubItemIfAllowed(facItems, isAdmin || CheckLicense(lic, 41), "環域查詢", "BufferAnalysis/BufferMap.aspx");
 
             if (facItems.Count > 0)
             {

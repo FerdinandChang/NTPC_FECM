@@ -433,14 +433,14 @@ namespace NTPC_FEC.RoadBreak
                 {
                     if (!string.IsNullOrEmpty(breakId) && breakId.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
                     {
-                        string picDir = Server.MapPath("~/Upload/RoadBreakPIC/" + breakId);
+                        string picDir = PathHelper.FindDirectory("Upload/RoadBreakPIC/" + breakId);
                         if (Directory.Exists(picDir))
                         {
                             string[] files = Directory.GetFiles(picDir, "佐證照片*.*");
                             photoCount = files.Length;
                             foreach (string f in files)
                             {
-                                photoUrls.Add("../Upload/RoadBreakPIC/" + breakId + "/" + Path.GetFileName(f));
+                                photoUrls.Add(PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}", breakId, Path.GetFileName(f))));
                             }
                         }
                     }
@@ -630,7 +630,7 @@ namespace NTPC_FEC.RoadBreak
             {
                 if (!string.IsNullOrEmpty(breakId) && breakId.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
                 {
-                    string picDir = Server.MapPath("~/Upload/RoadBreakPIC/" + breakId);
+                    string picDir = PathHelper.FindDirectory("Upload/RoadBreakPIC/" + breakId);
                     if (Directory.Exists(picDir))
                     {
                         Directory.Delete(picDir, true);
@@ -750,3 +750,5 @@ namespace NTPC_FEC.RoadBreak
         }
     }
 }
+
+

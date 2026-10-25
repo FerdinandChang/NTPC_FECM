@@ -31,7 +31,7 @@ namespace NTPC_FEC.Case
                 {
                     Response.Write(json.Serialize(new { Success = false, Message = ex.Message }));
                 }
-                Response.End();
+                AjaxResponseHelper.CompleteRequest(Response, Context);
                 return;
             }
         }
@@ -88,12 +88,7 @@ namespace NTPC_FEC.Case
             // 安全 Token 檢查 (若有帶 token 則比對前後1小時，若 Session 已登入則寬容通過)
             if (!string.IsNullOrEmpty(token))
             {
-                string curHour = DateTime.Now.ToString("yyyyMMddHH");
-                string prevHour = DateTime.Now.AddHours(-1).ToString("yyyyMMddHH");
-                string token1 = ("MD5:" + facId + curHour).ToMD5();
-                string token2 = ("MD5:" + facId + prevHour).ToMD5();
-
-                bool tokenValid = (token == token1 || token == token2);
+                bool tokenValid = SecurityTokenHelper.ValidateHourToken(token, facId);
                 if (!tokenValid && Session["LoginUser"] == null)
                 {
                     Response.Write(json.Serialize(new { Success = false, Message = "安全憑證已過期或無效，請由案件清單重新進入。" }));

@@ -561,21 +561,23 @@
     <form id="form1" runat="server">
         <div id="breakApp" v-cloak>
             <!-- 頂部導覽列 -->
-            <header class="top-navbar">
-                <div class="brand-title">
-                    <a v-on:click="goBack" class="nav-btn">
-                        <i class="fas fa-arrow-left"></i> 返回
+            <header class="top-navbar no-print">
+                <div class="d-flex align-items-center">
+                    <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                        <i class="fas fa-home"></i>
+                        <span class="d-none d-sm-inline">回首頁</span>
                     </a>
-                    <span>
-                        <i class="fas fa-road"></i> 道路破損現場通報
-                    </span>
-                    <span class="mode-badge" :class="mode === 'new' ? 'badge-new' : 'badge-edit'">
-                        {{ mode === 'new' ? '新增通報' : '案件編輯' }}
-                    </span>
+                    <h1 class="brand-title">
+                        <i class="fas fa-road text-white mr-1"></i>
+                        <span>道路破損現場通報</span>
+                        <span class="mode-badge ml-2" :class="mode === 'new' ? 'badge-new' : 'badge-edit'">
+                            {{ mode === 'new' ? '新增通報' : '案件編輯' }}
+                        </span>
+                    </h1>
                 </div>
                 <div class="d-none d-md-flex align-items-center gap-2">
-                    <button type="button" class="nav-btn" v-on:click="submitForm" :disabled="isSubmitting">
-                        <i class="fas fa-paper-plane" :class="{ 'fa-spin': isSubmitting }"></i>
+                    <button type="button" class="btn btn-warning btn-sm font-weight-bold px-3" v-on:click="submitForm" :disabled="isSubmitting">
+                        <i class="fas fa-paper-plane mr-1" :class="{ 'fa-spin': isSubmitting }"></i>
                         {{ isSubmitting ? '儲存中...' : '送出通報' }}
                     </button>
                 </div>
@@ -992,11 +994,11 @@
             methods: {
                 // 0. 初始化離線草稿守護器
                 initDraftSentinel() {
-                    if (typeof FecOfflineSentinel === 'undefined') return;
-                    this.draftSentinel = new FecOfflineSentinel({
+                    if (this.mode !== 'new' || typeof FecOfflineSentinel === 'undefined') return;
+                    this.draftSentinel = FecOfflineSentinel.create({
                         storageKey: 'FEC_DRAFT_NEWBREAK',
                         bannerPosition: 'top',
-                        onSave: () => {
+                        getData: () => {
                             if (this.mode !== 'new') return null;
                             return {
                                 form: this.form,
@@ -1007,7 +1009,7 @@
                                 }))
                             };
                         },
-                        onRestore: (saved) => {
+                        restoreData: (saved) => {
                             if (saved && saved.form) {
                                 Object.assign(this.form, saved.form);
                             }
@@ -1027,6 +1029,9 @@
                             this.showAlert('已自動還原上次儲存的離線草稿內容！', 'success');
                         }
                     });
+                    if (this.draftSentinel && this.draftSentinel.checkAndPromptRestore) {
+                        this.draftSentinel.checkAndPromptRestore();
+                    }
                 },
 
                 // 1. 初始化 Leaflet 地圖

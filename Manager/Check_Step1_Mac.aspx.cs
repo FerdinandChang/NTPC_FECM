@@ -398,7 +398,7 @@ namespace NTPC_FEC.Manager
             };
 
             string relDir = "/Upload/MAC/" + facId + "/" + macId.ToString() + "/";
-            string absDir = Server.MapPath("~" + relDir);
+            string absDir = PathHelper.FindDirectory(relDir);
 
             DirectoryInfo dir = new DirectoryInfo(absDir);
             HashSet<string> matchedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -430,7 +430,7 @@ namespace NTPC_FEC.Manager
                     if (files.Length > 0)
                     {
                         p["Exists"] = true;
-                        p["Url"] = relDir + files[0].Name;
+                        p["Url"] = PathHelper.ResolveUrl(relDir + files[0].Name);
                         p["FileName"] = files[0].Name;
                         matchedFiles.Add(files[0].FullName);
                     }
@@ -457,7 +457,7 @@ namespace NTPC_FEC.Manager
                             Dictionary<string, object> extra = new Dictionary<string, object>();
                             extra["Title"] = Path.GetFileNameWithoutExtension(f.Name);
                             extra["Exists"] = true;
-                            extra["Url"] = relDir + f.Name;
+                            extra["Url"] = PathHelper.ResolveUrl(relDir + f.Name);
                             extra["FileName"] = f.Name;
                             list.Add(extra);
                         }
@@ -620,3 +620,5 @@ namespace NTPC_FEC.Manager
         #endregion
     }
 }
+
+

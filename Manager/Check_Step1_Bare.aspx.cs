@@ -380,7 +380,7 @@ namespace NTPC_FEC.Manager
             List<Dictionary<string, object>> list = new List<Dictionary<string, object>>();
             string[] titles = new string[] { "現場照片(一)", "現場照片(二)", "現場照片(三)", "現場照片(四)" };
             string relBase = "/Upload/BareGround/" + bareId + "/" + invNo;
-            string dirPath = HttpContext.Current.Server.MapPath("~" + relBase);
+            string dirPath = PathHelper.FindDirectory(relBase);
 
             for (int i = 0; i < titles.Length; i++)
             {
@@ -403,7 +403,7 @@ namespace NTPC_FEC.Manager
                     if (files.Length > 0)
                     {
                         p["HasFile"] = true;
-                        p["Url"] = string.Format("..{0}/{1}?t={2}", relBase, files[0].Name, files[0].LastWriteTime.Ticks);
+                        p["Url"] = PathHelper.ResolveUrl(string.Format("~{0}/{1}?t={2}", relBase, files[0].Name, files[0].LastWriteTime.Ticks));
                     }
                 }
 
@@ -424,7 +424,7 @@ namespace NTPC_FEC.Manager
             try
             {
                 string relBase = "/Upload/BareGround/" + bareId + "/" + invNo;
-                string dirPath = HttpContext.Current.Server.MapPath("~" + relBase);
+                string dirPath = PathHelper.FindDirectory(relBase);
                 if (Directory.Exists(dirPath))
                 {
                     string sig1Path = Path.Combine(dirPath, "Sig1.png");
@@ -432,7 +432,7 @@ namespace NTPC_FEC.Manager
                     {
                         byte[] bytes1 = File.ReadAllBytes(sig1Path);
                         dict["Sig1Base64"] = "data:image/png;base64," + Convert.ToBase64String(bytes1);
-                        dict["Sig1Url"] = string.Format("..{0}/Sig1.png?t={1}", relBase, File.GetLastWriteTime(sig1Path).Ticks);
+                        dict["Sig1Url"] = PathHelper.ResolveUrl(string.Format("~{0}/Sig1.png?t={1}", relBase, File.GetLastWriteTime(sig1Path).Ticks));
                     }
 
                     string sig2Path = Path.Combine(dirPath, "Sig2.png");
@@ -440,7 +440,7 @@ namespace NTPC_FEC.Manager
                     {
                         byte[] bytes2 = File.ReadAllBytes(sig2Path);
                         dict["Sig2Base64"] = "data:image/png;base64," + Convert.ToBase64String(bytes2);
-                        dict["Sig2Url"] = string.Format("..{0}/Sig2.png?t={1}", relBase, File.GetLastWriteTime(sig2Path).Ticks);
+                        dict["Sig2Url"] = PathHelper.ResolveUrl(string.Format("~{0}/Sig2.png?t={1}", relBase, File.GetLastWriteTime(sig2Path).Ticks));
                     }
                 }
             }
@@ -678,3 +678,5 @@ namespace NTPC_FEC.Manager
         }
     }
 }
+
+

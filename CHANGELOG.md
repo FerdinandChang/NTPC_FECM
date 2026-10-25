@@ -4,45 +4,57 @@
 
 ---
 
+## [1.6.0] - 2026-10-26
+
+### 🚀 版本概述
+新北市固定溢散源管理平台（NTPC_FECM）發布 1.6.0 版本。本版本隆重上線「環域空間分析與 360 環景導覽」模組（`BufferAnalysis/`）、全新導入「安全圖片代理串流處理常式」（`ViewImage.ashx`）與「外勤照片前端智慧等比壓縮器」（`fec-image-compressor.js`），並全面實作 OWASP 標準之 Excel 公式注入防禦（`ExcelExportHelper.cs`）與高精度大地測量座標轉換（`GeoCoordHelper.cs`），實現空間決策輔助與外勤效能大躍進。
+
+### ✨ 主要歷程與改動
+
+#### 1. 環域空間分析與 360 環景導覽模組 (`BufferAnalysis/`)
+- **雙欄黃金聯動與多重緩衝區分析 (`BufferMap.aspx`, `BufferHandler.ashx`)**：
+  - 以營建工地、固定污染源或道路點位為中心，動態設定 100m、300m、500m、1000m、3000m 空間緩衝區。
+  - 交叉分析緩衝區內敏感族群受體（學校、醫院、幼兒園、老人長照機構）、微型感測器數據、即時風向風速箭頭與其他固定源污染排放，提供環保稽查指揮決策支援。
+  - 整合 360 度環景實景導覽，支援外勤與主管人員線上身歷其境檢視現場周遭地貌。
+  - 於 `MenuService.cs` 工廠資料主選單中正式掛載「環域查詢」功能。
+
+#### 2. 安全圖片串流輸出代理 (`ViewImage.ashx`, `ViewImageHandler.cs`)
+- **隔離實體路徑與防目錄穿越**：
+  - 取代前端直接請求 `Upload/` 實體圖檔 URL，全面改由 `ViewImage.ashx` 統一安全代理串流輸出（`TransmitFile`）。
+  - 嚴格校驗傳入路徑、禁止目錄穿越（`..`），路徑缺失時自動優雅回傳預設無照片圖示（`nophoto.jpg`）。
+  - 與 `Upload/Web.config` 唯讀防 WebShell 機制形成完美互補，既杜絕惡意腳本執行，又確保合法圖片正常顯示。
+
+#### 3. 外勤現場照片前端自動等比壓縮器 (`Scripts/fec-image-compressor.js`)
+- **智慧壓縮大幅提速外勤上傳**：
+  - 外勤現場使用手機拍攝之高畫質大圖（單張 8MB~15MB），於瀏覽器端利用 Canvas 智慧等比縮圖至最適尺寸（最長邊 1600px）並進行高品質 JPEG 壓縮（0.82）。
+  - 單張照片體積壓縮至 200KB~400KB（壓縮率達 95%+），徹底根除山區或弱網環境下外勤上傳卡頓、逾時及觸碰 IIS 請求大小限制問題。
+  - 全面應用於各外勤巡檢填報模組（`RoadClean/`、`RoadBSC/`、`RoadBreak/`、`BareGround/` 等）。
+
+#### 4. 安全 Excel 匯出與公式注入防禦 (`App_Code/Helpers/ExcelExportHelper.cs`)
+- **OWASP 深度防護公式注入 (Formula Injection 防護)**：
+  - 自動掃描並消毒所有單元格字串，若以 `=`, `+`, `-`, `@`, `\t`, `\r` 開頭自動加上防禦引號，徹底杜絕 CSV / DDE 惡意公式執行漏洞。
+  - 原生支援 RFC 5987 規範多編碼 `Content-Disposition` 標頭，相容 iOS/Safari、Chrome、Edge 等中文檔名不亂碼。
+  - 徹底避免 ASP.NET `Response.End()` 引發之 `ThreadAbortException` 例外。
+
+#### 5. 高精度地理座標轉換工具 (`App_Code/Helpers/GeoCoordHelper.cs`)
+- **大地測量座標轉換**：
+  - 內建高精度雙向轉換演算法，支援台灣二度分帶 TWD97 (TM2) 投影座標與 WGS84 經緯度座標雙向無縫互轉，提供圖台定位與空間分析精確座標運算。
+
+#### 6. 結構化審計資料庫架構與輔助基礎設施 (`DB/`, `App_Code/Helpers/`)
+- **結構化審計資料表 (`DB/Sys_AuditLog.sql`)**：
+  - 提供資料庫審計追蹤資料表建立腳本，健全系統法規稽核記錄。
+- **基礎設施擴充**：
+  - 建立 `AjaxResponseHelper.cs`、`JsonHelper.cs`、`PathHelper.cs`、`SecurityTokenHelper.cs` 等通用核心工具類別。
+
+#### 7. 正式機打包清單升級 (`deploy_manifest.json`)
+- 將 `ViewImage.ashx`、`Scripts/fec-image-compressor.js`、`BufferAnalysis/BufferMap.aspx`、`BufferAnalysis/BufferHandler.ashx` 列入發布必備檔案清單。
+
+---
+
 ## [1.5.0] - 2026-10-25
 
 ### 🚀 版本概述
 新北市固定溢散源管理平台（NTPC_FECM）發布 1.5.0 版本。本版本實現了核心安全架構的模組化解耦與深度縱深防禦，全面以獨立 `AuthModule` 接管認證與授權以杜絕 IIS 子站台衝突；實作雙重 Anti-CSRF 防護、Magic Bytes 檔案上傳簽章檢核、目錄穿越防禦、特權管理操作審計日誌（Audit Trail），並推出標準化安全錯誤頁面（`Error.aspx`）與全外勤表單斷線守護機制。
-
-### ✨ 主要歷程與改動
-
-#### 1. 模組化全域認證與雙重防禦架構 (`AuthModule.cs`, `AuthRuleService.cs`)
-- **解耦 Global.asax，模組化接管全域生命週期**：
-  - 獨立 `IHttpModule`（`AuthModule.cs`）完整接管身分驗證、RBAC 權限檢核與錯誤處理，編譯入 DLL，解除對 `Global.asax` 的依賴，徹底杜絕 IIS 虛擬子應用程式環境下的動態編譯與型別衝突。
-  - 動態於 PreSendRequestHeaders 注入安全標頭（`X-Content-Type-Options: nosniff`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`），徹底避免 IIS 500.19 重複標頭報錯。
-- **雙重 Anti-CSRF 防禦機制**：
-  - 核發 `XSRF-TOKEN` Cookie，自動校驗 Axios 附加之 `X-XSRF-TOKEN` Header 與表單 `__RequestVerificationToken`，有效防範跨站請求偽造。
-- **精準 RBAC 角色與模組存取矩陣 (`AuthRuleService.cs`)**：
-  - 實作完整許可證位元遮罩（LIC / LIC2）檢核，涵蓋案件初/複/三審、施工機具、裸露地、道路巡檢、固定源等全部模組存取邊界。
-
-#### 2. 檔案處理與路徑安全防禦體系 (`FileSecurityHelper.cs`)
-- **檔名消毒與目錄穿越防禦 (Path Traversal 防禦)**：
-  - 嚴格過濾檔名中的非法字元、`../`、`..\` 等跳脫符號，並透過 `IsSafePath` 校驗檔案絕對路徑，確保檔案嚴格限制於指定安全目錄之內。
-- **檔案頭 Magic Bytes 真實格式驗證**：
-  - 支援 PDF、PNG、JPG、GIF、ZIP 等常見格式的位元簽章（Magic Bytes）深度檢核，徹底杜絕竄改副檔名的偽裝惡意檔案上傳。
-
-#### 3. 系統特權管理與重要操作稽核日誌 (`AuditLogger.cs`)
-- **操作審計追蹤 (Audit Trail)**：
-  - 建立特權管理日誌系統，凡帳號開通/停用、權限角色變更、重設臨時密碼等關鍵操作，自動記錄操作者、來源 IP、時間戳記與操作詳情至 `App_Data/Logs/audit_yyyyMM.log`，符合公務機關資安稽核要求。
-
-#### 4. 全站標準化自訂錯誤提示頁面 (`Error.aspx`)
-- **安全錯誤處理與追蹤**：
-  - 建立標準化錯誤引導頁面，隱藏詳細伺服器錯誤堆疊與敏感資訊，並自動配發 8 碼錯誤追蹤代碼（TraceId），方便使用者向管理員回報並快速對應伺服器端日誌。
-  - `Web.config.template` 整合 `customErrors mode="RemoteOnly" defaultRedirect="~/Error.aspx"`。
-
-#### 5. 外勤巡檢表單全面整合離線草稿守護與 CSRF 防護
-- **外勤頁面全面升級**：
-  - `BareGround/NewBare.aspx`、`Machine/NewMac.aspx`、`RoadBSC/NewBSC.aspx`、`RoadBreak/NewBreak.aspx`、`RoadClean/NewCleanChk.aspx` 全面整合 `fec-offline-sentinel.js` 弱網感知與本機自動暫存，並全面加入 Anti-CSRF 防偽機制，確保外勤表單操作穩定安全。
-
-#### 6. 正式機發布清單與設定範本最佳化
-- **發布清單升級 (`deploy_manifest.json`)**：
-  - 移除 `Global.asax`，將 `Error.aspx` 與 `Web.config.template` 納入正式機發布必備檔案。
-  - `Web.config.template` 完整配置 `AuthModule` 模組註冊、30 分鐘逾時設定、httpCookies 資安屬性與常用 MIME Types。
 
 ---
 
@@ -50,48 +62,6 @@
 
 ### 🚀 版本概述
 新北市固定溢散源管理平台（NTPC_FECM）發布 1.4.0 版本。本版本著重於「全域資安防護」、「政府資安規範相容性（30分鐘閒置自動登出）」、「外勤離線草稿守護（FEC Offline Sentinel）」及「原生 PowerShell 自動化安全發布工具」的全面實作與強化，打造高資安、高可靠性與抗斷網之外勤巡查作業環境。
-
-### ✨ 主要歷程與改動
-
-#### 1. 全域身分驗證過濾與上傳目錄防 WebShell 攻擊
-- **全域認證過濾模組 (`App_Code/Security/AuthFilterModule.cs`)**：
-  - 實作全域 HTTP 模組攔截未授權存取，涵蓋靜態資源與公開頁面白名單。
-  - 針對一般網頁請求：未登入或 Session 逾時強制安全導向 `Default.aspx?reason=timeout`。
-  - 針對 AJAX/API 呼叫：自動攔截並回傳標準 HTTP 401 JSON 回應（`{"success":false,"authenticated":false,"message":"連線逾時..."}`），杜絕 API 越權繞過風險。
-- **上傳目錄安全隔離 (`Upload/Web.config`)**：
-  - 在 `Upload/` 目錄部署專屬安全設定檔，將 IIS 處理常式存取原則限制為唯讀（`accessPolicy="Read"`）。
-  - 明確禁用 `.aspx`、`.ashx`、`.asmx`、`.cs`、`.config`、`.exe`、`.bat`、`.cmd` 等副檔名，並設定 `HttpForbiddenHandler`，徹底阻絕任何上傳 WebShell 與惡意腳本執行。
-
-#### 2. 全域例外攔截與資安日誌持久化 (`Global.asax`, `Global.asax.cs`)
-- **應用程式生命週期與錯誤攔截**：
-  - `Application_Start` 自動呼叫 `EnsurePasswordColumnCapacity()` 確保密碼欄位長度合規。
-  - `Application_Error` 全域攔截未預期異常，將時間、使用者帳號、來源 IP、HTTP 方法、請求網址及完整堆疊追蹤安全記錄至 `App_Data/Logs/Error_yyyyMMdd.log`。
-  - AJAX 請求自動屏蔽系統錯誤內部細節，統一回應安全的標準 500 JSON，符合 OWASP 資安防護標準。
-
-#### 3. 符合政府機關資安規範之 30 分鐘閒置自動登出與預警機制
-- **全域閒置偵測與預警彈窗 (`MainPage.Master`, `Logout.aspx`, `KeepAlive.ashx`)**：
-  - 符合政府機關資安規範：連續 30 分鐘無操作強制自動登出。
-  - 頂部導航列動態顯示操作有效倒數計時膠囊（`30:00`）。
-  - 進入最後 120 秒前跳出全螢幕模糊預警彈窗（`idle-modal-dialog`），支援大數字即時倒數與一鍵延長連線。
-  - 全載具操作即時重置：偵測到任何滑鼠移動、鍵盤按鍵、滾輪、點擊或觸控操作，即時無感重置倒數計時，每 5 分鐘自動向 `KeepAlive.ashx` 發送心跳展延 Session。
-  - 支援瀏覽器分頁能見度（`visibilitychange`）監聽，防止筆電休眠或背景分頁喚醒後繞過逾時檢驗。
-  - 登出時重定向至 `Default.aspx?reason=timeout`，登入頁友善提示逾時登出資訊。
-
-#### 4. 外勤現場巡查離線與本機草稿守護器 (`Scripts/fec-offline-sentinel.js`)
-- **弱網與斷網防呆保護**：
-  - 外勤現場弱網或斷網時即時感知，於頂部顯示醒目離線警報列。
-  - 每 15 秒自動將填報中的表單資料備份暫存至本機 localStorage。
-  - 斷線重連或重新整理頁面時，主動提供「一鍵還原上次填報草稿」功能。
-  - 表單成功送出後自動安全銷毀本機草稿。
-  - 全面應用於外勤表單頁面（`RoadClean/NewCleanChk.aspx`, `BareGround/NewBare.aspx` 等）。
-
-#### 5. 原生 PowerShell 自動化安全發布與防呆打包工具 (`Scripts/Deploy-Pack.ps1`)
-- **擺脫外部 Python 環境依賴**：
-  - 原生 PowerShell 實作一鍵安全發布工具，相容所有 Windows Server / IIS 環境。
-  - 整合 UTF-8 BOM 自動補齊、Vue `@` 語法合規前檢、Release DLL 建置、`App_Code` 防 CS0433 衝突覆蓋及發布包自檢。
-
-#### 6. 正式機發布清單升級 (`deploy_manifest.json`)
-- 納入 `KeepAlive.ashx`, `Global.asax`, `Upload/Web.config`, `Scripts/fec-offline-sentinel.js` 等核心防護檔案至發布清單。
 
 ---
 

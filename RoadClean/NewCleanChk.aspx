@@ -145,41 +145,38 @@
 
 
         .nav-btn {
-
-            background: rgba(255, 255, 255, 0.15);
-
-            border: none;
-
-            color: #ffffff;
-
-            font-size: 1.1rem;
-
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff !important;
+            font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
-
-            width: 38px;
-
-            height: 38px;
-
+            height: 36px;
+            min-width: 36px;
+            width: auto;
+            padding: 0 12px;
+            gap: 6px;
             border-radius: 8px;
-
-            display: flex;
-
+            display: inline-flex;
             align-items: center;
-
             justify-content: center;
-
-            transition: all 0.2s;
-
+            transition: all 0.2s ease;
+            text-decoration: none !important;
+            white-space: nowrap;
         }
 
-
-
         .nav-btn:hover {
-
             background-color: rgba(255, 255, 255, 0.3);
+            color: #ffffff !important;
+            text-decoration: none !important;
+            transform: translateY(-1px);
+        }
 
-            transform: scale(1.05);
-
+        @media (max-width: 575.98px) {
+            .nav-btn {
+                width: 36px;
+                padding: 0;
+            }
         }
 
 
@@ -1294,42 +1291,26 @@
 
         <!-- 頂部導覽列 -->
 
-        <header class="top-navbar">
-
+        <header class="top-navbar no-print">
             <div class="d-flex align-items-center">
-
-                <button type="button" class="nav-btn mr-2" v-on:click="goBack" title="返回巡檢列表">
-
-                    <i class="fas fa-arrow-left"></i>
-
-                </button>
-
-                <h1 class="brand-title">
-
-                    <i class="fas fa-route mr-2 text-warning"></i>
-
-                    <span class="d-none d-sm-inline">新北市固定溢散源管理平台 - </span>道路潔淨巡檢
-
-                </h1>
-
-            </div>
-
-            <div class="d-flex align-items-center" style="gap: 8px;">
-
-                <span class="badge badge-light d-none d-md-inline-block px-2 py-1 font-weight-bold">
-
-                    {{ mode === 'read' ? '檢視紀錄' : (mode === 'edit' ? '編輯巡檢' : '現場填報') }}
-
-                </span>
-
-                <a href="../MainPage.aspx" class="btn btn-sm btn-outline-light">
-
-                    <i class="fas fa-home mr-1"></i> 回主控台
-
+                <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline">回首頁</span>
                 </a>
-
+                <button type="button" class="nav-btn mr-2" v-on:click="goBack" title="返回巡檢清單">
+                    <i class="fas fa-arrow-left"></i>
+                    <span class="d-none d-sm-inline">返回清單</span>
+                </button>
+                <h1 class="brand-title">
+                    <i class="fas fa-route mr-2 text-white"></i>
+                    <span>道路潔淨現場查核</span>
+                </h1>
             </div>
-
+            <div class="d-flex align-items-center" style="gap: 8px;">
+                <span class="badge badge-light px-2 py-1 font-weight-bold">
+                    {{ mode === 'read' ? '檢視紀錄' : (mode === 'edit' ? '編輯巡檢' : '現場填報') }}
+                </span>
+            </div>
         </header>
 
 
@@ -2261,14 +2242,10 @@
                 if (this.mode === 'edit' || this.mode === 'read') {
 
                     if (this.chkId) {
-
                         await this.fetchRecord(this.chkId);
                     }
                 } else {
                     this.initDraftSentinel();
-
-                    }
-
                 }
 
             },

@@ -50,14 +50,38 @@
             position: sticky; top: 0; z-index: 1020;
         }
         .nav-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: none; color: #ffffff;
-            font-size: 1.1rem; cursor: pointer;
-            width: 38px; height: 38px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #ffffff !important;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            height: 36px;
+            min-width: 36px;
+            width: auto;
+            padding: 0 12px;
+            gap: 6px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            text-decoration: none !important;
+            white-space: nowrap !important;
+            box-sizing: border-box;
         }
-        .nav-btn:hover { background-color: rgba(255, 255, 255, 0.3); }
+        .nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.32);
+            color: #ffffff !important;
+            text-decoration: none !important;
+            transform: translateY(-1px);
+        }
+        @media (max-width: 575.98px) {
+            .nav-btn {
+                width: 36px;
+                padding: 0;
+            }
+        }
         .top-navbar .brand-title {
             font-size: 1.1rem; font-weight: 700; margin: 0;
             display: flex; align-items: center; gap: 8px;
@@ -305,19 +329,24 @@
 <body>
     <div id="dirtyApp" v-cloak>
         <!-- 頂部導覽列 -->
-        <header class="top-navbar">
+        <header class="top-navbar no-print">
             <div class="d-flex align-items-center">
-                <button type="button" class="nav-btn mr-3" v-on:click="goBack" title="返回上一頁">
+                <a href="../MainPage.aspx?sub=menu4" class="nav-btn mr-2" title="返回主選單">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline">回首頁</span>
+                </a>
+                <button type="button" class="nav-btn mr-2" v-on:click="goBack" title="返回髒污管理清單">
                     <i class="fas fa-arrow-left"></i>
+                    <span class="d-none d-sm-inline">返回清單</span>
                 </button>
                 <h1 class="brand-title">
-                    <i class="fas fa-exclamation-triangle text-warning"></i>
-                    <span>道路髒污通報單</span>
+                    <i class="fas fa-trash-alt text-white mr-1"></i>
+                    <span>道路髒污現場通報</span>
                 </h1>
             </div>
 
-            <div class="d-flex align-items-center">
-                <span class="badge badge-light px-3 py-2 mr-2 font-weight-bold" style="font-size: 13px;">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge badge-light px-2 py-1 mr-2 font-weight-bold" style="font-size: 13px;">
                     <i class="fas" :class="modeBadgeIcon"></i> {{ modeText }}
                 </span>
                 <button v-if="mode !== 'read'" type="button" class="btn btn-warning btn-sm font-weight-bold px-3 d-none d-md-inline-block" 

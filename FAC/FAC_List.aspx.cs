@@ -145,14 +145,7 @@ namespace NTPC_FEC.FAC
                     }));
                 }
 
-                try
-                {
-                    Response.End();
-                }
-                catch (System.Threading.ThreadAbortException)
-                {
-                    return;
-                }
+                AjaxResponseHelper.CompleteRequest(Response, Context);
                 return;
             }
         }
@@ -719,7 +712,7 @@ namespace NTPC_FEC.FAC
                     item["File_Type"] = r.Table.Columns.Contains("File_Type") ? r["File_Type"].ToString() : "";
                     item["UploadDate"] = (r["UploadDate"] != DBNull.Value) ? Convert.ToDateTime(r["UploadDate"]).ToString("yyyy-MM-dd HH:mm") : "";
                     item["UploadUserName"] = r["UploadUserName"].ToString();
-                    item["FileUrl"] = string.Format("../Upload/FAC/{0}/{1}", cNo, fName);
+                    item["FileUrl"] = PathHelper.ResolveUrl(string.Format("~/Upload/FAC/{0}/{1}", cNo, fName));
                     fileList.Add(item);
                 }
             }
@@ -1530,24 +1523,8 @@ namespace NTPC_FEC.FAC
                 sheet.SetColumnWidth(14, 24 * 256);
                 sheet.SetColumnWidth(15, 28 * 256);
 
-                Response.Clear();
-                Response.ContentType = "application/vnd.ms-excel";
                 string filename = "固定源場所清單_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".xls";
-                Response.AddHeader("Content-Disposition", "attachment;filename=" + HttpUtility.UrlEncode(filename, Encoding.UTF8));
-
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    workbook.Write(ms);
-                    Response.BinaryWrite(ms.ToArray());
-                }
-
-                try
-                {
-                    Response.End();
-                }
-                catch (System.Threading.ThreadAbortException)
-                {
-                }
+                ExcelExportHelper.ExportToResponse(workbook, filename, Response);
             }
             catch (Exception ex)
             {
@@ -1561,3 +1538,4 @@ namespace NTPC_FEC.FAC
 
     }
 }
+

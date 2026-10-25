@@ -301,7 +301,7 @@ namespace NTPC_FEC.RoadBreak
         private List<PhotoComparisonItem> LoadPhotoComparisonList(string breakId)
         {
             List<PhotoComparisonItem> list = new List<PhotoComparisonItem>();
-            string picDir = Server.MapPath("~/Upload/RoadBreakPIC/" + breakId);
+            string picDir = PathHelper.FindDirectory("Upload/RoadBreakPIC/" + breakId);
 
             if (!Directory.Exists(picDir))
             {
@@ -367,7 +367,7 @@ namespace NTPC_FEC.RoadBreak
                 item.Title = "查核點位照片 " + index;
                 item.BeforeTitle = "現場佐證照片 " + index;
                 item.BeforeFileName = bf.Name;
-                item.BeforeUrl = "../Upload/RoadBreakPIC/" + breakId + "/" + bf.Name;
+                item.BeforeUrl = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}", breakId, bf.Name));
                 item.BeforeExists = true;
                 item.BeforeSize = bf.Length;
                 item.BeforeTime = bf.LastWriteTime.ToString("yyyy-MM-dd HH:mm");
@@ -377,7 +377,7 @@ namespace NTPC_FEC.RoadBreak
                     matchedAfterFiles.Add(matchAfter.FullName);
                     item.AfterTitle = "改善後照片 " + index;
                     item.AfterFileName = matchAfter.Name;
-                    item.AfterUrl = "../Upload/RoadBreakPIC/" + breakId + "/" + matchAfter.Name;
+                    item.AfterUrl = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}", breakId, matchAfter.Name));
                     item.AfterExists = true;
                     item.AfterSize = matchAfter.Length;
                     item.AfterTime = matchAfter.LastWriteTime.ToString("yyyy-MM-dd HH:mm");
@@ -413,7 +413,7 @@ namespace NTPC_FEC.RoadBreak
 
                     extraItem.AfterTitle = "改善後照片 " + index;
                     extraItem.AfterFileName = af.Name;
-                    extraItem.AfterUrl = "../Upload/RoadBreakPIC/" + breakId + "/" + af.Name;
+                    extraItem.AfterUrl = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}", breakId, af.Name));
                     extraItem.AfterExists = true;
                     extraItem.AfterSize = af.Length;
                     extraItem.AfterTime = af.LastWriteTime.ToString("yyyy-MM-dd HH:mm");
@@ -466,3 +466,5 @@ namespace NTPC_FEC.RoadBreak
         }
     }
 }
+
+

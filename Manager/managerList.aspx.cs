@@ -67,7 +67,7 @@ namespace NTPC_FEC.Manager
 
                 try
                 {
-                    Response.End();
+                    AjaxResponseHelper.CompleteRequest(Response, Context);
                 }
                 catch (System.Threading.ThreadAbortException)
                 {
@@ -1158,7 +1158,7 @@ namespace NTPC_FEC.Manager
 
                 try
                 {
-                    Response.End();
+                    AjaxResponseHelper.CompleteRequest(Response, Context);
                 }
                 catch (System.Threading.ThreadAbortException)
                 {

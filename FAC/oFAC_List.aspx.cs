@@ -443,9 +443,9 @@ namespace NTPC_FEC.FAC
                     }
                 }
                 item["LicFileName"] = licFile;
-                item["LicFileUrl"] = !string.IsNullOrEmpty(licFile) ? ("../Upload/LicDoc/" + licFile) : "";
+                item["LicFileUrl"] = !string.IsNullOrEmpty(licFile) ? PathHelper.ResolveUrl("~/Upload/LicDoc/" + licFile) : "";
                 item["UnlockFileName"] = unlockFile;
-                item["UnlockFileUrl"] = !string.IsNullOrEmpty(unlockFile) ? ("../Upload/LicDoc/" + unlockFile) : "";
+                item["UnlockFileUrl"] = !string.IsNullOrEmpty(unlockFile) ? PathHelper.ResolveUrl("~/Upload/LicDoc/" + unlockFile) : "";
 
                 items.Add(item);
             }
@@ -722,7 +722,7 @@ namespace NTPC_FEC.FAC
                 row["UploadUserName"] = r["UploadUserName"] != DBNull.Value ? r["UploadUserName"].ToString() : "";
                 row["UploadFileName"] = fileName;
                 row["IsDeleted"] = fileName.StartsWith("刪");
-                row["FileUrl"] = fileName.StartsWith("刪") ? ("../Upload/LicDoc/History/" + fileName) : ("../Upload/LicDoc/" + fileName);
+                row["FileUrl"] = fileName.StartsWith("刪") ? PathHelper.ResolveUrl("~/Upload/LicDoc/History/" + fileName) : PathHelper.ResolveUrl("~/Upload/LicDoc/" + fileName);
                 list.Add(row);
             }
 
@@ -823,7 +823,7 @@ namespace NTPC_FEC.FAC
                 Success = true,
                 Message = "許可證檔案上傳成功！",
                 FileName = newFileName,
-                FileUrl = "../Upload/LicDoc/" + newFileName
+                FileUrl = PathHelper.ResolveUrl("~/Upload/LicDoc/" + newFileName)
             }));
         }
 
@@ -881,7 +881,7 @@ namespace NTPC_FEC.FAC
                 UnlockDocDate = docDate,
                 UnlockMemo = memo,
                 UnlockFileName = unlockFile,
-                UnlockFileUrl = !string.IsNullOrEmpty(unlockFile) ? ("../Upload/LicDoc/" + unlockFile) : ""
+                UnlockFileUrl = !string.IsNullOrEmpty(unlockFile) ? PathHelper.ResolveUrl("~/Upload/LicDoc/" + unlockFile) : ""
             }));
         }
 
@@ -1170,3 +1170,4 @@ namespace NTPC_FEC.FAC
         }
     }
 }
+

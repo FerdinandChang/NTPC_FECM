@@ -1564,7 +1564,8 @@
     <!-- 本地化核心腳本庫 (無外部 CDN) -->
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
-    <script src="../Scripts/fec-offline-sentinel.js?v=20261025_02"></script>
+    <script src="../Scripts/fec-offline-sentinel.js?v=20261026_02"></script>
+    <script src="../Scripts/fec-image-compressor.js?v=20261026_02"></script>
 
     <script>
         const { createApp } = Vue;
@@ -1791,43 +1792,55 @@
             methods: {
                 // 初始化離線草稿守護器
                 initDraftSentinel() {
-                    if (typeof FecOfflineSentinel === 'undefined') return;
-                    this.draftSentinel = new FecOfflineSentinel({
-                        storageKey: 'FEC_DRAFT_NEWMAC',
-                        bannerPosition: 'top',
-                        onSave: () => {
-                            if (this.mode !== 'new') return null;
-                            return {
-                                mac: this.mac,
-                                facInfo: this.facInfo,
-                                facTypeOtherText: this.facTypeOtherText,
-                                macTypeOtherText: this.macTypeOtherText,
-                                brandOtherText: this.brandOtherText,
-                                photos: this.photos
-                            };
-                        },
-                        onRestore: (saved) => {
-                            if (saved && saved.mac) {
-                                Object.assign(this.mac, saved.mac);
+                    try {
+                        if (typeof FecOfflineSentinel === 'undefined') return;
+                        var opts = {
+                            storageKey: 'FEC_DRAFT_NEWMAC',
+                            bannerPosition: 'top',
+                            getData: () => {
+                                if (this.mode !== 'new') return null;
+                                return {
+                                    mac: this.mac,
+                                    facInfo: this.facInfo,
+                                    facTypeOtherText: this.facTypeOtherText,
+                                    macTypeOtherText: this.macTypeOtherText,
+                                    brandOtherText: this.brandOtherText,
+                                    photos: this.photos
+                                };
+                            },
+                            restoreData: (saved) => {
+                                if (saved && saved.mac) {
+                                    Object.assign(this.mac, saved.mac);
+                                }
+                                if (saved && saved.facInfo) {
+                                    Object.assign(this.facInfo, saved.facInfo);
+                                }
+                                if (saved && saved.facTypeOtherText) {
+                                    this.facTypeOtherText = saved.facTypeOtherText;
+                                }
+                                if (saved && saved.macTypeOtherText) {
+                                    this.macTypeOtherText = saved.macTypeOtherText;
+                                }
+                                if (saved && saved.brandOtherText) {
+                                    this.brandOtherText = saved.brandOtherText;
+                                }
+                                if (saved && saved.photos) {
+                                    Object.assign(this.photos, saved.photos);
+                                }
+                                this.showAlert('已自動還原上次儲存的施工機具草稿內容！', 'success');
                             }
-                            if (saved && saved.facInfo) {
-                                Object.assign(this.facInfo, saved.facInfo);
-                            }
-                            if (saved && saved.facTypeOtherText) {
-                                this.facTypeOtherText = saved.facTypeOtherText;
-                            }
-                            if (saved && saved.macTypeOtherText) {
-                                this.macTypeOtherText = saved.macTypeOtherText;
-                            }
-                            if (saved && saved.brandOtherText) {
-                                this.brandOtherText = saved.brandOtherText;
-                            }
-                            if (saved && saved.photos) {
-                                Object.assign(this.photos, saved.photos);
-                            }
-                            this.showAlert('已自動還原上次儲存的施工機具草稿內容！', 'success');
+                        };
+                        if (typeof FecOfflineSentinel.create === 'function') {
+                            this.draftSentinel = FecOfflineSentinel.create(opts);
+                        } else if (typeof FecOfflineSentinel === 'function') {
+                            this.draftSentinel = new FecOfflineSentinel(opts);
                         }
-                    });
+                        if (this.draftSentinel && typeof this.draftSentinel.checkAndPromptRestore === 'function') {
+                            this.draftSentinel.checkAndPromptRestore();
+                        }
+                    } catch (e) {
+                        console.warn('離線草稿守護器載入跳過:', e);
+                    }
                 },
 
                 toggleDropdown(name) {
@@ -1972,6 +1985,23 @@
                     const file = event.target.files[0];
                     if (!file) return;
 
+                    if (window.FecImageCompressor) {
+                        window.FecImageCompressor.compress(file, { maxDimension: 1600, quality: 0.82 }, (err, res) => {
+                            if (!err && res && res.base64) {
+                                this.photos[cat] = {
+                                    Exists: true,
+                                    Base64: res.base64,
+                                    Url: res.base64
+                                };
+                            } else {
+                                this.fallbackReadFile(file, cat);
+                            }
+                        });
+                    } else {
+                        this.fallbackReadFile(file, cat);
+                    }
+                },
+                fallbackReadFile(file, cat) {
                     const reader = new FileReader();
                     reader.onload = e => {
                         this.photos[cat] = {

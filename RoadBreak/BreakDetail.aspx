@@ -654,12 +654,16 @@
             <!-- 1. 頂部導覽列 -->
             <header class="top-navbar no-print">
                 <div class="brand-title">
+                    <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                        <i class="fas fa-home"></i>
+                        <span class="d-none d-sm-inline">回首頁</span>
+                    </a>
                     <button type="button" class="nav-btn mr-2" v-on:click="goBack" title="返回清單">
                         <i class="fas fa-arrow-left"></i>
                         <span class="d-none d-sm-inline">返回清單</span>
                     </button>
-                    <i class="fas fa-file-alt text-white"></i>
-                    <span>道路污染通報案件檢視</span>
+                    <i class="fas fa-road text-white"></i>
+                    <span>道路破損通報案件檢視</span>
                     <span v-if="caseData.Show_ID" class="badge badge-light text-dark font-weight-bold ml-2" style="font-size: 0.85rem;">
                         {{ caseData.Show_ID }}
                     </span>

@@ -933,7 +933,7 @@ namespace NTPC_FEC.RoadClean
         {
             var list = new List<object>();
             string relDir = "/Upload/RoadDirtyPIC/" + dirtyId + "/";
-            string physDir = Server.MapPath("~" + relDir);
+            string physDir = PathHelper.FindDirectory(relDir);
 
             if (!Directory.Exists(physDir))
             {
@@ -952,7 +952,7 @@ namespace NTPC_FEC.RoadClean
                     list.Add(new
                     {
                         FileName = f.Name,
-                        Url = relDir + f.Name,
+                        Url = PathHelper.ResolveUrl(relDir + f.Name),
                         Size = f.Length,
                         LastModified = f.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
                     });
@@ -989,7 +989,7 @@ namespace NTPC_FEC.RoadClean
 
             // 清理硬碟目錄
             string relDir = "/Upload/RoadDirtyPIC/" + req.DirtyId + "/";
-            string physDir = Server.MapPath("~" + relDir);
+            string physDir = PathHelper.FindDirectory(relDir);
             if (Directory.Exists(physDir))
             {
                 try { Directory.Delete(physDir, true); } catch { }
@@ -999,3 +999,5 @@ namespace NTPC_FEC.RoadClean
         }
     }
 }
+
+

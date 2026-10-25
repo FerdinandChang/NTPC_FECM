@@ -289,7 +289,7 @@ namespace NTPC_FEC.RoadBreak
 
             // 讀取既有佐證照片
             var photos = new List<object>();
-            string picDir = Server.MapPath("~/Upload/RoadBreakPIC/" + breakId);
+            string picDir = PathHelper.FindDirectory("Upload/RoadBreakPIC/" + breakId);
             if (Directory.Exists(picDir))
             {
                 DirectoryInfo dir = new DirectoryInfo(picDir);
@@ -302,7 +302,7 @@ namespace NTPC_FEC.RoadBreak
                     {
                         Index = idx,
                         FileName = f.Name,
-                        Url = "../Upload/RoadBreakPIC/" + breakId + "/" + f.Name,
+                        Url = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}", breakId, f.Name)),
                         Size = f.Length
                     });
                     idx++;
@@ -635,3 +635,5 @@ namespace NTPC_FEC.RoadBreak
         }
     }
 }
+
+

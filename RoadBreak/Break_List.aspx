@@ -551,13 +551,16 @@
                 <!-- 頂部品牌導覽列 (全站標準左側導航、右側主操作) -->
         <header class="top-navbar">
             <div class="d-flex align-items-center">
-                <a href="../MainPage.aspx?sub=menu4" class="nav-btn mr-2" title="返回主選單">
+                <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
                     <i class="fas fa-home"></i>
                     <span class="d-none d-sm-inline">回首頁</span>
                 </a>
                 <a href="Break_List.aspx" class="navbar-brand-title">
                     <i class="fas fa-road text-white"></i>
                     <span>道路破損巡查與通報管理</span>
+                    <span class="badge badge-light text-dark font-weight-bold ml-1">
+                        {{ counts.Total || 0 }} 筆
+                    </span>
                 </a>
             </div>
             <div class="d-flex align-items-center gap-2">

@@ -529,22 +529,24 @@
 <body>
     <div id="bscApp" v-cloak>
         <!-- 頂部導覽列 -->
-        <header class="top-navbar">
-            <div class="brand-title">
-                <i class="fas fa-seedling text-warning"></i>
-                <span>人行道與交通島裸露覆土現場通報</span>
-                <span class="mode-badge" :class="isEditMode ? 'badge-edit' : 'badge-new'">
-                    {{ isEditMode ? '編輯案件' : '現場通報' }}
-                </span>
+        <header class="top-navbar no-print">
+            <div class="d-flex align-items-center">
+                <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline">回首頁</span>
+                </a>
+                <h1 class="brand-title">
+                    <i class="fas fa-seedling text-white mr-1"></i>
+                    <span>人行道與交通島裸露覆土現場通報</span>
+                    <span class="mode-badge ml-2" :class="isEditMode ? 'badge-edit' : 'badge-new'">
+                        {{ isEditMode ? '編輯案件' : '現場通報' }}
+                    </span>
+                </h1>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <a href="BSC_List.aspx?mode=BSCEdit" class="nav-btn">
-                    <i class="fas fa-list-ul"></i>
+                <a href="BSC_List.aspx" class="btn btn-outline-light btn-sm font-weight-bold shadow-sm" style="border-radius: 8px;">
+                    <i class="fas fa-list-ul mr-1"></i>
                     <span class="d-none d-sm-inline">通報清單</span>
-                </a>
-                <a href="../MainPage.aspx?sub=menu4" class="nav-btn">
-                    <i class="fas fa-arrow-left"></i>
-                    <span class="d-none d-sm-inline">回首頁</span>
                 </a>
             </div>
         </header>
