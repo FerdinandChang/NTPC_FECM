@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 新北市固定溢散源管理平台 (NTPC_FEC)
  * 外勤現場巡查離線與本機草稿守護器 (FEC Offline Sentinel)
  * 
@@ -42,6 +42,29 @@
             window.addEventListener('online', updateNetworkStatus);
             window.addEventListener('offline', updateNetworkStatus);
 
+            function stripHeavyData(obj) {
+                if (!obj || typeof obj !== 'object') return obj;
+                if (Array.isArray(obj)) {
+                    return obj.map(function (item) {
+                        return stripHeavyData(item);
+                    });
+                }
+                var clean = {};
+                for (var prop in obj) {
+                    if (Object.prototype.hasOwnProperty.call(obj, prop)) {
+                        var val = obj[prop];
+                        if (typeof val === 'string' && val.length > 512 && (val.indexOf('data:image') === 0 || prop.toLowerCase().indexOf('base64') >= 0)) {
+                            clean[prop] = null;
+                        } else if (typeof val === 'object') {
+                            clean[prop] = stripHeavyData(val);
+                        } else {
+                            clean[prop] = val;
+                        }
+                    }
+                }
+                return clean;
+            }
+
             function saveDraft() {
                 if (typeof getData !== 'function') return;
                 try {
@@ -49,10 +72,24 @@
                     if (!data) return;
                     var payload = {
                         savedAt: new Date().toISOString(),
+                        degraded: false,
                         data: data
                     };
                     localStorage.setItem(key, JSON.stringify(payload));
                 } catch (e) {
+                    if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
+                        try {
+                            var stripped = stripHeavyData(getData());
+                            var fallbackPayload = {
+                                savedAt: new Date().toISOString(),
+                                degraded: true,
+                                data: stripped
+                            };
+                            localStorage.setItem(key, JSON.stringify(fallbackPayload));
+                            console.warn('[FEC Sentinel] 本機草稿因圖片體積超出配額已啟用降級保存 (核心表單數值已完整保留)');
+                        } catch (err2) {
+                        }
+                    }
                 }
             }
 
@@ -84,6 +121,7 @@
                 if (!draft) return;
 
                 var timeStr = new Date(draft.savedAt).toLocaleString();
+                var degradedTip = draft.degraded ? ' <span class="badge badge-secondary ml-1" style="font-size:0.75rem;">僅核心表單 (照片容量超出已略過)</span>' : '';
                 var alertDiv = document.createElement('div');
                 alertDiv.id = 'fecDraftRestoreAlert';
                 alertDiv.className = 'alert alert-warning shadow-sm border-warning d-flex align-items-center justify-content-between flex-wrap p-2 px-3 mb-3';
@@ -92,7 +130,7 @@
                     '<div class="d-flex align-items-center my-1">' +
                         '<i class="fas fa-history text-warning mr-2" style="font-size:1.25rem;"></i>' +
                         '<div>' +
-                            '<strong>發現未送出的現場暫存草稿！</strong>' +
+                            '<strong>發現未送出的現場暫存草稿！</strong>' + degradedTip +
                             '<div class="small text-muted">暫存時間：' + timeStr + '</div>' +
                         '</div>' +
                     '</div>' +

@@ -2072,7 +2072,7 @@
     <!-- 引用本地 Leaflet.js (完全免外連) -->
 
     <script src="../Scripts/leaflet/leaflet.js"></script>
-    <script src="../Scripts/fec-offline-sentinel.js"></script>
+    <script src="../Scripts/fec-offline-sentinel.js?v=20261025_02"></script>
 
 
 

@@ -4,6 +4,48 @@
 
 ---
 
+## [1.5.0] - 2026-10-25
+
+### 🚀 版本概述
+新北市固定溢散源管理平台（NTPC_FECM）發布 1.5.0 版本。本版本實現了核心安全架構的模組化解耦與深度縱深防禦，全面以獨立 `AuthModule` 接管認證與授權以杜絕 IIS 子站台衝突；實作雙重 Anti-CSRF 防護、Magic Bytes 檔案上傳簽章檢核、目錄穿越防禦、特權管理操作審計日誌（Audit Trail），並推出標準化安全錯誤頁面（`Error.aspx`）與全外勤表單斷線守護機制。
+
+### ✨ 主要歷程與改動
+
+#### 1. 模組化全域認證與雙重防禦架構 (`AuthModule.cs`, `AuthRuleService.cs`)
+- **解耦 Global.asax，模組化接管全域生命週期**：
+  - 獨立 `IHttpModule`（`AuthModule.cs`）完整接管身分驗證、RBAC 權限檢核與錯誤處理，編譯入 DLL，解除對 `Global.asax` 的依賴，徹底杜絕 IIS 虛擬子應用程式環境下的動態編譯與型別衝突。
+  - 動態於 PreSendRequestHeaders 注入安全標頭（`X-Content-Type-Options: nosniff`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`），徹底避免 IIS 500.19 重複標頭報錯。
+- **雙重 Anti-CSRF 防禦機制**：
+  - 核發 `XSRF-TOKEN` Cookie，自動校驗 Axios 附加之 `X-XSRF-TOKEN` Header 與表單 `__RequestVerificationToken`，有效防範跨站請求偽造。
+- **精準 RBAC 角色與模組存取矩陣 (`AuthRuleService.cs`)**：
+  - 實作完整許可證位元遮罩（LIC / LIC2）檢核，涵蓋案件初/複/三審、施工機具、裸露地、道路巡檢、固定源等全部模組存取邊界。
+
+#### 2. 檔案處理與路徑安全防禦體系 (`FileSecurityHelper.cs`)
+- **檔名消毒與目錄穿越防禦 (Path Traversal 防禦)**：
+  - 嚴格過濾檔名中的非法字元、`../`、`..\` 等跳脫符號，並透過 `IsSafePath` 校驗檔案絕對路徑，確保檔案嚴格限制於指定安全目錄之內。
+- **檔案頭 Magic Bytes 真實格式驗證**：
+  - 支援 PDF、PNG、JPG、GIF、ZIP 等常見格式的位元簽章（Magic Bytes）深度檢核，徹底杜絕竄改副檔名的偽裝惡意檔案上傳。
+
+#### 3. 系統特權管理與重要操作稽核日誌 (`AuditLogger.cs`)
+- **操作審計追蹤 (Audit Trail)**：
+  - 建立特權管理日誌系統，凡帳號開通/停用、權限角色變更、重設臨時密碼等關鍵操作，自動記錄操作者、來源 IP、時間戳記與操作詳情至 `App_Data/Logs/audit_yyyyMM.log`，符合公務機關資安稽核要求。
+
+#### 4. 全站標準化自訂錯誤提示頁面 (`Error.aspx`)
+- **安全錯誤處理與追蹤**：
+  - 建立標準化錯誤引導頁面，隱藏詳細伺服器錯誤堆疊與敏感資訊，並自動配發 8 碼錯誤追蹤代碼（TraceId），方便使用者向管理員回報並快速對應伺服器端日誌。
+  - `Web.config.template` 整合 `customErrors mode="RemoteOnly" defaultRedirect="~/Error.aspx"`。
+
+#### 5. 外勤巡檢表單全面整合離線草稿守護與 CSRF 防護
+- **外勤頁面全面升級**：
+  - `BareGround/NewBare.aspx`、`Machine/NewMac.aspx`、`RoadBSC/NewBSC.aspx`、`RoadBreak/NewBreak.aspx`、`RoadClean/NewCleanChk.aspx` 全面整合 `fec-offline-sentinel.js` 弱網感知與本機自動暫存，並全面加入 Anti-CSRF 防偽機制，確保外勤表單操作穩定安全。
+
+#### 6. 正式機發布清單與設定範本最佳化
+- **發布清單升級 (`deploy_manifest.json`)**：
+  - 移除 `Global.asax`，將 `Error.aspx` 與 `Web.config.template` 納入正式機發布必備檔案。
+  - `Web.config.template` 完整配置 `AuthModule` 模組註冊、30 分鐘逾時設定、httpCookies 資安屬性與常用 MIME Types。
+
+---
+
 ## [1.4.0] - 2026-10-24
 
 ### 🚀 版本概述
@@ -57,50 +99,6 @@
 
 ### 🚀 版本概述
 新北市固定溢散源管理平台（NTPC_FECM）發布 1.3.0 版本。本版本隆重推出新北市固定源 LINE 官方帳號與智慧推播通報模組（`LINE/Line.aspx`）、上線出入口洗車台設備完整清單管制模組（`Wash/WashList.aspx`）、實作高安全性管理員臨時密碼重設與通知信寄送服務，並針對空品惡化通報與全站各業務清單執行深度自適應 RWD 與行動端卡片化優化。
-
-### ✨ 主要歷程與改動
-
-#### 1. LINE 官方帳號智慧通報與綁定模組 (`LINE/`)
-- **LINE 官方帳號整合服務 (`LINE/Line.aspx`, `Line.aspx.cs`)**：
-  - 整合新北市環保局固定溢散源 LINE 官方帳號，提供現場巡查、空品惡化預警與業者端即時雙向推播。
-  - 實作智慧帳號綁定流程，支援動態產生專屬綁定 QR Code（引入本地庫 `Scripts/qrcode.min.js` 及各解析度圖標資產）。
-  - 提供圖文選單快捷入口說明與各類環保法規/防制措施指引。
-
-#### 2. 洗車設備名冊與運作管理模組 (`Wash/`)
-- **洗車設備名冊與管制清單 (`Wash/WashList.aspx`, `WashList.aspx.cs`)**：
-  - 完整收錄新北市營建工地、砂石場、預拌混凝土廠等車輛出入口洗車設備基本資料與設施型式。
-  - 整合洗車設施運作狀態、定期自主檢驗履歷與歷史稽查紀錄。
-  - 納入 `deploy_manifest.json` 正式機發布清單。
-
-#### 3. 帳號安全與臨時密碼發行郵件服務
-- **高強度臨時密碼重設機制 (`App_Code/Services/AuthService.cs`)**：
-  - 實作安全 RNG 加密亂數與 Fisher-Yates 演算法生成 10 碼高強度臨時密碼。
-  - 實作管理員一鍵重設密碼並經由 `MailService` 發送密碼通知信至該帳號信箱。
-  - 舊密碼自動封存至 `UserPwdHistory` 歷史記錄表，並將 `LastPwdChangeDate` 設為 NULL，強制使用者於首次登入時變更密碼。
-- **管理端帳號介面強化 (`Modules/Manager/AccountManagement.aspx`)**：
-  - 介面整合「重設臨時密碼」彈跳視窗（Modal），直覺展示收件信箱並回傳即時發送狀態。
-
-#### 4. 空品惡化通報與自主申報全載具 RWD 重構
-- **空品惡化預警應變申報 (`OwnReport/Report_AirQuality.aspx`, `AirQuality_List.aspx`)**：
-  - 全面優化通報填報表單與通報清單，徹底解決手機端破版與換行問題。
-  - 強化自主檢查照片上傳即時預覽與縮圖點擊放大功能。
-- **自主防制措施照片申報 (`OwnReport/PIC_Report.aspx`, `PIC_Report_List.aspx`)**：
-  - 採用卡片化流動式版面，提升現場外勤與工地人員操作流暢度。
-
-#### 5. 全站列表與明細深度行動端優化 (消除橫向捲動)
-- **行動端卡片式清單全面落地**：
-  - 在 `FAC/Charts.aspx`、`FAC/FAC_List.aspx`、`Machine/NewMac.aspx` 等頁面實作小螢幕專屬數據卡片，外勤人員於手機端無需橫向捲動即可瀏覽完整欄位。
-  - 優化工具列按鈕與搜尋輸入框水平排列防折行排版（`flex-wrap: nowrap`）。
-  - 修復行動端頂部導覽列過長文字溢出問題，自適應縮小字體與標籤。
-
-#### 6. NDVI 植被監測背景排程增強 (`NdviJob/`)
-- **排程自動化批次腳本 (`NdviJob/run_monthly.bat`)**：
-  - 建立 Windows 工作排程器批次腳本，確保每月 Sentinel-2 圖磚產製自動無痛運作。
-
-#### 7. 打包清單與安全規範完善
-- **打包配置更新 (`deploy_manifest.json`, `Scripts/deploy_pack.py`)**：
-  - 修正中文字元編碼，將 `LINE/Line.aspx`、`Wash/WashList.aspx` 及 LINE 相關圖示完整列入打包必備檔案。
-  - `.gitignore` 補充排除 `Microsoft/` 暫存目錄。
 
 ---
 

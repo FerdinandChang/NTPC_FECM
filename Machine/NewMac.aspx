@@ -1564,6 +1564,7 @@
     <!-- 本地化核心腳本庫 (無外部 CDN) -->
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
+    <script src="../Scripts/fec-offline-sentinel.js?v=20261025_02"></script>
 
     <script>
         const { createApp } = Vue;
@@ -1571,6 +1572,7 @@
         createApp({
             data() {
                 return {
+                    draftSentinel: null,
                     mode: 'new',
                     facId: '',
                     macId: '',
@@ -1771,6 +1773,7 @@
                 this.facId = params.get('id') || '';
                 this.macId = params.get('id2') || '';
                 this.loadInitData();
+                this.initDraftSentinel();
 
                 // 點擊空白處自動收起已展開的下拉選單
                 this.onDocumentClick = (e) => {
@@ -1786,6 +1789,47 @@
                 }
             },
             methods: {
+                // 初始化離線草稿守護器
+                initDraftSentinel() {
+                    if (typeof FecOfflineSentinel === 'undefined') return;
+                    this.draftSentinel = new FecOfflineSentinel({
+                        storageKey: 'FEC_DRAFT_NEWMAC',
+                        bannerPosition: 'top',
+                        onSave: () => {
+                            if (this.mode !== 'new') return null;
+                            return {
+                                mac: this.mac,
+                                facInfo: this.facInfo,
+                                facTypeOtherText: this.facTypeOtherText,
+                                macTypeOtherText: this.macTypeOtherText,
+                                brandOtherText: this.brandOtherText,
+                                photos: this.photos
+                            };
+                        },
+                        onRestore: (saved) => {
+                            if (saved && saved.mac) {
+                                Object.assign(this.mac, saved.mac);
+                            }
+                            if (saved && saved.facInfo) {
+                                Object.assign(this.facInfo, saved.facInfo);
+                            }
+                            if (saved && saved.facTypeOtherText) {
+                                this.facTypeOtherText = saved.facTypeOtherText;
+                            }
+                            if (saved && saved.macTypeOtherText) {
+                                this.macTypeOtherText = saved.macTypeOtherText;
+                            }
+                            if (saved && saved.brandOtherText) {
+                                this.brandOtherText = saved.brandOtherText;
+                            }
+                            if (saved && saved.photos) {
+                                Object.assign(this.photos, saved.photos);
+                            }
+                            this.showAlert('已自動還原上次儲存的施工機具草稿內容！', 'success');
+                        }
+                    });
+                },
+
                 toggleDropdown(name) {
                     const currentState = this.dropdowns[name].open;
                     this.closeAllDropdowns();
@@ -1960,6 +2004,10 @@
 
                 // 儲存資料
                 submitData() {
+                    if (!navigator.onLine) {
+                        alert('⚠️ 現場網路已離線！系統已自動保存本機最新草稿，請待恢復連線後再按送出。');
+                        return;
+                    }
                     if (!this.mac.Check_date) {
                         this.showAlert('請選擇調查日期！', 'warning');
                         return;
@@ -2016,6 +2064,9 @@
                         .then(res => {
                             this.isSaving = false;
                             if (res.data && res.data.Success) {
+                                if (this.draftSentinel) {
+                                    this.draftSentinel.clearDraft();
+                                }
                                 alert(res.data.Message || '儲存成功！');
                                 window.location.href = 'macList.aspx?mode=reject';
                             } else {

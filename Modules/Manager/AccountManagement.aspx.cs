@@ -7,6 +7,7 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using NTPC_FEC.Helpers;
 using NTPC_FEC.Models;
+using NTPC_FEC.Security;
 using NTPC_FEC.Services;
 
 namespace NTPC_FEC.Modules.Manager
@@ -347,6 +348,7 @@ namespace NTPC_FEC.Modules.Manager
                     {
                         AuthService.ClearLoginFailure(targetUserId);
                     }
+                    AuditLogger.Log("USER_STATE_CHANGE", targetUserId, string.Format("狀態變更為：{0}", (newState == "OK" ? "正常啟用" : "停用")));
                     ShowAlert(string.Format("帳號 [{0}] 狀態已更新為：{1}", targetUserId, (newState == "OK" ? "正常啟用" : "停用")), "alert-success");
                     LoadUsers();
                 }
@@ -399,6 +401,7 @@ namespace NTPC_FEC.Modules.Manager
             OperationResult res = AuthService.ResetUserTempPasswordAndSendEmail(targetUserId, targetEmail);
             if (res.Success)
             {
+                AuditLogger.Log("USER_PWD_RESET", targetUserId, string.Format("重設臨時密碼並發信至：{0}", targetEmail));
                 pnlResetPwdModal.Visible = false;
                 ShowAlert(res.Message, "alert-success");
                 LoadUsers();
@@ -562,6 +565,7 @@ namespace NTPC_FEC.Modules.Manager
 
                 pnlSetLicModal.Visible = false;
                 string unitLabel = string.IsNullOrEmpty(newPUnit) ? "未指定" : newPUnit;
+                AuditLogger.Log("USER_PERM_CHANGE", editUserId, string.Format("單位：{0}, LIC：{1}, LIC2：{2}", unitLabel, newLic, newLic2));
                 ShowAlert(string.Format("帳號 [{0}] 的所屬單位（{1}）、業務權限與轄區配置已儲存成功！", editUserId, unitLabel), "alert-success");
                 LoadPUnitTabs();
                 LoadUsers();
@@ -619,17 +623,19 @@ namespace NTPC_FEC.Modules.Manager
                 EnsureUserAccEmailColumn();
                 AuthService.EnsurePasswordColumnCapacity();
                 string hashedNewPwd = AuthService.HashPassword(newPwd);
-                string insSql = "INSERT INTO UserAcc (UserID, Password, Name, PUnit, Email, LIC, LIC2, Acc_State, LastPwdChangeDate) VALUES (@UserID, @Password, @Name, @PUnit, @Email, 0, 0, 'OK', GETDATE())";
+                string insSql = "INSERT INTO UserAcc (UserID, Password, PasswordHash, Name, PUnit, Email, LIC, LIC2, Acc_State, LastPwdChangeDate) VALUES (@UserID, @Password, @PasswordHash, @Name, @PUnit, @Email, 0, 0, 'OK', GETDATE())";
                 var insParams = new SqlParameter[]
                 {
                     new SqlParameter("@UserID", SqlDbType.VarChar) { Value = newId },
-                    new SqlParameter("@Password", SqlDbType.VarChar) { Value = hashedNewPwd },
+                    new SqlParameter("@Password", SqlDbType.VarChar) { Value = newPwd },
+                    new SqlParameter("@PasswordHash", SqlDbType.VarChar) { Value = hashedNewPwd },
                     new SqlParameter("@Name", SqlDbType.NVarChar) { Value = newName },
                     new SqlParameter("@PUnit", SqlDbType.NVarChar) { Value = newPUnit },
                     new SqlParameter("@Email", SqlDbType.VarChar) { Value = (object)newEmail ?? DBNull.Value }
                 };
 
                 DbHelper.ExecuteNonQuery(insSql, insParams);
+                AuditLogger.Log("USER_CREATE", newId, string.Format("建立新帳號，姓名：{0}，單位：{1}", newName, newPUnit));
                 pnlNewAccModal.Visible = false;
                 ShowAlert(string.Format("帳號 [{0}] 已成功建立！請立即點選【權限設定】為其配置業務模組權限。", newId), "alert-success");
                 LoadPUnitTabs();

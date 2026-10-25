@@ -1,4 +1,4 @@
-{
+﻿{
   "description": "新北市固定溢散源管理平台 (NTPC_FEC) 正式機打包清單與強制自檢配置",
   "root_include_files": [
     "Default.aspx",
@@ -7,9 +7,10 @@
     "MainPage.Master",
     "ValidateCode.ashx",
     "KeepAlive.ashx",
-    "Global.asax",
     "Logout.aspx",
+    "Error.aspx",
     "Web.config",
+    "Web.config.template",
     "自主管理平台操作手冊R8.pdf",
     "favicon.ico",
     "apple-touch-icon.png",
@@ -57,10 +58,11 @@
     "MainPage.aspx",
     "MainPage.Master",
     "Logout.aspx",
+    "Error.aspx",
     "ValidateCode.ashx",
     "KeepAlive.ashx",
-    "Global.asax",
     "Web.config",
+    "Web.config.template",
     "Upload/Web.config",
     "favicon.ico",
     "Content/bootstrap.min.css",

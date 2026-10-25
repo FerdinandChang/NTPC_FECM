@@ -482,11 +482,11 @@ namespace NTPC_FEC.Wash
                 return;
             }
 
-            // 檢查副檔名安全
-            string originalFileName = Path.GetFileName(file.FileName);
+            // 檢查副檔名安全 (嚴格白名單比對)
+            string originalFileName = FileSecurityHelper.SanitizeFileName(file.FileName);
             string ext = Path.GetExtension(originalFileName).ToLower();
-            string allowedExts = ".pdf|.doc|.docx|.xls|.xlsx|.jpg|.jpeg|.png|.zip|.rar|.7z|.csv";
-            if (string.IsNullOrEmpty(ext) || !allowedExts.Contains(ext))
+            string[] allowedExts = new string[] { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".zip", ".rar", ".7z", ".csv" };
+            if (!FileSecurityHelper.IsAllowedExtension(originalFileName, allowedExts))
             {
                 Response.Write(jsonSerializer.Serialize(new
                 {
@@ -496,8 +496,20 @@ namespace NTPC_FEC.Wash
                 return;
             }
 
-            // 目標儲存路徑：~/Upload/WashPIC/{facId}/月報/
-            string targetFolder = Server.MapPath(string.Format("~/Upload/WashPIC/{0}/月報", facId));
+            // 目標儲存路徑：~/Upload/WashPIC/{facId}/月報/ (嚴格邊界檢查杜絕 Path Traversal)
+            string cleanFacId = FileSecurityHelper.SanitizeFileName(facId);
+            string washPicBase = Server.MapPath("~/Upload/WashPIC");
+            string targetFolder = Path.Combine(washPicBase, cleanFacId, "月報");
+            if (!FileSecurityHelper.IsSafePath(washPicBase, targetFolder))
+            {
+                Response.Write(jsonSerializer.Serialize(new
+                {
+                    Success = false,
+                    Message = "非法場所路徑存取！"
+                }));
+                return;
+            }
+
             if (!Directory.Exists(targetFolder))
             {
                 Directory.CreateDirectory(targetFolder);
@@ -662,8 +674,10 @@ namespace NTPC_FEC.Wash
                 return;
             }
 
-            string dirPath = Server.MapPath(string.Format("~/Upload/WashPIC/{0}/月報", facId));
-            if (!Directory.Exists(dirPath))
+            string cleanFacId = FileSecurityHelper.SanitizeFileName(facId);
+            string washPicBase = Server.MapPath("~/Upload/WashPIC");
+            string dirPath = Path.Combine(washPicBase, cleanFacId, "月報");
+            if (!FileSecurityHelper.IsSafePath(washPicBase, dirPath) || !Directory.Exists(dirPath))
             {
                 Response.Clear();
                 Response.StatusCode = 404;
@@ -684,6 +698,14 @@ namespace NTPC_FEC.Wash
             }
 
             string filePath = files[0];
+            if (!FileSecurityHelper.IsSafePath(washPicBase, filePath))
+            {
+                Response.Clear();
+                Response.StatusCode = 403;
+                Response.Write("非法路徑存取！");
+                Response.End();
+                return;
+            }
             string downloadName = Path.GetFileName(filePath);
 
             Response.Clear();

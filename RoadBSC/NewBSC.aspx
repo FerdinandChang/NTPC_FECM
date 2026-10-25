@@ -859,6 +859,7 @@
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
     <script src="../Scripts/leaflet/leaflet.js"></script>
+    <script src="../Scripts/fec-offline-sentinel.js?v=20261025_02"></script>
 
     <script>
         const { createApp, ref, reactive, onMounted, computed, nextTick } = Vue;
@@ -980,6 +981,7 @@
                 const queryId = urlParams.get('id') || '';
 
                 const isEditMode = ref(queryMode === 'edit' && !!queryId);
+                let draftSentinel = null;
                 const isSubmitting = ref(false);
                 const isMapCollapsed = ref(false);
                 const currentUser = ref('系統查核員');
@@ -1404,8 +1406,15 @@
                             }))
                         };
 
+                        if (!navigator.onLine) {
+                            alert('⚠️ 現場網路已離線！系統已自動保存本機最新草稿，請待恢復連線後再按送出。');
+                            return;
+                        }
                         const res = await axios.post('NewBSC.aspx?action=save', payload);
                         if (res.data && res.data.Success) {
+                            if (draftSentinel) {
+                                draftSentinel.clearDraft();
+                            }
                             alert(res.data.Message || '通報成功！');
                             window.location.href = 'BSC_List.aspx?mode=BSCEdit';
                         } else {
@@ -1424,6 +1433,33 @@
                     await loadInitData();
                     if (isEditMode.value) {
                         await loadCaseData();
+                    } else if (typeof FecOfflineSentinel !== 'undefined') {
+                        draftSentinel = FecOfflineSentinel.create({
+                            storageKey: 'FEC_DRAFT_NEWBSC',
+                            getData: () => {
+                                if (!form.TOWN_CODE && !form.ROAD_Name) return null;
+                                return {
+                                    form: JSON.parse(JSON.stringify(form)),
+                                    photos: photos.value
+                                };
+                            },
+                            restoreData: (d) => {
+                                if (!d) return;
+                                if (d.form) {
+                                    Object.assign(form, d.form);
+                                    if (form.lat && form.lng) {
+                                        updateMapMarker(form.lat, form.lng);
+                                    }
+                                }
+                                if (d.photos && d.photos.length > 0) {
+                                    photos.value = d.photos;
+                                }
+                            }
+                        });
+
+                        nextTick(() => {
+                            draftSentinel.checkAndPromptRestore(document.getElementById('bscApp'));
+                        });
                     }
                 });
 

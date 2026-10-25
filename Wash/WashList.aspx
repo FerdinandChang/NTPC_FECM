@@ -599,38 +599,59 @@
 <body>
     <div id="washApp" v-cloak>
         <!-- 頂部品牌導覽列 -->
+        <!-- 頂部品牌導覽列 (符合 inspection-ui-standard 規範) -->
         <header class="top-navbar">
-            <div class="d-flex align-items-center">
-                <a href="../Index.aspx" class="nav-btn mr-2" title="返回管理平台首頁">
+            <div class="d-flex align-items-center flex-grow-1 overflow-hidden pr-2">
+                <!-- 1. 返回主選單按鈕 (SKILL.md 531 行標準) -->
+                <a href="../MainPage.aspx" class="nav-btn mr-2 flex-shrink-0" title="返回主選單">
                     <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline ml-1">回首頁</span>
                 </a>
-                <span class="navbar-brand-title">
-                    <i class="fas fa-tint text-warning"></i>
-                    <span>道路認養洗/掃街里程日誌</span>
-                </span>
+
+                <!-- 2. 品牌 LOGO、模組標題與母體數據 Badge (SKILL.md 533 行標準) -->
+                <a href="WashList.aspx" class="navbar-brand-title d-flex align-items-center text-white text-decoration-none">
+                    <!-- 新北市平台標準盾牌向量標誌 -->
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#ffffff" class="mr-2 flex-shrink-0" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+                    </svg>
+                    <!-- 純白模組圖標 (依規範嚴禁雜色或刺眼黃色) -->
+                    <i class="fas fa-truck-pickup text-white mr-2 flex-shrink-0"></i>
+                    <span class="text-truncate">
+                        <span class="d-none d-md-inline">新北市固定溢散源 - </span>道路認養洗/掃街里程日誌
+                    </span>
+                    <span class="badge badge-light text-dark font-weight-bold ml-2 d-none d-sm-inline flex-shrink-0" style="font-size: 0.8rem;">
+                        {{ records.length }} 筆
+                    </span>
+                </a>
             </div>
 
-            <div class="d-flex align-items-center gap-2">
+            <!-- 右側功能動作群 (SKILL.md 534~537 行標準) -->
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <!-- 填報日誌 (綠色主按鈕) -->
+                <a :href="newRecordUrl" class="btn btn-success btn-sm font-weight-bold shadow-sm d-inline-flex align-items-center" style="height: 36px; border-radius: 8px;" title="填報全新洗掃日誌">
+                    <i class="fas fa-plus-circle mr-1"></i>
+                    <span class="d-none d-sm-inline">填報日誌</span>
+                </a>
+
                 <!-- 月報管理按鈕 -->
-                <a href="ReportUpload_List.aspx" class="nav-btn d-none d-md-inline-flex" title="洗掃月報上傳管理">
-                    <i class="fas fa-file-upload"></i>
+                <a href="ReportUpload_List.aspx" class="nav-btn d-none d-md-inline-flex align-items-center" title="洗掃作業月報上傳管理">
+                    <i class="fas fa-file-upload mr-1"></i>
                     <span>月報管理</span>
                 </a>
 
                 <!-- 匯出 Excel 按鈕 -->
-                <button type="button" class="nav-btn d-none d-sm-inline-flex" v-on:click="exportExcel" :disabled="loading || records.length === 0" title="匯出本月洗掃日誌 Excel 報表">
-                    <i class="fas fa-file-excel text-success"></i>
-                    <span>匯出 Excel</span>
+                <button type="button" class="nav-btn d-none d-sm-inline-flex align-items-center" v-on:click="exportExcel" :disabled="loading || records.length === 0" title="匯出本月洗掃日誌 Excel 報表">
+                    <i class="fas fa-file-excel text-success mr-1"></i>
+                    <span>匯出 EXCEL</span>
                 </button>
 
-                <!-- 新增日誌按鈕 -->
-                <a :href="newRecordUrl" class="nav-btn nav-btn-highlight" title="填報全新洗掃日誌">
-                    <i class="fas fa-plus"></i>
-                    <span>填報日誌</span>
-                </a>
+                <!-- 重新整理按鈕 -->
+                <button type="button" class="nav-btn" v-on:click="loadList" :disabled="loading" title="重新整理資料清單">
+                    <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+                </button>
 
-                <!-- 場所或使用者徽章 -->
-                <span class="badge badge-light text-dark px-2 py-1 ml-2 d-none d-lg-inline-flex align-items-center" style="font-size: 12px; height: 32px;">
+                <!-- 使用者帳號徽章 -->
+                <span class="badge badge-light text-dark px-2 py-1 ml-1 d-none d-lg-inline-flex align-items-center" style="font-size: 12px; height: 34px; border-radius: 8px;">
                     <i class="fas fa-user-circle text-primary mr-1"></i>
                     {{ userName || '使用者' }}
                 </span>

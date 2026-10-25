@@ -3,6 +3,7 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Text;
+using System.Threading;
 using System.Web;
 using System.Web.Configuration;
 using System.Web.Hosting;
@@ -10,7 +11,7 @@ using System.Web.Hosting;
 namespace NTPC_FEC.Helpers
 {
     /// <summary>
-    /// 資料庫存取核心類別 (安全參數化查詢，杜絕 SQL Injection)
+    /// 資料庫存取核心類別 (安全參數化查詢，杜絕 SQL Injection，具備暫態故障自動重試)
     /// </summary>
     public static class DbHelper
     {
@@ -168,6 +169,18 @@ namespace NTPC_FEC.Helpers
             }
         }
 
+        private static bool IsTransientSqlError(SqlException ex)
+        {
+            if (ex == null) return false;
+            // 典型暫態抖動錯誤代碼：-2 逾時, 1205 死鎖, 10054 斷線重置等
+            int[] transientNumbers = new int[] { -2, 64, 233, 1205, 10053, 10054, 10060, 40613 };
+            for (int i = 0; i < transientNumbers.Length; i++)
+            {
+                if (ex.Number == transientNumbers[i]) return true;
+            }
+            return false;
+        }
+
         public static DataTable ExecuteDataTable(string sql, params SqlParameter[] parameters)
         {
             return ExecuteDataTable(sql, parameters, null);
@@ -175,26 +188,36 @@ namespace NTPC_FEC.Helpers
 
         public static DataTable ExecuteDataTable(string sql, SqlParameter[] parameters, string connectionName)
         {
-            using (var conn = GetOpenConnection(connectionName))
-            using (var cmd = new SqlCommand(sql, conn))
+            int maxRetries = 1;
+            for (int attempt = 0; attempt <= maxRetries; attempt++)
             {
-                cmd.CommandTimeout = 120;
-                AttachParameters(cmd, parameters);
-
                 try
                 {
-                    using (var da = new SqlDataAdapter(cmd))
+                    using (var conn = GetOpenConnection(connectionName))
+                    using (var cmd = new SqlCommand(sql, conn))
                     {
-                        var dt = new DataTable();
-                        da.Fill(dt);
-                        return dt;
+                        cmd.CommandTimeout = 120;
+                        AttachParameters(cmd, parameters);
+
+                        using (var da = new SqlDataAdapter(cmd))
+                        {
+                            var dt = new DataTable();
+                            da.Fill(dt);
+                            return dt;
+                        }
                     }
                 }
-                finally
+                catch (SqlException ex)
                 {
-                    cmd.Parameters.Clear();
+                    if (attempt < maxRetries && IsTransientSqlError(ex))
+                    {
+                        Thread.Sleep(200); // 暫態抖動微秒級避讓重試
+                        continue;
+                    }
+                    throw;
                 }
             }
+            return new DataTable();
         }
 
         public static int ExecuteNonQuery(string sql, params SqlParameter[] parameters)
@@ -227,20 +250,37 @@ namespace NTPC_FEC.Helpers
 
         public static object ExecuteScalar(string sql, SqlParameter[] parameters, string connectionName)
         {
-            using (var conn = GetOpenConnection(connectionName))
-            using (var cmd = new SqlCommand(sql, conn))
+            int maxRetries = 1;
+            for (int attempt = 0; attempt <= maxRetries; attempt++)
             {
-                cmd.CommandTimeout = 120;
-                AttachParameters(cmd, parameters);
                 try
                 {
-                    return cmd.ExecuteScalar();
+                    using (var conn = GetOpenConnection(connectionName))
+                    using (var cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.CommandTimeout = 120;
+                        AttachParameters(cmd, parameters);
+                        try
+                        {
+                            return cmd.ExecuteScalar();
+                        }
+                        finally
+                        {
+                            cmd.Parameters.Clear();
+                        }
+                    }
                 }
-                finally
+                catch (SqlException ex)
                 {
-                    cmd.Parameters.Clear();
+                    if (attempt < maxRetries && IsTransientSqlError(ex))
+                    {
+                        Thread.Sleep(200);
+                        continue;
+                    }
+                    throw;
                 }
             }
+            return null;
         }
     }
 }

@@ -845,6 +845,7 @@
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
     <script src="../Scripts/leaflet/leaflet.js"></script>
+    <script src="../Scripts/fec-offline-sentinel.js?v=20261025_02"></script>
 
     <script type="text/javascript">
         // TWD97 與 WGS84 前端高精度雙向轉換函式
@@ -930,6 +931,7 @@
             data() {
                 return {
                     mode: 'new',            // 'new' | 'edit'
+                    draftSentinel: null,
                     caseId: '',
                     currentUser: '系統查核員',
                     towns: [],
@@ -984,9 +986,49 @@
 
                 this.initMap();
                 this.loadInitData();
+                this.initDraftSentinel();
             },
 
             methods: {
+                // 0. 初始化離線草稿守護器
+                initDraftSentinel() {
+                    if (typeof FecOfflineSentinel === 'undefined') return;
+                    this.draftSentinel = new FecOfflineSentinel({
+                        storageKey: 'FEC_DRAFT_NEWBREAK',
+                        bannerPosition: 'top',
+                        onSave: () => {
+                            if (this.mode !== 'new') return null;
+                            return {
+                                form: this.form,
+                                photos: this.photos.map(p => ({
+                                    FileName: p.FileName,
+                                    PreviewUrl: p.PreviewUrl,
+                                    Base64: p.Base64
+                                }))
+                            };
+                        },
+                        onRestore: (saved) => {
+                            if (saved && saved.form) {
+                                Object.assign(this.form, saved.form);
+                            }
+                            if (saved && saved.photos && Array.isArray(saved.photos)) {
+                                this.photos = saved.photos;
+                            }
+                            if (this.form.Lat && this.form.Lon) {
+                                const lat = parseFloat(this.form.Lat);
+                                const lon = parseFloat(this.form.Lon);
+                                if (!isNaN(lat) && !isNaN(lon)) {
+                                    this.setMarkerPosition(lat, lon, true);
+                                    if (this.leafletMap) {
+                                        this.leafletMap.setView([lat, lon], 17);
+                                    }
+                                }
+                            }
+                            this.showAlert('已自動還原上次儲存的離線草稿內容！', 'success');
+                        }
+                    });
+                },
+
                 // 1. 初始化 Leaflet 地圖
                 initMap() {
                     const defaultCenter = [25.012363, 121.465715]; // 新北市政府中心
@@ -1332,6 +1374,10 @@
 
                 // 10. 送出表單
                 submitForm() {
+                    if (!navigator.onLine) {
+                        alert('⚠️ 現場網路已離線！系統已自動保存本機最新草稿，請待恢復連線後再按送出。');
+                        return;
+                    }
                     // 表單驗證
                     if (!this.form.S_UTME || !this.form.S_UTMN || this.form.S_UTME < 100000 || this.form.S_UTMN < 100000) {
                         this.showAlert('請先於地圖點擊標記或點選 GPS 定位取得通報坐標！', 'danger');
@@ -1380,6 +1426,9 @@
                         .then(res => {
                             this.isSubmitting = false;
                             if (res.data && res.data.Success) {
+                                if (this.draftSentinel) {
+                                    this.draftSentinel.clearDraft();
+                                }
                                 alert(res.data.Message || '通報單送出成功！');
                                 window.location.href = '../RoadBreak/Break_List.aspx?mode=BreakEdit';
                             } else {

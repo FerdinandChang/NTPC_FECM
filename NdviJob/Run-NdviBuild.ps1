@@ -75,8 +75,9 @@ try {
 
     if ($exit -eq 0) {
         Write-Log 'NDVI 圖磚產出完成，正在確保 IIS 網頁存取權限 (IIS_IUSRS / IUSR)...'
+        Remove-Item "$Out\web.config" -Force -ErrorAction SilentlyContinue
         try {
-            & icacls $Out /grant "IIS_IUSRS:(OI)(CI)RX" /grant "IUSR:(OI)(CI)RX" /T | Out-Null
+            & icacls $Out /grant "IIS_IUSRS:(OI)(CI)RX" /grant "IUSR:(OI)(CI)RX" /grant "Users:(OI)(CI)RX" /T | Out-Null
         } catch { }
         Write-Log 'NDVI 更新完成'
         Write-EventSafe 'Information' 1000 "NDVI 月報更新完成。記錄: $runLog"

@@ -73,7 +73,7 @@ Write-Host "      編碼與語法檢查 100% 通過！" -ForegroundColor Green
 # [2/4] 專案建置
 Write-Host "【2/4】正在執行專案建置 (dotnet build - 強制 C# 5.0 語法驗證)..." -ForegroundColor Cyan
 $csprojPath = Join-Path $projectRoot "NTPC_FEC.csproj"
-$buildOutput = & dotnet build $csprojPath -c Release --no-restore /p:EnableSourceControlManagerQueries=false 2>&1
+$buildOutput = & dotnet build $csprojPath -c Release --no-restore /p:EnableSourceControlManagerQueries=false /p:EnableSourceLink=false /p:SourceControlInformationFeatureSupported=false 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "【錯誤】專案建置失敗！" -ForegroundColor Red
     Write-Host ($buildOutput -join "`n") -ForegroundColor Red

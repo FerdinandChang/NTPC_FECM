@@ -140,7 +140,8 @@ namespace NTPC_FEC.Services
         }
 
         /// <summary>
-        /// 自動確保資料庫 Password 欄位長度具備 VARCHAR(128) 儲存雜湊的能力
+        /// 自動確保資料庫 UserAcc 具備獨立新欄位 PasswordHash (VARCHAR(128))
+        /// 雙軌並存設計：舊版讀寫 Password 欄位，新版讀寫 PasswordHash 欄位
         /// </summary>
         public static void EnsurePasswordColumnCapacity()
         {
@@ -151,9 +152,9 @@ namespace NTPC_FEC.Services
                 try
                 {
                     string alterSql = @"
-                        IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('UserAcc') AND name = 'Password' AND max_length < 128)
+                        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('UserAcc') AND name = 'PasswordHash')
                         BEGIN
-                            ALTER TABLE UserAcc ALTER COLUMN Password VARCHAR(128);
+                            ALTER TABLE UserAcc ADD PasswordHash VARCHAR(128) NULL;
                         END
                         IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('UserPwdHistory') AND name = 'Password' AND max_length < 128)
                         BEGIN
@@ -286,8 +287,9 @@ namespace NTPC_FEC.Services
                 context.Session.Remove("ValidateCode");
             }
 
-            // 3. 查詢資料庫使用者
-            string sql = "SELECT UID, UserID, Password, PUnit, Name, Acc_State, LIC, LIC2, FAC_ID, LastLogin, LastPwdChangeDate FROM UserAcc WHERE UserID = @UserID";
+            // 3. 確保新版 PasswordHash 欄位存在並查詢使用者
+            EnsurePasswordColumnCapacity();
+            string sql = "SELECT UID, UserID, Password, PasswordHash, PUnit, Name, Acc_State, LIC, LIC2, FAC_ID, LastLogin, LastPwdChangeDate FROM UserAcc WHERE UserID = @UserID";
             var parameters = new SqlParameter[]
             {
                 new SqlParameter("@UserID", SqlDbType.VarChar) { Value = cleanUserId }
@@ -314,11 +316,27 @@ namespace NTPC_FEC.Services
 
             var row = dt.Rows[0];
             string dbPassword = ((row["Password"] != null && row["Password"] != DBNull.Value) ? row["Password"].ToString() : "");
+            string dbPasswordHash = (row.Table.Columns.Contains("PasswordHash") && row["PasswordHash"] != null && row["PasswordHash"] != DBNull.Value) ? row["PasswordHash"].ToString() : "";
             string accState = ((row["Acc_State"] != null && row["Acc_State"] != DBNull.Value) ? row["Acc_State"].ToString() : "");
             string userName = ((row["Name"] != null && row["Name"] != DBNull.Value) ? row["Name"].ToString() : cleanUserId);
 
-            // 4. 安全密碼驗證 (同時相容雜湊與舊明文)
-            bool isPasswordCorrect = VerifyPassword(password, dbPassword);
+            // 4. 安全密碼雙軌驗證 (第一優先比對新版 PasswordHash，第二優先比對舊版 Password)
+            bool isPasswordCorrect = false;
+            bool needUpgradeToHash = false;
+
+            if (!string.IsNullOrEmpty(dbPasswordHash))
+            {
+                isPasswordCorrect = VerifyPassword(password, dbPasswordHash);
+            }
+            else if (!string.IsNullOrEmpty(dbPassword))
+            {
+                isPasswordCorrect = VerifyPassword(password, dbPassword);
+                if (isPasswordCorrect)
+                {
+                    needUpgradeToHash = true;
+                }
+            }
+
             if (!isPasswordCorrect)
             {
                 result.Success = false;
@@ -329,15 +347,13 @@ namespace NTPC_FEC.Services
             // 密碼正確，立即清除連續失敗累計
             ClearLoginFailure(cleanUserId);
 
-            // 5. 漸進式雜湊升級 (Hash-on-Login)
-            // 若此帳號目前在資料庫中仍為歷史明文，立即於背景無感升級為 Salted SHA-256 雜湊
-            if (!IsHashedPassword(dbPassword))
+            // 5. 漸進式雜湊升級 (僅寫入 PasswordHash 獨立欄位，絕對不更動舊 Password 欄位以保證舊版系統正常運作)
+            if (needUpgradeToHash || string.IsNullOrEmpty(dbPasswordHash))
             {
                 try
                 {
-                    EnsurePasswordColumnCapacity();
                     string upgradedHash = HashPassword(password);
-                    string upSql = "UPDATE UserAcc SET Password = @NewHash WHERE UserID = @UserID";
+                    string upSql = "UPDATE UserAcc SET PasswordHash = @NewHash WHERE UserID = @UserID";
                     var upParams = new SqlParameter[]
                     {
                         new SqlParameter("@NewHash", SqlDbType.VarChar) { Value = upgradedHash },
@@ -416,6 +432,15 @@ namespace NTPC_FEC.Services
                 context.Session["MustChangePassword"] = mustChangePwd;
             }
 
+            // 核發 Anti-CSRF 雙重防禦 Token
+            if (context != null && context.Response != null)
+            {
+                HttpCookie xsrfCookie = new HttpCookie("XSRF-TOKEN", Guid.NewGuid().ToString("N"));
+                xsrfCookie.Path = "/";
+                xsrfCookie.HttpOnly = false;
+                context.Response.Cookies.Add(xsrfCookie);
+            }
+
             try
             {
                 string updateSql = "UPDATE UserAcc SET LastLogin = @LastLogin WHERE UserID = @UserID";
@@ -436,6 +461,162 @@ namespace NTPC_FEC.Services
             result.RedirectUrl = "MainPage.aspx";
             result.User = user;
 
+            return result;
+        }
+
+        /// <summary>
+        /// 業者端專屬登入驗證 (ClientLogin.aspx) - 雙軌支援 PasswordHash 與舊版 Password
+        /// </summary>
+        public static LoginResult ValidateClientLogin(string userId, string password, HttpContext context)
+        {
+            var result = new LoginResult();
+
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(password))
+            {
+                result.Success = false;
+                result.Message = "帳號與密碼均不可為空！";
+                return result;
+            }
+
+            string cleanUserId = userId.Trim();
+
+            // 1. 檢查帳號防爆破鎖定
+            int lockMinutes;
+            if (IsAccountLocked(cleanUserId, out lockMinutes))
+            {
+                result.Success = false;
+                result.IsLocked = true;
+                result.LockMinutes = lockMinutes;
+                result.Message = string.Format("此帳號因連續密碼錯誤次數過多，目前處於安全鎖定狀態！請於 {0} 分鐘後再試。", lockMinutes);
+                return result;
+            }
+
+            // 2. 確保新版 PasswordHash 欄位存在並查詢使用者
+            EnsurePasswordColumnCapacity();
+            string sql = "SELECT UID, UserID, Password, PasswordHash, PUnit, Name, Acc_State, LIC, LIC2, FAC_ID, LastLogin, LastPwdChangeDate FROM UserAcc WHERE UserID = @UserID";
+            var parameters = new SqlParameter[]
+            {
+                new SqlParameter("@UserID", SqlDbType.VarChar) { Value = cleanUserId }
+            };
+
+            DataTable dt;
+            try
+            {
+                dt = DbHelper.ExecuteDataTable(sql, parameters);
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = "資料庫連線異常：" + ex.Message;
+                return result;
+            }
+
+            if (dt == null || dt.Rows.Count == 0)
+            {
+                result.Success = false;
+                result.Message = RecordLoginFailure(cleanUserId);
+                return result;
+            }
+
+            var row = dt.Rows[0];
+            string dbPassword = ((row["Password"] != null && row["Password"] != DBNull.Value) ? row["Password"].ToString() : "");
+            string dbPasswordHash = (row.Table.Columns.Contains("PasswordHash") && row["PasswordHash"] != null && row["PasswordHash"] != DBNull.Value) ? row["PasswordHash"].ToString() : "";
+            string accState = ((row["Acc_State"] != null && row["Acc_State"] != DBNull.Value) ? row["Acc_State"].ToString() : "");
+            string userName = ((row["Name"] != null && row["Name"] != DBNull.Value) ? row["Name"].ToString() : cleanUserId);
+
+            // 3. 安全雙軌密碼驗證 (優先 PasswordHash，次要 Password)
+            bool isPasswordCorrect = false;
+            bool needUpgradeToHash = false;
+
+            if (!string.IsNullOrEmpty(dbPasswordHash))
+            {
+                isPasswordCorrect = VerifyPassword(password, dbPasswordHash);
+            }
+            else if (!string.IsNullOrEmpty(dbPassword))
+            {
+                isPasswordCorrect = VerifyPassword(password, dbPassword);
+                if (isPasswordCorrect)
+                {
+                    needUpgradeToHash = true;
+                }
+            }
+
+            if (!isPasswordCorrect)
+            {
+                result.Success = false;
+                result.Message = RecordLoginFailure(cleanUserId);
+                return result;
+            }
+
+            // 密碼正確，清除失敗計數
+            ClearLoginFailure(cleanUserId);
+
+            // 4. 漸進式寫入 PasswordHash (絕對不覆蓋 Password 欄位)
+            if (needUpgradeToHash || string.IsNullOrEmpty(dbPasswordHash))
+            {
+                try
+                {
+                    string upgradedHash = HashPassword(password);
+                    string upSql = "UPDATE UserAcc SET PasswordHash = @NewHash WHERE UserID = @UserID";
+                    var upParams = new SqlParameter[]
+                    {
+                        new SqlParameter("@NewHash", SqlDbType.VarChar) { Value = upgradedHash },
+                        new SqlParameter("@UserID", SqlDbType.VarChar) { Value = cleanUserId }
+                    };
+                    DbHelper.ExecuteNonQuery(upSql, upParams);
+                }
+                catch
+                {
+                }
+            }
+
+            // 5. 檢查狀態
+            if (!accState.Equals("OK", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Success = false;
+                result.Message = "此帳號非正常使用狀態，無法登入！";
+                return result;
+            }
+
+            // 6. 封裝 UserAccount 並設定 Session
+            long lic = 0, lic2 = 0;
+            long.TryParse((row["LIC"] != null ? row["LIC"].ToString() : ""), out lic);
+            long.TryParse((row["LIC2"] != null ? row["LIC2"].ToString() : ""), out lic2);
+            int uid = 0;
+            int.TryParse((row["UID"] != null ? row["UID"].ToString() : ""), out uid);
+
+            var user = new UserAccount
+            {
+                UID = uid,
+                UserID = cleanUserId,
+                Name = userName,
+                PUnit = ((row["PUnit"] != null && row["PUnit"] != DBNull.Value) ? row["PUnit"].ToString() : ""),
+                AccState = accState,
+                Lic = lic,
+                Lic2 = lic2,
+                FacID = ((row["FAC_ID"] != null && row["FAC_ID"] != DBNull.Value) ? row["FAC_ID"].ToString() : "")
+            };
+
+            if (context != null && context.Session != null)
+            {
+                context.Session["LoginUser"] = user.UserID;
+                context.Session["UserName"] = user.Name;
+                context.Session["UserAccount"] = user;
+                context.Session["LoginMode"] = "client";
+            }
+
+            // 核發 Anti-CSRF Cookie
+            if (context != null && context.Response != null)
+            {
+                HttpCookie xsrfCookie = new HttpCookie("XSRF-TOKEN", Guid.NewGuid().ToString("N"));
+                xsrfCookie.Path = "/";
+                xsrfCookie.HttpOnly = false;
+                context.Response.Cookies.Add(xsrfCookie);
+            }
+
+            result.Success = true;
+            result.User = user;
+            result.RedirectUrl = "MainPage.aspx";
             return result;
         }
 
@@ -470,6 +651,15 @@ namespace NTPC_FEC.Services
                 sessionCookie.Expires = DateTime.Now.AddDays(-7);
                 sessionCookie.Path = "/";
                 context.Response.Cookies.Add(sessionCookie);
+            }
+
+            // 4. 清除 Anti-CSRF Token
+            if (context.Request.Cookies["XSRF-TOKEN"] != null)
+            {
+                var xsrfCookie = new HttpCookie("XSRF-TOKEN", "");
+                xsrfCookie.Expires = DateTime.Now.AddDays(-7);
+                xsrfCookie.Path = "/";
+                context.Response.Cookies.Add(xsrfCookie);
             }
         }
 
@@ -597,12 +787,14 @@ namespace NTPC_FEC.Services
                 };
                 DbHelper.ExecuteNonQuery(insHistSql, insHistParams);
 
-                // 8. 以安全雜湊格式更新使用者密碼
+                // 8. 雙寫更新使用者密碼：Password 寫入明文(供舊版系統使用)，PasswordHash 寫入雜湊(供新版系統使用)
+                EnsurePasswordColumnCapacity();
                 string hashedNewPwd = HashPassword(newPwd);
-                string updateSql = "UPDATE UserAcc SET Password = @NewPassword, LastPwdChangeDate = GETDATE() WHERE UserID = @UserID";
+                string updateSql = "UPDATE UserAcc SET Password = @PlainPassword, PasswordHash = @HashedPassword, LastPwdChangeDate = GETDATE() WHERE UserID = @UserID";
                 var updateParams = new SqlParameter[]
                 {
-                    new SqlParameter("@NewPassword", SqlDbType.VarChar) { Value = hashedNewPwd },
+                    new SqlParameter("@PlainPassword", SqlDbType.VarChar) { Value = newPwd },
+                    new SqlParameter("@HashedPassword", SqlDbType.VarChar) { Value = hashedNewPwd },
                     new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId }
                 };
                 DbHelper.ExecuteNonQuery(updateSql, updateParams);
@@ -721,12 +913,13 @@ namespace NTPC_FEC.Services
                     DbHelper.ExecuteNonQuery(histSql, histParams);
                 }
 
-                // 5. 更新 UserAcc：更換為臨時密碼之安全雜湊、更新 Email、LastPwdChangeDate 設為 NULL
+                // 5. 雙寫更新 UserAcc：Password 寫入臨時明文(供舊版系統使用)、PasswordHash 寫入雜湊(供新版系統使用)
                 string hashedTempPwd = HashPassword(tempPwd);
-                string updateSql = "UPDATE UserAcc SET Password = @NewPwd, Email = @Email, LastPwdChangeDate = NULL WHERE UserID = @UserID";
+                string updateSql = "UPDATE UserAcc SET Password = @PlainPwd, PasswordHash = @HashedPwd, Email = @Email, LastPwdChangeDate = NULL WHERE UserID = @UserID";
                 var updateParams = new SqlParameter[]
                 {
-                    new SqlParameter("@NewPwd", SqlDbType.VarChar) { Value = hashedTempPwd },
+                    new SqlParameter("@PlainPwd", SqlDbType.VarChar) { Value = tempPwd },
+                    new SqlParameter("@HashedPwd", SqlDbType.VarChar) { Value = hashedTempPwd },
                     new SqlParameter("@Email", SqlDbType.VarChar) { Value = targetEmail.Trim() },
                     new SqlParameter("@UserID", SqlDbType.VarChar) { Value = targetUserId }
                 };

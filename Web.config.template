@@ -1,28 +1,45 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<!-- 
-  新北市固定溢散源管理平台 - 安全環境設定範本 (Web.config.template)
-  請於正式機複製為 Web.config 並填入該伺服器專屬密碼，此範本已由 .gitignore 安全保護
+<!--
+  新北市固定溢散源管理平台 (NTPC_FEC / NTPC_FECM) 標準設定範本
+  適用情境：部署至正式機或測試機 IIS 站台（特別是 IIS 虛擬子應用程式環境）
+  
+  【部署注意事項】：
+  1. 連線字串請依正式機 SQL Server 環境替換 MainConnectionString 與 AirQualityConnectionString。
+  2. 若站台位於 IIS 子應用程式（如 /NTPC_FECM），切勿在 <customHeaders> 重複宣告根站台已存在的安全標頭（如 X-Frame-Options 等），否則會觸發 HTTP 500.19 重複項目錯誤。
+  3. 整合管線模式下切勿在 <system.web> 加入 <httpModules>，本專案一律使用 <system.webServer><modules> 註冊 AuthModule。
 -->
 <configuration>
   <appSettings>
+    <!-- SMTP 發信伺服器設定 -->
     <add key="SMTPserver" value="msr.hinet.net" />
-    <add key="EmailAddr" value="your_mail@ms6.hinet.net" />
-    <add key="SMTP_User" value="your_mail@ms6.hinet.net" />
-    <add key="SMTP_Password" value="########" />
-    <add key="CCEmail" value="your_mail@ms6.hinet.net" />
+    <add key="EmailAddr" value="your_notification@epd.gov.tw" />
+    <add key="SMTP_User" value="your_smtp_user" />
+    <add key="SMTP_Password" value="YOUR_SMTP_PASSWORD" />
+    <add key="CCEmail" value="your_cc@epd.gov.tw" />
   </appSettings>
   <connectionStrings>
-    <add name="MainConnectionString" connectionString="Data Source={DB_SERVER}\SQLEXPRESS2017;Initial Catalog=NTPC_FEC;User ID={DB_USER};Password={DB_PASSWORD}" providerName="System.Data.SqlClient" />
-    <add name="AirQualityConnectionString" connectionString="Data Source={DB_SERVER}\SQLEXPRESS;Initial Catalog=NTPC_AirQuality;User ID={DB_USER};Password={DB_PASSWORD}" providerName="System.Data.SqlClient" />
+    <!-- 主資料庫連線 (包含使用者帳號、各系統巡查主表) -->
+    <add name="MainConnectionString" connectionString="Data Source=YOUR_DB_SERVER;Initial Catalog=NTPC_FEC;User ID=YOUR_DB_USER;Password=YOUR_DB_PASSWORD" providerName="System.Data.SqlClient" />
+    <!-- 空品資料庫連線 (包含施工機具相關連線) -->
+    <add name="AirQualityConnectionString" connectionString="Data Source=YOUR_DB_SERVER;Initial Catalog=NTPC_AirQuality;User ID=YOUR_DB_USER;Password=YOUR_DB_PASSWORD" providerName="System.Data.SqlClient" />
   </connectionStrings>
   <system.web>
     <globalization fileEncoding="utf-8" requestEncoding="utf-8" responseEncoding="utf-8" culture="zh-TW" uiCulture="zh-TW" />
-    <sessionState timeout="180" />
-    <customErrors mode="RemoteOnly" />
+    <!-- 依據公務機關資安規範，Web 系統使用者閒置逾時上限為 30 分鐘 -->
+    <sessionState timeout="30" />
+    <!-- 資安規範：正式機隱藏詳細例外訊息以防敏感資訊洩漏，本地開發保留原生錯誤 -->
+    <customErrors mode="RemoteOnly" defaultRedirect="~/Error.aspx" />
     <compilation debug="false" targetFramework="4.8" />
+    <httpCookies httpOnlyCookies="true" requireSSL="false" sameSite="Lax" />
+    <!-- 檔案上傳上限 100MB (102400 KB)，執行逾時 600 秒 -->
     <httpRuntime targetFramework="4.8" maxRequestLength="102400" executionTimeout="600" />
   </system.web>
   <system.webServer>
+    <validation validateIntegratedModeConfiguration="false" />
+    <modules>
+      <!-- 全域資安控管模組：自動進行 Session 驗證、防暴力破解、目錄遍歷攔截與 CSRF 雙重防禦 -->
+      <add name="AuthModule" type="NTPC_FEC.Security.AuthModule, NTPC_FEC" />
+    </modules>
     <security>
       <requestFiltering>
         <requestLimits maxAllowedContentLength="104857600" />
@@ -36,6 +53,8 @@
       </requestFiltering>
     </security>
     <staticContent>
+      <remove fileExtension=".json" />
+      <mimeMap fileExtension=".json" mimeType="application/json" />
       <remove fileExtension=".webp" />
       <mimeMap fileExtension=".webp" mimeType="image/webp" />
       <remove fileExtension=".woff" />

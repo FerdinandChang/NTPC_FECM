@@ -24,6 +24,8 @@ namespace NTPC_FEC.Models
         public string RedirectUrl { get; set; }
         public UserAccount User { get; set; }
         public bool RequirePwdChange { get; set; }
+        public bool IsLocked { get; set; }
+        public int LockMinutes { get; set; }
     }
 
     public class OperationResult

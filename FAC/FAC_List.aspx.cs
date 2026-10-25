@@ -776,16 +776,28 @@ namespace NTPC_FEC.FAC
             }
 
             string cNo = dtFac.Rows[0]["C_NO"].ToString().Trim();
-            string saveDir = Server.MapPath("~/Upload/FAC/" + cNo);
+            string cleanCno = FileSecurityHelper.SanitizeFileName(cNo);
+            string baseFacDir = Server.MapPath("~/Upload/FAC");
+            string saveDir = Path.Combine(baseFacDir, cleanCno);
+            if (!FileSecurityHelper.IsSafePath(baseFacDir, saveDir))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "非法場所目錄路徑" }));
+                return;
+            }
             if (!Directory.Exists(saveDir))
             {
                 Directory.CreateDirectory(saveDir);
             }
 
-            string cleanProc = string.IsNullOrEmpty(processNo) ? "全廠" : processNo.Trim();
-            string cleanType = string.IsNullOrEmpty(fileType) ? "廠區配置圖" : fileType.Trim();
-            string newFileName = string.Format("{0}-{1}-{2}{3}", cNo, cleanProc, cleanType, origExt);
+            string cleanProc = FileSecurityHelper.SanitizeFileName(string.IsNullOrEmpty(processNo) ? "全廠" : processNo.Trim());
+            string cleanType = FileSecurityHelper.SanitizeFileName(string.IsNullOrEmpty(fileType) ? "廠區配置圖" : fileType.Trim());
+            string newFileName = string.Format("{0}-{1}-{2}{3}", cleanCno, cleanProc, cleanType, origExt);
             string fullPath = Path.Combine(saveDir, newFileName);
+            if (!FileSecurityHelper.IsSafePath(baseFacDir, fullPath))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "非法存取路徑" }));
+                return;
+            }
 
             // 若已有同名舊檔，自動備份轉存並標記
             if (File.Exists(fullPath))
@@ -839,14 +851,25 @@ namespace NTPC_FEC.FAC
             }
 
             string cNo = cNoObj.ToString().Trim();
-            string dirPath = Server.MapPath("~/Upload/FAC/" + cNo);
-            string filePath = Path.Combine(dirPath, fileName);
+            string cleanCno = FileSecurityHelper.SanitizeFileName(cNo);
+            string safeFileName = FileSecurityHelper.SanitizeFileName(fileName);
+            string baseFacDir = Server.MapPath("~/Upload/FAC");
+            string dirPath = Path.Combine(baseFacDir, cleanCno);
+            string filePath = Path.Combine(dirPath, safeFileName);
+            if (!FileSecurityHelper.IsSafePath(baseFacDir, filePath))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "非法存取路徑" }));
+                return;
+            }
 
-            string delNewName = string.Format("刪{0:yyyyMMddHHmmss}_{1}", DateTime.Now, fileName);
+            string delNewName = string.Format("刪{0:yyyyMMddHHmmss}_{1}", DateTime.Now, safeFileName);
             if (File.Exists(filePath))
             {
                 string delPath = Path.Combine(dirPath, delNewName);
-                File.Move(filePath, delPath);
+                if (FileSecurityHelper.IsSafePath(baseFacDir, delPath))
+                {
+                    File.Move(filePath, delPath);
+                }
             }
 
             string sqlUpdate = @"
