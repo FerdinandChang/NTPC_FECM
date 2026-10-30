@@ -889,8 +889,9 @@ namespace NTPC_FEC.RoadClean
             string resultText = "通過";
             if (resultState == 2301) resultText = "退回修正";
             else if (resultState == 2201) resultText = "駁回";
+            else if (resultState == 9001) resultText = "案件取消";
 
-            string memo = !string.IsNullOrEmpty(model.Memo) ? model.Memo.Trim() : (resultState == 2101 ? "審核通過" : "");
+            string memo = !string.IsNullOrEmpty(model.Memo) ? model.Memo.Trim() : (resultState == 2101 ? "審核通過" : (resultState == 9001 ? "重複上傳案件，作廢取消" : ""));
 
             // 取得當前最大 pIndex
             string sqlMax = "SELECT ISNULL(MAX(pIndex), 0) FROM RoadClean_ExamineData WHERE ChkID = @chkId";
@@ -1017,9 +1018,9 @@ namespace NTPC_FEC.RoadClean
             }
 
             int state = Convert.ToInt32(stateObj);
-            if (state != 1001)
+            if (state != 1001 && state != 2301 && state != 9001)
             {
-                Response.Write(json.Serialize(new { Success = false, Message = "非暫存草稿案件不可刪除！" }));
+                Response.Write(json.Serialize(new { Success = false, Message = "此案件狀態不可刪除！" }));
                 return;
             }
 
@@ -1041,7 +1042,7 @@ namespace NTPC_FEC.RoadClean
                 // 忽略檔案清理異常
             }
 
-            Response.Write(json.Serialize(new { Success = true, Message = "巡檢草稿紀錄已成功刪除！" }));
+            Response.Write(json.Serialize(new { Success = true, Message = "巡檢案件紀錄及照片檔案已成功刪除！" }));
         }
     
                 #region 匯出 Excel 報表

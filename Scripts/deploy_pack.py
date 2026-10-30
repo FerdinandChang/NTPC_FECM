@@ -41,7 +41,7 @@ def preflight_check_and_fix_bom(manifest):
         dirs[:] = [d for d in dirs if d.lower() not in exclude_dirs]
         for file in files:
             low = file.lower()
-            if low.endswith((".aspx", ".master", ".ashx")):
+            if low.endswith((".aspx", ".master", ".ashx", ".cs")):
                 full_path = Path(root) / file
                 rel_path = full_path.relative_to(PROJECT_ROOT).as_posix()
                 raw = full_path.read_bytes()

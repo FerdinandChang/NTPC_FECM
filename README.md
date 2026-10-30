@@ -6,7 +6,7 @@
 
 ## 📌 專案簡介
 本平台提供新北市轄內固定逸散源業者及主管機關進行自主管理申報、施工機具查核、裸露地列管、洗車設備監控、道路洗掃巡檢、案件初複三審管制作業、統計分析、衛星植生綠覆率圖台管理、LINE 官方帳號智慧推播及環域空間敏感受體交叉分析。
-自 1.0.0 完成現代化架構重構，1.1.0 建立巡檢規範與本地地圖庫，1.2.0 實現全業務模組標準化整合，1.3.0 導入 LINE 智慧推播與洗車設備名冊，1.4.0 實作外勤離線草稿守護與 30 分鐘閒置自動登出，1.5.0 實現全域模組化資安引擎（`AuthModule`、雙重 Anti-CSRF、Magic Bytes、`Error.aspx`），1.6.0 全新推出「環域空間分析與 360 環景導覽」模組（`BufferAnalysis/`）、安全圖片代理輸出常式（`ViewImage.ashx`）、外勤照片前端智慧等比壓縮（`fec-image-compressor.js`）及 OWASP 標準 Excel 公式注入防禦；1.7.0 正式上線「環境部施工機具管理與批次匯入」模組（`MoenvEquip/`）、學校敏感受體空間分析資料庫與安全警示報表（`BufferAnalysis/Data/ntpc_schools.json`）、路面破損派工與改善閉環管理（`RoadBreak/SetSG_Break.aspx`, `RoadBreak/ImproveBreak.aspx`）、專屬稽查照片定位與防串場機制（`InvPhotoHelper.cs`）並全面升級 NPOI.OOXML Office 報表核心函式庫。
+自 1.0.0 完成現代化架構重構，1.1.0 建立巡檢規範與本地地圖庫，1.2.0 實現全業務模組標準化整合，1.3.0 導入 LINE 智慧推播與洗車設備名冊，1.4.0 實作外勤離線草稿守護與 30 分鐘閒置自動登出，1.5.0 實現全域模組化資安引擎（`AuthModule`、雙重 Anti-CSRF、Magic Bytes、`Error.aspx`），1.6.0 全新推出「環域空間分析與 360 環景導覽」模組（`BufferAnalysis/`）、安全圖片代理輸出常式（`ViewImage.ashx`）、外勤照片前端智慧等比壓縮（`fec-image-compressor.js`）及 OWASP 標準 Excel 公式注入防禦；1.7.0 上線「環境部施工機具管理與匯入」模組（`MoenvEquip/`）、學校敏感受體空間分析資料庫（`BufferAnalysis/Data/ntpc_schools.json`）、路面破損派工與改善閉環管理（`RoadBreak/SetSG_Break.aspx`）及專屬稽查照片定位輔助；1.8.0 隆重上線全新「道路洗掃路段與現場查核空間地圖」（`Wash/WashMap.aspx`）、全面升級「新一代資料表驅動權限體系」（`UserAuthPermission` 雙軌平滑相容授權）與洗掃案件作廢管理。
 
 ---
 
@@ -37,7 +37,7 @@ d:\NTPC_FEC/
 ├── BufferAnalysis/         # 環域空間分析與 360 環景導覽模組 (BufferMap.aspx, BufferHandler.ashx)
 ├── Upload/                 # 檔案上傳目錄 (配置專屬 Web.config 限制唯讀並禁止執行任何腳本)
 ├── LINE/                   # LINE 官方帳號智慧通報模組 (Line.aspx, Line.aspx.cs)
-├── Wash/                   # 洗車設備與出入口沖洗監控模組 (WashList.aspx, ReportUpload.aspx, DataInput.aspx)
+├── Wash/                   # 洗車設備與出入口沖洗監控模組 (WashList.aspx, ReportUpload.aspx, WashMap.aspx 等)
 ├── Machine/                # 施工機具管理模組 (NewMac.aspx, macList.aspx)
 ├── MoenvEquip/             # 環境部施工機具管理與匯入模組 (MoenvEquipment_List.aspx, MoenvEquipment_Upload.aspx)
 ├── BareGround/             # 裸露地管制作業模組 (NewBare.aspx, Bare_List.aspx, BareResult.aspx)
@@ -116,4 +116,4 @@ d:\NTPC_FEC/
 ## 📝 版本維護與歷程規範
 本專案嚴格遵循語意化版本（Semantic Versioning）與版本歷程紀錄規範：
 - 每次版本更新均於 [CHANGELOG.md](CHANGELOG.md) 詳載版本號、發布日期及重要改動事項。
-- 遵循 Git Tag 標註版本（如 `v1.0.0`、`v1.1.0`、`v1.2.0`、`v1.3.0`、`v1.4.0`、`v1.5.0`、`v1.6.0`、`v1.7.0`）。
+- 遵循 Git Tag 標註版本（如 `v1.0.0`、`v1.1.0`、`v1.2.0`、`v1.3.0`、`v1.4.0`、`v1.5.0`、`v1.6.0`、`v1.7.0`、`v1.8.0`）。

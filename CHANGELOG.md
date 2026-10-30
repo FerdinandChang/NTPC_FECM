@@ -4,6 +4,58 @@
 
 ---
 
+## [1.8.0] - 2026-10-31
+
+### 🚀 版本概述
+新北市固定逸散源管理平台（NTPC_FECM）發布 1.8.0 版本。本版本隆重上線全新「道路洗掃路段與現場查核空間地圖」（`Wash/WashMap.aspx`, `Wash/WashMapHandler.ashx`），實現 SQL Server 正規化空間地圖儲存架構與認養路段視覺化；同時迎來重大底層重構——全面升級「新一代資料表驅動權限架構」（`UserAuthPermission`），徹底突破 64 位元 Bit 位元限制並實作平滑向下相容雙軌授權；此外，進一步強化道路洗掃巡檢案件管理（新增作廢取消與關聯照片清理），並升級發布打包自動化工具。
+
+### ✨ 主要歷程與改動
+
+#### 1. 道路洗掃路段與現場查核空間地圖圖台上線 (`Wash/WashMap.aspx`, `Wash/WashMapHandler.ashx`)
+- **SQL Server 正規化三表儲存架構**：
+  - 新增並正規化建立三張洗掃圖台專用資料表：
+    1. `dbo.WashMap_Factory`（列管工廠、認養分級與道路幾何主檔）
+    2. `dbo.WashMap_MonthlyLog`（各月份洗掃日誌公里數與出勤天數表）
+    3. `dbo.WashMap_MonthlyAudit`（各月份現場抽查結果紀錄表）
+  - 支援「增量寫入模式（`onlyNewMonths`）」：已存在於 SQL 的歷史舊月份自動略過不重讀，大幅降低批次處理負擔。
+- **認養路段 GeoJSON 圖台視覺化與現場查核**：
+  - 整合 Leaflet 1.9.4 地圖圖台，將全市各工廠認養洗掃路段線型幾何動態著色繪製。
+  - 結合現場查核點位標記、合規狀態標籤、各月份累積里程儀表板，提供主管機關全方位的洗掃履約監控。
+- **Excel 批次上傳與離線快照支援**：
+  - 後端串接 NPOI（HSSF/XSSF）解析複雜洗掃報表，並內建 `Wash/Data/wash_map_data.json` 作為離線與冷啟動資料快取。
+
+#### 2. 新一代資料表驅動權限體系升級 (`PermissionService.cs`, `AuthRuleService.cs`)
+- **突破 64-bit LIC 位元限制**：
+  - 傳統架構採用 `BIGINT` 儲存 64 個 Bit 位元，隨系統業務模組迅速擴充已達上限。
+  - 導入全自動維護之 `[dbo].[UserAuthPermission]`（`UserID`, `AuthCode`, `CreateTime`, `CreateUser`）獨立權限資料表及索引。
+- **平滑向下相容之雙軌授權校驗**：
+  - 提供 `PermissionService.HasPermission(userId, lic, authCode, fallbackLicId)` 核心校驗方法。
+  - 優先讀取字串權限代碼集合（如 `SYS_ACCOUNT_MANAGE`, `CASE_INV1`, `WASH_MAP_READ` 等）；未設定代碼時自動平滑 Fallback 至既有 `LIC` / `LIC2` Bit 位元運算，確保舊帳號完全不受影響。
+  - 外部介接模組（如觀光夜市 LIC 31~35、油氣設施 LIC2 0~5）仍維持原樣完全相容。
+- **全域頁面存取防護細緻化 (`AuthRuleService.cs`)**：
+  - 全面將後端頁面存取授權規則升級為細粒度權限字串代碼比對。
+
+#### 3. 帳號權限管理後台階層化全面重構 (`Modules/Manager/AccountManagement.aspx`, `AccountManagement.aspx.cs`)
+- **階層化模組/子區塊勾選介面**：
+  - 將權限清單依主模組與業務子區塊（如案件初/複/三審、機具審核、洗掃地圖等）分類呈現，大幅提升管理員授權效率。
+- **同步維護新舊雙軌權限**：
+  - 儲存帳號權限時，自動將勾選項寫入 `UserAuthPermission`，並同時同步計算更新 `UserAcc.LIC` 與 `UserAcc.LIC2`，達成 100% 雙向相容。
+
+#### 4. 道路洗掃巡檢案件管理優化 (`RoadClean/Clean_List.aspx`, `Clean_List.aspx.cs`)
+- **新增審查作廢取消機制（狀態 9001）**：
+  - 審查流程新增「作廢取消」審查選項與備忘錄必填檢核，便於外勤主管快速標記並過濾誤報或重複上傳之單號。
+- **案件與相片清理機制**：
+  - 開放草稿（1001）、退回修正（2301）與已作廢案件（9001）之刪除權限。
+  - 刪除案件時同步自動清理伺服器端相應的佐證照片目錄與電子簽章檔案，防止垃圾資料佔用主機磁碟。
+
+#### 5. 正式機打包與防呆工具升級 (`deploy_manifest.json`, `Scripts/deploy_pack.py`)
+- **BOM 防呆覆蓋擴大**：
+  - 打包前檢腳本正式擴大至所有 `.cs` 檔案，確保全原始碼均帶有 UTF-8 BOM 標頭。
+- **發布清單同步**：
+  - 將 `Wash/WashMap.aspx`、`Wash/WashMapHandler.ashx`、`Wash/Data/wash_map_data.json` 納入正式機發布白名單與冒煙自檢驗證規範。
+
+---
+
 ## [1.7.0] - 2026-10-30
 
 ### 🚀 版本概述

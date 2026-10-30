@@ -866,7 +866,7 @@
                                                 <button type="button" class="btn btn-sm btn-primary btn-action font-weight-bold" v-on:click="openPutCheckModal(item)" title="送出審查">
                                                     <i class="fas fa-paper-plane"></i> 送審
                                                 </button>
-                                                <button v-if="item.CaseState === 1001" type="button" class="btn btn-sm btn-outline-danger btn-action" v-on:click="openDeleteModal(item)" title="刪除草稿">
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-action" v-on:click="openDeleteModal(item)" :title="item.CaseState === 2301 ? '刪除退回案件' : '刪除草稿'">
                                                     <i class="fas fa-trash-alt"></i>
                                                 </button>
                                             </template>
@@ -879,6 +879,16 @@
                                                 <a :href="'NewCleanChk.aspx?mode=read&chkId=' + item.ChkId + '&listMode=' + currentMode" class="btn btn-sm btn-info btn-action font-weight-bold" title="檢視詳細">
                                                     <i class="fas fa-eye"></i> 檢視
                                                 </a>
+                                            </template>
+
+                                            <!-- 已作廢取消(9001) 狀態 -->
+                                            <template v-else-if="item.CaseState === 9001">
+                                                <a :href="'NewCleanChk.aspx?mode=read&chkId=' + item.ChkId + '&listMode=' + currentMode" class="btn btn-sm btn-secondary btn-action font-weight-bold" title="檢視詳細">
+                                                    <i class="fas fa-eye"></i> 檢視
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-action" v-on:click="openDeleteModal(item)" title="徹底清理此作廢單">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
                                             </template>
 
                                             <!-- 已審核通過(2101) 或 駁回(2201) -->
@@ -946,7 +956,7 @@
                                     <button type="button" class="btn btn-primary btn-action font-weight-bold" v-on:click="openPutCheckModal(item)">
                                         <i class="fas fa-paper-plane"></i> 送審
                                     </button>
-                                    <button v-if="item.CaseState === 1001" type="button" class="btn btn-outline-danger btn-action" v-on:click="openDeleteModal(item)">
+                                    <button type="button" class="btn btn-outline-danger btn-action" v-on:click="openDeleteModal(item)">
                                         <i class="fas fa-trash-alt"></i> 刪除
                                     </button>
                                 </template>
@@ -957,6 +967,14 @@
                                     <a :href="'NewCleanChk.aspx?mode=read&chkId=' + item.ChkId + '&listMode=' + currentMode" class="btn btn-info btn-action font-weight-bold">
                                         <i class="fas fa-eye"></i> 檢視
                                     </a>
+                                </template>
+                                <template v-else-if="item.CaseState === 9001">
+                                    <a :href="'NewCleanChk.aspx?mode=read&chkId=' + item.ChkId + '&listMode=' + currentMode" class="btn btn-secondary btn-action font-weight-bold">
+                                        <i class="fas fa-eye"></i> 檢視
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger btn-action" v-on:click="openDeleteModal(item)">
+                                        <i class="fas fa-trash-alt"></i> 刪除
+                                    </button>
                                 </template>
                                 <template v-else>
                                     <a :href="'NewCleanChk.aspx?mode=read&chkId=' + item.ChkId + '&listMode=' + currentMode" class="btn btn-info btn-action font-weight-bold">
@@ -1023,7 +1041,7 @@
 
                         <div class="form-group">
                             <label class="font-weight-bold text-dark">審查結果決定：</label>
-                            <div class="d-flex gap-2">
+                            <div class="d-flex flex-wrap gap-2">
                                 <button type="button" class="btn flex-fill font-weight-bold" 
                                         :class="examineForm.result === 2101 ? 'btn-success shadow-sm' : 'btn-outline-success'" 
                                         v-on:click="examineForm.result = 2101">
@@ -1039,15 +1057,20 @@
                                         v-on:click="examineForm.result = 2201">
                                     <i class="fas fa-times-circle mr-1"></i> 駁回 (2201)
                                 </button>
+                                <button type="button" class="btn flex-fill font-weight-bold" 
+                                        :class="examineForm.result === 9001 ? 'btn-secondary text-white shadow-sm' : 'btn-outline-secondary'" 
+                                        v-on:click="setExamineCancel()">
+                                    <i class="fas fa-ban mr-1"></i> 作廢取消 (9001)
+                                </button>
                             </div>
                         </div>
 
                         <div class="form-group mb-0">
                             <label class="font-weight-bold text-dark">
                                 審查備忘錄 / 意見說明：
-                                <span v-if="examineForm.result !== 2101" class="text-danger small">* 退回或駁回時請具體載明原因</span>
+                                <span v-if="examineForm.result !== 2101" class="text-danger small">* 退回、駁回或作廢取消時請具體載明原因</span>
                             </label>
-                            <textarea class="form-control" rows="3" v-model="examineForm.memo" placeholder="請輸入審查意見或修正指示..."></textarea>
+                            <textarea class="form-control" rows="3" v-model="examineForm.memo" placeholder="請輸入審查意見或修正指示（作廢取消時可註明：重複上傳單號）..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer bg-light" style="border-radius: 0 0 12px 12px;">
@@ -1313,10 +1336,12 @@
                         <div class="text-danger mb-3" style="font-size: 3rem;">
                             <i class="fas fa-exclamation-circle"></i>
                         </div>
-                        <h5 class="font-weight-bold text-dark mb-2">確定刪除此筆巡檢草稿？</h5>
+                        <h5 class="font-weight-bold text-dark mb-2">確定刪除此筆巡檢紀錄？</h5>
                         <p class="text-muted small mb-4">
                             單號：{{ activeItem.ChkId }}（{{ activeItem.RoadName }}）<br />
-                            注意：刪除後資料與手寫簽章檔案將永久移除，無法復原！
+                            <span v-if="activeItem.CaseState === 2301" class="text-danger font-weight-bold">（此為退回補正案件）<br /></span>
+                            <span v-else-if="activeItem.CaseState === 9001" class="text-secondary font-weight-bold">（此為已作廢案件）<br /></span>
+                            注意：刪除後資料與現場巡檢照片、簽章將永久移除，無法復原！
                         </p>
                         <div class="d-flex justify-content-center gap-2">
                             <button type="button" class="btn btn-secondary font-weight-bold px-4 mr-2" data-dismiss="modal">取消</button>
@@ -1730,10 +1755,16 @@
                     this.examineForm.memo = '';
                     $('#examineModal').modal('show');
                 },
+                setExamineCancel() {
+                    this.examineForm.result = 9001;
+                    if (!this.examineForm.memo) {
+                        this.examineForm.memo = '重複上傳案件，作廢取消';
+                    }
+                },
                 async submitExamine() {
                     if (!this.activeItem) return;
                     if (this.examineForm.result !== 2101 && !this.examineForm.memo.trim()) {
-                        alert('退回補正或駁回案件時，必須填寫審查備忘錄/意見說明！');
+                        alert('退回補正、駁回或作廢取消案件時，必須填寫審查備忘錄/意見說明！');
                         return;
                     }
 
@@ -1830,7 +1861,7 @@
                         const res = await axios.post('Clean_List.aspx?action=delete', { ChkId: this.activeItem.ChkId });
                         if (res.data && res.data.Success) {
                             $('#deleteModal').modal('hide');
-                            alert(res.data.Message || '草稿已刪除！');
+                            alert(res.data.Message || '案件已刪除！');
                             this.loadList();
                         } else {
                             alert(res.data ? res.data.Message : '刪除失敗');

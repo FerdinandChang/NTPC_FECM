@@ -711,7 +711,7 @@
                                             <!-- 權限結構 (多欄緊湊卡片網格) -->
                                             <td class="col-perm">
                                                 <span class="mobile-field-label"><i class="fas fa-shield-alt mr-1"></i>配置業務權限：</span>
-                                                <%# RenderUserPermissions(Eval("LIC"), Eval("LIC2")) %>
+                                                <%# RenderUserPermissions(Eval("UserID"), Eval("LIC"), Eval("LIC2")) %>
                                             </td>
 
                                             <!-- 行政區 (全區智慧折疊 / 3欄緊湊網格) -->
@@ -805,7 +805,7 @@
                             <!-- 權限群組清單 (三欄緊湊卡片 + 卡片內橫向膠囊排列) -->
                             <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-2 mb-2">
                                 <h6 class="font-weight-bold text-dark mb-0">
-                                    <i class="fas fa-layer-group text-info mr-2"></i>業務模組權限配置
+                                    <i class="fas fa-layer-group text-info mr-2"></i>業務核心模組權限配置 (1:1 對照首頁)
                                 </h6>
                                 <div>
                                     <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 0.78rem;" onclick="toggleAllModuleChecks(true)">
@@ -835,6 +835,48 @@
                                                 <!-- 該群組所屬的權限項目核取方塊 (UnorderedList 實現橫向多排膠囊) -->
                                                 <div class="perm-checkbox-group">
                                                     <asp:CheckBoxList ID="cblGroupItems" runat="server" RepeatLayout="UnorderedList"></asp:CheckBoxList>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:Repeater>
+                            </div>
+
+                            <!-- 外部系統介接權責專區 (維持 LIC/LIC2 設定，專供外部 API 讀取) -->
+                            <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-2 mt-3 mb-2">
+                                <div>
+                                    <h6 class="font-weight-bold text-dark mb-0 d-inline-block mr-2">
+                                        <i class="fas fa-external-link-alt text-warning mr-2"></i>外部系統介接專區 (餐飲、夜市、油氣設施)
+                                    </h6>
+                                    <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 0.75rem;">維持 LIC / LIC2 位元規範供外部系統與 API 讀取</span>
+                                </div>
+                                <div class="mt-1 mt-sm-0">
+                                    <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 text-dark font-weight-bold" style="font-size: 0.78rem;" onclick="toggleExtModuleChecks(true)">
+                                        <i class="fas fa-check-double mr-1"></i>介接模組全選
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 ml-1" style="font-size: 0.78rem;" onclick="toggleExtModuleChecks(false)">
+                                        <i class="far fa-square mr-1"></i>介接模組清空
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row" id="extModulesContainer">
+                                <asp:Repeater ID="repExtPermGroups" runat="server" OnItemDataBound="repExtPermGroups_ItemDataBound">
+                                    <ItemTemplate>
+                                        <div class="col-md-6 col-lg-4 mb-2">
+                                            <div class="perm-card-box" style="border-top: 3px solid #f59e0b;">
+                                                <div class="perm-card-header">
+                                                    <span class="font-weight-bold text-dark" style="font-size: 0.86rem;">
+                                                        <i class="fas fa-plug text-warning mr-1"></i><asp:Literal ID="litExtGroupName" runat="server" Text='<%# Eval("Key") %>'></asp:Literal>
+                                                    </span>
+                                                    <div>
+                                                        <button type="button" class="btn btn-outline-primary btn-xs py-0 px-2" style="font-size: 0.73rem;" onclick="toggleGroupChecks(this, true)">全選</button>
+                                                        <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2" style="font-size: 0.73rem;" onclick="toggleGroupChecks(this, false)">清空</button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="perm-checkbox-group">
+                                                    <asp:CheckBoxList ID="cblExtGroupItems" runat="server" RepeatLayout="UnorderedList"></asp:CheckBoxList>
                                                 </div>
                                             </div>
                                         </div>
@@ -1019,6 +1061,12 @@
             syncCheckboxHighlight(container);
         }
 
+        function toggleExtModuleChecks(isCheck) {
+            var container = $('#extModulesContainer');
+            container.find('input[type="checkbox"]').prop('checked', isCheck);
+            syncCheckboxHighlight(container);
+        }
+
         function toggleTownChecks(isCheck) {
             var container = $('#townGridBox');
             container.find('input[type="checkbox"]').prop('checked', isCheck);
@@ -1048,9 +1096,10 @@
 
         $(function () {
             syncCheckboxHighlight('#permModulesContainer');
+            syncCheckboxHighlight('#extModulesContainer');
             syncCheckboxHighlight('#townGridBox');
 
-            $(document).on('change', '#permModulesContainer input[type="checkbox"], #townGridBox input[type="checkbox"]', function () {
+            $(document).on('change', '#permModulesContainer input[type="checkbox"], #extModulesContainer input[type="checkbox"], #townGridBox input[type="checkbox"]', function () {
                 var $li = $(this).closest('li');
                 if ($(this).prop('checked')) {
                     $li.addClass('checked-item');

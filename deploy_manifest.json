@@ -30,7 +30,10 @@
     "packages",
     "scratch",
     "tiles",
-    "ndvijob"
+    "ndvijob",
+    "microsoft",
+    "__pycache__",
+    "map"
   ],
   "exclude_extensions": [
     ".pdb",
@@ -134,6 +137,9 @@
     "Wash/ReportUpload_List.aspx",
     "Wash/DataInput.aspx",
     "Wash/WashList.aspx",
+    "Wash/WashMap.aspx",
+    "Wash/WashMapHandler.ashx",
+    "Wash/Data/wash_map_data.json",
     "洗掃街里程日誌(空白範本).pdf",
     "OwnReport/Report_AirQuality.aspx",
     "OwnReport/AirQuality_List.aspx",

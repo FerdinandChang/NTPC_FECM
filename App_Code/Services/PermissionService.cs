@@ -9,10 +9,14 @@ namespace NTPC_FEC.Services
 {
     public class AuthItem
     {
-        public int LicID { get; set; }
-        public string LicName { get; set; }
-        public string Group { get; set; }
-        public string FieldName { get; set; } // "LIC" 或 "LIC2"
+        public string AuthCode { get; set; }   // 唯一識別代碼 (如 FAC_LIST_READ)
+        public int LicID { get; set; }          // 舊版 Bit 索引 (0~63)
+        public string LicName { get; set; }     // 功能顯示名稱
+        public string Group { get; set; }       // 主模組名稱 (如 工廠基本資料)
+        public string SubGroup { get; set; }    // 子區塊名稱 (如 道路髒污清理，無則為空)
+        public string FieldName { get; set; }   // "LIC", "LIC2" 或 "NEW"
+        public bool IsExternal { get; set; }    // 是否為 8/9 外部介接模組 (維持原樣)
+        public int SortOrder { get; set; }
     }
 
     public class TownItem
@@ -23,75 +27,165 @@ namespace NTPC_FEC.Services
 
     public class PermissionService
     {
-        // 取得所有系統權限項目 (資料庫優先，內建標準設定作為穩健備援)
-        public static List<AuthItem> GetAuthItems()
+        // 確保 UserAuthPermission 資料表與索引存在
+        public static void EnsureAuthPermissionTableExists()
         {
-            var list = new List<AuthItem>();
             try
             {
-                string sql = "SELECT Lic_ID, Lic_Name, [Group], FieldName FROM Auth_List ORDER BY FieldName, Lic_ID";
-                DataTable dt = DbHelper.ExecuteDataTable(sql);
+                string sql = "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'UserAuthPermission') " +
+                             "BEGIN " +
+                             "    CREATE TABLE [dbo].[UserAuthPermission] ( " +
+                             "        [UserID]     VARCHAR(50)  NOT NULL, " +
+                             "        [AuthCode]   VARCHAR(50)  NOT NULL, " +
+                             "        [CreateTime] DATETIME     NOT NULL DEFAULT (GETDATE()), " +
+                             "        [CreateUser] VARCHAR(50)  NULL, " +
+                             "        CONSTRAINT [PK_UserAuthPermission] PRIMARY KEY CLUSTERED ([UserID] ASC, [AuthCode] ASC) " +
+                             "    ); " +
+                             "    CREATE NONCLUSTERED INDEX [IX_UserAuthPermission_UserID] ON [dbo].[UserAuthPermission] ([UserID]); " +
+                             "END";
+                DbHelper.ExecuteNonQuery(sql);
+            }
+            catch { }
+        }
+
+        // 取得所有系統權限項目定義 (包含本系統 1~7 及 10，以及外部介接 8 與 9)
+        public static List<AuthItem> GetAuthItems()
+        {
+            EnsureAuthPermissionTableExists();
+            return GetAllDefinedAuthItems();
+        }
+
+        // 取得使用者所有授權代碼 (優先讀取 UserAuthPermission，舊帳號自動由 LIC/LIC2 映射備援)
+        public static HashSet<string> GetUserAuthCodes(string userId, long fallbackLic, long fallbackLic2)
+        {
+            EnsureAuthPermissionTableExists();
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(userId)) return set;
+
+            try
+            {
+                string sql = "SELECT AuthCode FROM UserAuthPermission WHERE UserID = @UserID";
+                var parameters = new SqlParameter[]
+                {
+                    new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId }
+                };
+                DataTable dt = DbHelper.ExecuteDataTable(sql, parameters);
                 if (dt != null && dt.Rows.Count > 0)
                 {
                     foreach (DataRow row in dt.Rows)
                     {
-                        int licId = 0;
-                        int.TryParse((row["Lic_ID"] != null ? row["Lic_ID"].ToString() : ""), out licId);
-                        list.Add(new AuthItem
+                        if (row["AuthCode"] != null && row["AuthCode"] != DBNull.Value)
                         {
-                            LicID = licId,
-                            LicName = ((row["Lic_Name"] != null && row["Lic_Name"] != DBNull.Value) ? row["Lic_Name"].ToString() : ""),
-                            Group = ((row["Group"] != null && row["Group"] != DBNull.Value) ? row["Group"].ToString() : "其他"),
-                            FieldName = ((row["FieldName"] != null && row["FieldName"] != DBNull.Value) ? row["FieldName"].ToString() : "LIC")
-                        });
+                            string code = row["AuthCode"].ToString().Trim();
+                            if (!string.IsNullOrEmpty(code)) set.Add(code);
+                        }
                     }
-                    return list;
+                    return set;
                 }
             }
-            catch
+            catch { }
+
+            // 若 UserAuthPermission 尚未有此使用者記錄，自動以舊版 LIC / LIC2 位元遮罩反向映射
+            var allItems = GetAllDefinedAuthItems();
+            foreach (var item in allItems)
             {
-                // 若資料庫離線，啟用備援權限項目
-            }
-
-            // 內建標準清單 (與舊系統截圖架構 100% 一致)
-            return GetDefaultAuthItems();
-        }
-
-        // 依據使用者 LIC / LIC2 位元碼解析擁有權限的群組化字典
-        public static Dictionary<string, List<string>> GetUserPermissionGroups(long lic, long lic2)
-        {
-            var authItems = GetAuthItems();
-            var dict = new Dictionary<string, List<string>>();
-
-            foreach (var item in authItems)
-            {
-                bool hasPermission = false;
+                bool hasPerm = false;
                 if (item.FieldName.Equals("LIC2", StringComparison.OrdinalIgnoreCase))
                 {
                     if (item.LicID >= 0 && item.LicID < 64)
                     {
-                        hasPermission = (lic2 & (1L << item.LicID)) != 0;
+                        hasPerm = (fallbackLic2 & (1L << item.LicID)) != 0;
                     }
                 }
                 else
                 {
                     if (item.LicID >= 0 && item.LicID < 64)
                     {
-                        hasPermission = (lic & (1L << item.LicID)) != 0;
+                        hasPerm = (fallbackLic & (1L << item.LicID)) != 0;
                     }
+                }
+
+                if (hasPerm && !string.IsNullOrEmpty(item.AuthCode))
+                {
+                    set.Add(item.AuthCode);
+                }
+            }
+
+            return set;
+        }
+
+        // 檢查使用者是否具備指定權限
+        public static bool HasPermission(string userId, long fallbackLic, string authCode, int legacyBit)
+        {
+            if (string.IsNullOrEmpty(userId)) return false;
+            if (userId.ToLower() == "admin") return true;
+
+            var userCodes = GetUserAuthCodes(userId, fallbackLic, 0L);
+            if (userCodes.Contains(authCode)) return true;
+
+            if (legacyBit >= 0 && legacyBit < 64)
+            {
+                return (fallbackLic & (1L << legacyBit)) != 0;
+            }
+
+            return false;
+        }
+
+        // 取得使用者群組化之權限摘要 (供清單顯示)
+        public static Dictionary<string, List<string>> GetUserPermissionGroups(string userId, long lic, long lic2)
+        {
+            var userCodes = GetUserAuthCodes(userId, lic, lic2);
+            var allItems = GetAllDefinedAuthItems();
+            var dict = new Dictionary<string, List<string>>();
+
+            foreach (var item in allItems)
+            {
+                bool hasPermission = false;
+                if (item.IsExternal)
+                {
+                    // 外部介接模組 (8/9) 依 LIC / LIC2 位元即時判定
+                    if (item.FieldName.Equals("LIC2", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (item.LicID >= 0 && item.LicID < 64)
+                        {
+                            hasPermission = (lic2 & (1L << item.LicID)) != 0;
+                        }
+                    }
+                    else
+                    {
+                        if (item.LicID >= 0 && item.LicID < 64)
+                        {
+                            hasPermission = (lic & (1L << item.LicID)) != 0;
+                        }
+                    }
+                }
+                else
+                {
+                    // 本系統業務模組依 AuthCode 判定
+                    hasPermission = userCodes.Contains(item.AuthCode);
                 }
 
                 if (hasPermission)
                 {
-                    if (!dict.ContainsKey(item.Group))
+                    string groupKey = item.Group;
+                    if (!dict.ContainsKey(groupKey))
                     {
-                        dict[item.Group] = new List<string>();
+                        dict[groupKey] = new List<string>();
                     }
-                    dict[item.Group].Add(item.LicName);
+                    if (!dict[groupKey].Contains(item.LicName))
+                    {
+                        dict[groupKey].Add(item.LicName);
+                    }
                 }
             }
 
             return dict;
+        }
+
+        // 舊版相容多載
+        public static Dictionary<string, List<string>> GetUserPermissionGroups(long lic, long lic2)
+        {
+            return GetUserPermissionGroups("", lic, lic2);
         }
 
         // 取得新北 29 行政區清單
@@ -117,7 +211,7 @@ namespace NTPC_FEC.Services
             }
             catch { }
 
-            // 備援新北 29 區清單
+            // 備援清單
             string[] towns = new string[]
             {
                 "板橋區", "三重區", "中和區", "永和區", "新莊區", "新店區", "樹林區", "鶯歌區", "三峽區", "淡水區",
@@ -191,7 +285,7 @@ namespace NTPC_FEC.Services
             if (licIds == null) return val;
             foreach (int id in licIds)
             {
-                if (id >= 0 && id < 63)
+                if (id >= 0 && id < 64)
                 {
                     val |= (1L << id);
                 }
@@ -199,78 +293,157 @@ namespace NTPC_FEC.Services
             return val;
         }
 
-        private static void AddItem(List<AuthItem> items, int id, string group, string name, string field = "LIC")
+        // 完整系統權限定義清單 (1~7、10 為本系統首頁對齊項目；8、9 為外部介接維持原樣)
+        private static List<AuthItem> GetAllDefinedAuthItems()
         {
-            items.Add(new AuthItem { LicID = id, Group = group, LicName = name, FieldName = field });
+            var list = new List<AuthItem>();
+            int sort = 1;
+
+            // ==========================================
+            // 模組 1. 工廠基本資料 (FAC)
+            // ==========================================
+            AddAuth(list, ref sort, "FAC_LIST_READ", 41, "逸散源列管", "工廠基本資料", "", "LIC", false);
+            AddAuth(list, ref sort, "FAC_LIST_EDIT", 2, "逸散源未列管", "工廠基本資料", "", "LIC", false);
+            AddAuth(list, ref sort, "FAC_LICENSE_QUERY", 10, "許可證資訊", "工廠基本資料", "", "LIC", false);
+            AddAuth(list, ref sort, "FAC_OUTLINK_QUERY", 11, "其他資料查詢", "工廠基本資料", "", "LIC", false);
+            AddAuth(list, ref sort, "FAC_STATS", 41, "工廠統計", "工廠基本資料", "", "LIC", false);
+            AddAuth(list, ref sort, "FAC_BUFFER_MAP", 41, "環域查詢", "工廠基本資料", "", "LIC", false);
+
+            // ==========================================
+            // 模組 2. 巡查任務派遣 (CASE)
+            // ==========================================
+            AddAuth(list, ref sort, "CASE_CHECK_RUN", 0, "防制作業查核", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_DRAFT_VIEW", 0, "查核紀錄暫存", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_BACK_LIST", 0, "退件紀錄", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_INV1", 3, "案件初審", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_INV2", 4, "案件複審", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_INV3", 5, "案件三審", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_SEARCH_LIST", 42, "查核成果列表", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_PROJECT_ZONE", 42, "歷史建檔區", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_DISPATCH_SET", 0, "案件改派設定", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_MISSION_7DAY", 0, "技師派遣", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_MISSION_2TIMES", 0, "經緯複查", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_SUM_STATS", 42, "查核統計", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_SUM_MANAGE", 42, "管轄狀況統計", "巡查任務派遣", "", "LIC", false);
+
+            // ==========================================
+            // 模組 3. 作業機具調查 (MACHINE)
+            // ==========================================
+            AddAuth(list, ref sort, "MAC_DRAFT_VIEW", 1, "查核紀錄暫存", "作業機具調查", "作業機具調查", "LIC", false);
+            AddAuth(list, ref sort, "MAC_INV1", 6, "案件初審", "作業機具調查", "作業機具調查", "LIC", false);
+            AddAuth(list, ref sort, "MAC_INV2", 6, "案件複審", "作業機具調查", "作業機具調查", "LIC", false);
+            AddAuth(list, ref sort, "MAC_INV3", 6, "案件三審", "作業機具調查", "作業機具調查", "LIC", false);
+            AddAuth(list, ref sort, "MAC_SEARCH_LIST", 43, "調查成果列表", "作業機具調查", "", "LIC", false);
+            AddAuth(list, ref sort, "MAC_SURVEY_FORM", 43, "固定污染源施工機具排查", "作業機具調查", "", "LIC", false);
+            AddAuth(list, ref sort, "MAC_MOENV_ANALYSIS", 43, "事業部施工機具資料分析", "作業機具調查", "", "LIC", false);
+
+            // ==========================================
+            // 模組 4. 裸露地調查 (BARE)
+            // ==========================================
+            AddAuth(list, ref sort, "BARE_NEW_CHECK", 17, "裸露地調查", "裸露地調查", "", "LIC", false);
+            AddAuth(list, ref sort, "BARE_DRAFT_VIEW", 17, "查核紀錄暫存", "裸露地調查", "", "LIC", false);
+            AddAuth(list, ref sort, "BARE_BACK_LIST", 17, "退件紀錄", "裸露地調查", "", "LIC", false);
+            AddAuth(list, ref sort, "BARE_INV1", 18, "案件初審", "裸露地調查", "", "LIC", false);
+            AddAuth(list, ref sort, "BARE_INV2", 19, "案件複審", "裸露地調查", "", "LIC", false);
+            AddAuth(list, ref sort, "BARE_INV3", 20, "案件三審", "裸露地調查", "", "LIC", false);
+            AddAuth(list, ref sort, "BARE_SEARCH_LIST", 44, "調查成果列表", "裸露地調查", "", "LIC", false);
+
+            // ==========================================
+            // 模組 5. 自主管理回報 (OWN)
+            // ==========================================
+            AddAuth(list, ref sort, "OWN_REPORT_INPUT", 8, "自主維護回報", "自主管理回報", "自主管理控管", "LIC", false);
+            AddAuth(list, ref sort, "OWN_REPORT_LIST", 8, "維護紀錄列表", "自主管理回報", "自主管理控管", "LIC", false);
+
+            AddAuth(list, ref sort, "OWN_WASH_INPUT", 12, "車輛洗掃回報", "自主管理回報", "車輛洗掃設備管理", "LIC", false);
+            AddAuth(list, ref sort, "OWN_WASH_UPLOAD", 13, "洗掃規管回傳", "自主管理回報", "車輛洗掃設備管理", "LIC", false);
+            AddAuth(list, ref sort, "OWN_WASH_LIST", 14, "洗掃紀錄列表", "自主管理回報", "車輛洗掃設備管理", "LIC", false);
+
+            AddAuth(list, ref sort, "OWN_DEFECT_INPUT", 15, "缺失改善回報", "自主管理回報", "防制設施缺失改善管理", "LIC", false);
+            AddAuth(list, ref sort, "OWN_DEFECT_LIST", 15, "改善紀錄列表", "自主管理回報", "防制設施缺失改善管理", "LIC", false);
+
+            AddAuth(list, ref sort, "OWN_LINE_ALERT", 45, "LINE即時通報", "自主管理回報", "空品不良應變管理", "LIC", false);
+            AddAuth(list, ref sort, "OWN_AIR_INPUT", 45, "空品應變回報", "自主管理回報", "空品不良應變管理", "LIC", false);
+            AddAuth(list, ref sort, "OWN_AIR_LIST", 45, "空品應變列表", "自主管理回報", "空品不良應變管理", "LIC", false);
+
+            // ==========================================
+            // 模組 6. 空間資訊整合 (MAP)
+            // ==========================================
+            AddAuth(list, ref sort, "MAP_WASH_GIS", 41, "道路洗掃排程地圖(GIS)", "空間資訊整合", "", "LIC", false);
+            AddAuth(list, ref sort, "MAP_NDVI_SAT", 41, "NDVI 植被衛星影像", "空間資訊整合", "", "LIC", false);
+
+            // ==========================================
+            // 模組 7. 道路潔淨巡檢 (ROAD)
+            // ==========================================
+            AddAuth(list, ref sort, "ROAD_CLEAN_NEW", 21, "道路潔淨查核 (新增)", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_CLEAN_DRAFT", 22, "查核紀錄暫存", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_CLEAN_BACK", 22, "返回修正案件", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_CLEAN_EXAM", 22, "案件審核", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_CLEAN_SEARCH", 24, "調查成果列表", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_CLEAN_STATS", 24, "道路潔淨統計", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
+
+            AddAuth(list, ref sort, "ROAD_DIRTY_NEW", 21, "道路髒污通報", "道路潔淨巡檢", "道路髒污清理", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_DIRTY_DRAFT", 21, "查核紀錄暫存(路污)", "道路潔淨巡檢", "道路髒污清理", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_DIRTY_IMPROVE", 23, "髒污改善回報", "道路潔淨巡檢", "道路髒污清理", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_DIRTY_FINISH", 24, "髒污改善成果", "道路潔淨巡檢", "道路髒污清理", "LIC", false);
+
+            AddAuth(list, ref sort, "ROAD_BREAK_NEW", 26, "道路破損通報", "道路潔淨巡檢", "道路破損清理", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_BREAK_DRAFT", 26, "查核紀錄暫存(破損)", "道路潔淨巡檢", "道路破損清理", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_BREAK_IMPROVE", 27, "破損改善回報", "道路潔淨巡檢", "道路破損清理", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_BREAK_FINISH", 27, "破損改善成果", "道路潔淨巡檢", "道路破損清理", "LIC", false);
+
+            AddAuth(list, ref sort, "ROAD_BSC_NEW", 28, "清理落塵通報", "道路潔淨巡檢", "人行道/跳空通道整理", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_BSC_DRAFT", 28, "查核紀錄暫存(落塵)", "道路潔淨巡檢", "人行道/跳空通道整理", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_BSC_IMPROVE", 29, "落塵改善回報", "道路潔淨巡檢", "人行道/跳空通道整理", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_BSC_FINISH", 29, "落塵改善成果", "道路潔淨巡檢", "人行道/跳空通道整理", "LIC", false);
+
+            // ==========================================
+            // 模組 10. 系統維運管理 (ADMIN)
+            // ==========================================
+            AddAuth(list, ref sort, "SYS_ACCOUNT_MANAGE", 63, "帳號權限管理", "系統維運管理", "", "LIC", false);
+
+            // =========================================================================
+            // 外部系統介接專區 (8 及 9)：完全維持目前設定，專供外部 API 讀取 LIC / LIC2
+            // =========================================================================
+            // 8-1. 餐飲業者管理 (寫入 UserAcc.LIC)
+            AddAuth(list, ref sort, "EXT_CAT_SURVEY", 25, "餐飲業者調查", "餐飲業者管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_CAT_INV1", 36, "初審", "餐飲業者管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_CAT_INV2", 37, "複審", "餐飲業者管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_CAT_INV3", 38, "三審", "餐飲業者管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_CAT_STAT", 39, "統計", "餐飲業者管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_CAT_EMISSION", 40, "排放量管理", "餐飲業者管理", "", "LIC", true);
+
+            // 8-2. 觀光夜市管理 (寫入 UserAcc.LIC)
+            AddAuth(list, ref sort, "EXT_NM_SURVEY", 31, "觀光夜市調查", "觀光夜市管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_NM_INV1", 32, "初審", "觀光夜市管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_NM_INV2", 33, "複審", "觀光夜市管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_NM_INV3", 34, "三審", "觀光夜市管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_NM_STAT", 35, "統計", "觀光夜市管理", "", "LIC", true);
+            AddAuth(list, ref sort, "EXT_NM_EMISSION", 30, "排放量管理", "觀光夜市管理", "", "LIC", true);
+
+            // 9. 油氣設施查核 (寫入 UserAcc.LIC2)
+            AddAuth(list, ref sort, "EXT_GAS_SURVEY", 0, "油氣設施調查", "油氣設施查核", "", "LIC2", true);
+            AddAuth(list, ref sort, "EXT_GAS_INV1", 1, "初審", "油氣設施查核", "", "LIC2", true);
+            AddAuth(list, ref sort, "EXT_GAS_INV2", 2, "複審", "油氣設施查核", "", "LIC2", true);
+            AddAuth(list, ref sort, "EXT_GAS_INV3", 3, "三審", "油氣設施查核", "", "LIC2", true);
+            AddAuth(list, ref sort, "EXT_GAS_STAT", 4, "統計", "油氣設施查核", "", "LIC2", true);
+            AddAuth(list, ref sort, "EXT_GAS_EMISSION", 5, "排放量管理", "油氣設施查核", "", "LIC2", true);
+
+            return list;
         }
 
-        // 預設備援標準權限資料
-        private static List<AuthItem> GetDefaultAuthItems()
+        private static void AddAuth(List<AuthItem> list, ref int sort, string code, int licId, string name, string group, string subGroup, string field, bool isExternal)
         {
-            var items = new List<AuthItem>();
-
-
-
-            // 空間資訊整合
-            AddItem(items, 41, "空間資訊整合", "空間資訊查詢");
-
-            // 裸露地管理
-            AddItem(items, 17, "裸露地管理", "裸露地調查");
-            AddItem(items, 18, "裸露地管理", "初審");
-            AddItem(items, 19, "裸露地管理", "複審");
-            AddItem(items, 20, "裸露地管理", "三審");
-            AddItem(items, 44, "裸露地管理", "資料查詢");
-
-            // 機具資料調查審核
-            AddItem(items, 1, "機具資料調查審核", "作業機具調查");
-            AddItem(items, 6, "機具資料調查審核", "初審");
-            AddItem(items, 43, "機具資料調查審核", "資料查詢");
-
-            // 防制設施查核審核
-            AddItem(items, 0, "防制設施查核審核", "防制設施查核");
-            AddItem(items, 3, "防制設施查核審核", "初審");
-            AddItem(items, 4, "防制設施查核審核", "複審");
-            AddItem(items, 5, "防制設施查核審核", "三審");
-            AddItem(items, 42, "防制設施查核審核", "資料查詢");
-
-            // 固定污染源場所管理
-            AddItem(items, 2, "固定污染源場所管理", "基本資料差異維護");
-            AddItem(items, 10, "固定污染源場所管理", "許可證登記資料查詢");
-            AddItem(items, 11, "固定污染源場所管理", "資料查詢");
-
-            // 道路髒污管理
-            AddItem(items, 21, "道路髒污管理", "道路髒污通報");
-            AddItem(items, 22, "道路髒污管理", "髒污改善回報指派");
-            AddItem(items, 23, "道路髒污管理", "道路髒污改善回報");
-            AddItem(items, 24, "道路髒污管理", "統計查詢");
-
-            // 道路破損與人行道
-            AddItem(items, 26, "道路破損管理", "道路破損通報");
-            AddItem(items, 27, "道路破損管理", "破損改善成果");
-            AddItem(items, 28, "人行道與交通島管理", "裸露覆土通報");
-            AddItem(items, 29, "人行道與交通島管理", "覆土改善成果");
-
-            // 觀光夜市管理
-            AddItem(items, 31, "觀光夜市管理", "觀光夜市調查");
-            AddItem(items, 32, "觀光夜市管理", "初審");
-            AddItem(items, 33, "觀光夜市管理", "複審");
-            AddItem(items, 34, "觀光夜市管理", "三審");
-            AddItem(items, 35, "觀光夜市管理", "統計");
-
-            // 自主管理與洗掃
-            AddItem(items, 8, "自主回報管理", "自主維護回報");
-            AddItem(items, 9, "自主回報管理", "維護紀錄審查");
-            AddItem(items, 12, "道路洗掃認養管理", "道路洗掃回報");
-            AddItem(items, 13, "道路洗掃認養管理", "洗掃報表回傳");
-            AddItem(items, 14, "道路洗掃認養管理", "洗掃紀錄審核");
-            AddItem(items, 15, "防制設施缺失改善管理", "缺失改善回報");
-            AddItem(items, 16, "防制設施缺失改善管理", "改善紀錄審核");
-            AddItem(items, 45, "空品不良應變管理", "空品應變回報與列表");
-
-            // 最高系統管理者旗標
-            AddItem(items, 63, "系統維運管理", "全系統最高管理權限", "LIC");
-
-            return items;
+            list.Add(new AuthItem
+            {
+                AuthCode = code,
+                LicID = licId,
+                LicName = name,
+                Group = group,
+                SubGroup = subGroup,
+                FieldName = field,
+                IsExternal = isExternal,
+                SortOrder = sort++
+            });
         }
     }
 }

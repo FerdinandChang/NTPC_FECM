@@ -33,6 +33,7 @@ namespace NTPC_FEC.Modules.Manager
         protected Literal litEditingPUnit;
         protected TextBox txtEditingPUnit;
         protected Repeater repPermGroups;
+        protected Repeater repExtPermGroups;
         protected CheckBoxList cblTowns;
         protected Button btnCloseLicModal;
         protected Button btnSaveLic;
@@ -226,48 +227,22 @@ namespace NTPC_FEC.Modules.Manager
             LoadUsers();
         }
 
-        // 格式化輸出已配置之權限字串 (多欄緊湊卡片網格)
+        // 舊呼叫相容
         public string RenderUserPermissions(object licObj, object lic2Obj)
         {
+            return RenderUserPermissions("", licObj, lic2Obj);
+        }
+
+        // 格式化輸出已配置之權限字串 (多欄緊湊卡片網格，支援新舊雙軌顯示)
+        public string RenderUserPermissions(object userIdObj, object licObj, object lic2Obj)
+        {
+            string userId = userIdObj != null ? userIdObj.ToString().Trim() : "";
             long lic = 0, lic2 = 0;
             if (licObj != null && licObj != DBNull.Value) long.TryParse(licObj.ToString(), out lic);
             if (lic2Obj != null && lic2Obj != DBNull.Value) long.TryParse(lic2Obj.ToString(), out lic2);
 
-            if (_cachedAuthItems == null)
-            {
-                _cachedAuthItems = PermissionService.GetAuthItems();
-            }
-
-            var groups = new Dictionary<string, List<string>>();
-            foreach (var item in _cachedAuthItems)
-            {
-                bool hasPermission = false;
-                if (item.FieldName.Equals("LIC2", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (item.LicID >= 0 && item.LicID < 64)
-                    {
-                        hasPermission = (lic2 & (1L << item.LicID)) != 0;
-                    }
-                }
-                else
-                {
-                    if (item.LicID >= 0 && item.LicID < 64)
-                    {
-                        hasPermission = (lic & (1L << item.LicID)) != 0;
-                    }
-                }
-
-                if (hasPermission)
-                {
-                    if (!groups.ContainsKey(item.Group))
-                    {
-                        groups[item.Group] = new List<string>();
-                    }
-                    groups[item.Group].Add(item.LicName);
-                }
-            }
-
-            if (groups.Count == 0)
+            var groups = PermissionService.GetUserPermissionGroups(userId, lic, lic2);
+            if (groups == null || groups.Count == 0)
             {
                 return "<span class='text-muted small'><i class='fas fa-info-circle mr-1'></i>尚未配置任何業務權限</span>";
             }
@@ -329,7 +304,6 @@ namespace NTPC_FEC.Modules.Manager
             string cmd = e.CommandName;
             if (cmd == "ToggleState")
             {
-                // 切換狀態 OK <=> CL
                 string[] parts = e.CommandArgument.ToString().Split('|');
                 string targetUserId = parts[0];
                 string currentState = parts.Length > 1 ? parts[1] : "OK";
@@ -414,7 +388,7 @@ namespace NTPC_FEC.Modules.Manager
             }
         }
 
-        // 開啟權限設定 Modal
+        // 開啟權限設定 Modal (雙軌呈現：核心模組 1:1 對照首頁 + 外部專區維持原設定)
         private void OpenSetLicModal(string targetUserId)
         {
             string sql = "SELECT UserID, Name, PUnit, LIC, LIC2 FROM UserAcc WHERE UserID = @UserID";
@@ -441,13 +415,29 @@ namespace NTPC_FEC.Modules.Manager
             ViewState["EditingLic"] = lic;
             ViewState["EditingLic2"] = lic2;
 
-            // 綁定權限群組 Repeater
+            // 取得該帳號所有已授權的 AuthCode 清單
+            var userAuthCodes = PermissionService.GetUserAuthCodes(targetUserId, lic, lic2);
+            ViewState["EditingUserAuthCodes"] = new List<string>(userAuthCodes);
+
+            // 分流載入所有權限項目
             var allAuth = PermissionService.GetAuthItems();
-            var groupedAuth = allAuth.GroupBy(a => a.Group).ToDictionary(g => g.Key, g => g.ToList());
-            repPermGroups.DataSource = groupedAuth;
+            var coreItems = allAuth.Where(a => !a.IsExternal).ToList();
+            var extItems = allAuth.Where(a => a.IsExternal).ToList();
+
+            // 1. 綁定核心業務模組 Repeater (1~7 及 10)
+            var groupedCore = coreItems.GroupBy(a => a.Group).ToDictionary(g => g.Key, g => g.ToList());
+            repPermGroups.DataSource = groupedCore;
             repPermGroups.DataBind();
 
-            // 綁定行政區清單
+            // 2. 綁定外部介接模組 Repeater (8 及 9：餐飲、夜市、油氣設施)
+            if (repExtPermGroups != null)
+            {
+                var groupedExt = extItems.GroupBy(a => a.Group).ToDictionary(g => g.Key, g => g.ToList());
+                repExtPermGroups.DataSource = groupedExt;
+                repExtPermGroups.DataBind();
+            }
+
+            // 3. 綁定行政區清單
             var allTowns = PermissionService.GetTownList();
             var userTownNos = PermissionService.GetUserTownNos(targetUserId);
             cblTowns.Items.Clear();
@@ -461,13 +451,40 @@ namespace NTPC_FEC.Modules.Manager
             pnlSetLicModal.Visible = true;
         }
 
-        // 群組權限項目內部綁定
+        // 核心業務模組權限項目內部綁定 (值為 AuthCode，與首頁 1:1 對齊)
         protected void repPermGroups_ItemDataBound(object sender, RepeaterItemEventArgs e)
         {
             if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
             {
                 var kvp = (KeyValuePair<string, List<AuthItem>>)e.Item.DataItem;
                 var cbl = e.Item.FindControl("cblGroupItems") as CheckBoxList;
+                if (cbl != null)
+                {
+                    var userCodeList = ViewState["EditingUserAuthCodes"] as List<string>;
+                    var userCodes = new HashSet<string>(userCodeList ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+
+                    cbl.Items.Clear();
+                    foreach (var item in kvp.Value)
+                    {
+                        string displayText = string.IsNullOrEmpty(item.SubGroup)
+                            ? item.LicName
+                            : string.Format("[{0}] {1}", item.SubGroup, item.LicName);
+
+                        var li = new ListItem(displayText, item.AuthCode);
+                        li.Selected = userCodes.Contains(item.AuthCode);
+                        cbl.Items.Add(li);
+                    }
+                }
+            }
+        }
+
+        // 外部系統介接模組項目內部綁定 (值為 LicID|FieldName，維持 LIC / LIC2 位元規範)
+        protected void repExtPermGroups_ItemDataBound(object sender, RepeaterItemEventArgs e)
+        {
+            if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
+            {
+                var kvp = (KeyValuePair<string, List<AuthItem>>)e.Item.DataItem;
+                var cbl = e.Item.FindControl("cblExtGroupItems") as CheckBoxList;
                 if (cbl != null)
                 {
                     long lic = ViewState["EditingLic"] != null ? (long)ViewState["EditingLic"] : 0L;
@@ -493,17 +510,16 @@ namespace NTPC_FEC.Modules.Manager
             }
         }
 
-        // 儲存權限、所屬單位與轄區設定
+        // 儲存權限、所屬單位與轄區設定 (雙軌原子化儲存)
         protected void btnSaveLic_Click(object sender, EventArgs e)
         {
             string editUserId = litEditingUserID.Text.Trim();
             if (string.IsNullOrEmpty(editUserId)) return;
 
             string newPUnit = (txtEditingPUnit != null && txtEditingPUnit.Text != null) ? txtEditingPUnit.Text.Trim() : "";
-            long newLic = 0L;
-            long newLic2 = 0L;
 
-            // 遍歷所有群組勾選項
+            // 1. 收集【軌道 A】核心業務模組勾選之 AuthCode
+            var selectedCoreCodes = new List<string>();
             foreach (RepeaterItem item in repPermGroups.Items)
             {
                 var cbl = item.FindControl("cblGroupItems") as CheckBoxList;
@@ -511,22 +527,43 @@ namespace NTPC_FEC.Modules.Manager
                 {
                     foreach (ListItem li in cbl.Items)
                     {
-                        if (li.Selected)
+                        if (li.Selected && !string.IsNullOrEmpty(li.Value))
                         {
-                            string[] valParts = li.Value.Split('|');
-                            if (valParts.Length >= 2)
-                            {
-                                int licId = 0;
-                                int.TryParse(valParts[0], out licId);
-                                string field = valParts[1];
+                            selectedCoreCodes.Add(li.Value);
+                        }
+                    }
+                }
+            }
 
-                                if (field.Equals("LIC2", StringComparison.OrdinalIgnoreCase))
+            // 2. 收集【軌道 B】外部系統介接模組位元 (餐飲、夜市、油氣設施)
+            long extLic = 0L;
+            long extLic2 = 0L;
+            if (repExtPermGroups != null)
+            {
+                foreach (RepeaterItem item in repExtPermGroups.Items)
+                {
+                    var cbl = item.FindControl("cblExtGroupItems") as CheckBoxList;
+                    if (cbl != null)
+                    {
+                        foreach (ListItem li in cbl.Items)
+                        {
+                            if (li.Selected)
+                            {
+                                string[] valParts = li.Value.Split('|');
+                                if (valParts.Length >= 2)
                                 {
-                                    if (licId >= 0 && licId < 64) newLic2 |= (1L << licId);
-                                }
-                                else
-                                {
-                                    if (licId >= 0 && licId < 64) newLic |= (1L << licId);
+                                    int licId = 0;
+                                    int.TryParse(valParts[0], out licId);
+                                    string field = valParts[1];
+
+                                    if (field.Equals("LIC2", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        if (licId >= 0 && licId < 64) extLic2 |= (1L << licId);
+                                    }
+                                    else
+                                    {
+                                        if (licId >= 0 && licId < 64) extLic |= (1L << licId);
+                                    }
                                 }
                             }
                         }
@@ -534,20 +571,50 @@ namespace NTPC_FEC.Modules.Manager
                 }
             }
 
+            // 3. 由軌道 A 反算舊版相容 LIC 位元 (提供外部既有只讀取 LIC 之老舊 API 備援)
+            var allAuth = PermissionService.GetAuthItems();
+            long compatLic = 0L;
+            foreach (var auth in allAuth)
+            {
+                if (!auth.IsExternal && selectedCoreCodes.Contains(auth.AuthCode))
+                {
+                    if (auth.LicID >= 0 && auth.LicID < 64 && auth.FieldName.Equals("LIC", StringComparison.OrdinalIgnoreCase))
+                    {
+                        compatLic |= (1L << auth.LicID);
+                    }
+                }
+            }
+
+            long finalLic = extLic | compatLic;
+            long finalLic2 = extLic2;
+
             try
             {
-                // 1. 更新 UserAcc 的 PUnit (所屬單位)、LIC 與 LIC2
+                // 4. 寫入 UserAuthPermission 表 (先刪後增)
+                string delAuthSql = "DELETE FROM UserAuthPermission WHERE UserID = @UserID";
+                DbHelper.ExecuteNonQuery(delAuthSql, new SqlParameter[] { new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId } });
+
+                foreach (string code in selectedCoreCodes)
+                {
+                    string insAuthSql = "INSERT INTO UserAuthPermission (UserID, AuthCode) VALUES (@UserID, @AuthCode)";
+                    DbHelper.ExecuteNonQuery(insAuthSql, new SqlParameter[] {
+                        new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId },
+                        new SqlParameter("@AuthCode", SqlDbType.VarChar) { Value = code }
+                    });
+                }
+
+                // 5. 更新 UserAcc 的 PUnit (所屬單位)、LIC 與 LIC2
                 string sql = "UPDATE UserAcc SET PUnit = @PUnit, LIC = @LIC, LIC2 = @LIC2 WHERE UserID = @UserID";
                 var parameters = new SqlParameter[]
                 {
                     new SqlParameter("@PUnit", SqlDbType.NVarChar) { Value = newPUnit },
-                    new SqlParameter("@LIC", SqlDbType.BigInt) { Value = newLic },
-                    new SqlParameter("@LIC2", SqlDbType.BigInt) { Value = newLic2 },
+                    new SqlParameter("@LIC", SqlDbType.BigInt) { Value = finalLic },
+                    new SqlParameter("@LIC2", SqlDbType.BigInt) { Value = finalLic2 },
                     new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId }
                 };
                 DbHelper.ExecuteNonQuery(sql, parameters);
 
-                // 2. 更新 UserFilterTown 行政區限制
+                // 6. 更新 UserFilterTown 行政區限制
                 string delSql = "DELETE FROM UserFilterTown WHERE User_ID = @UserID";
                 DbHelper.ExecuteNonQuery(delSql, new SqlParameter[] { new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId } });
 
@@ -567,8 +634,8 @@ namespace NTPC_FEC.Modules.Manager
 
                 pnlSetLicModal.Visible = false;
                 string unitLabel = string.IsNullOrEmpty(newPUnit) ? "未指定" : newPUnit;
-                AuditLogger.Log("USER_PERM_CHANGE", editUserId, string.Format("單位：{0}, LIC：{1}, LIC2：{2}", unitLabel, newLic, newLic2), null, string.Format("單位：{0}, LIC：{1}, LIC2：{2}", unitLabel, newLic, newLic2));
-                ShowAlert(string.Format("帳號 [{0}] 的所屬單位（{1}）、業務權限與轄區配置已儲存成功！", editUserId, unitLabel), "alert-success");
+                AuditLogger.Log("USER_PERM_CHANGE", editUserId, string.Format("單位：{0}, 核心權限數：{1}, LIC：{2}, LIC2：{3}", unitLabel, selectedCoreCodes.Count, finalLic, finalLic2), null, string.Format("單位：{0}, LIC：{1}, LIC2：{2}", unitLabel, finalLic, finalLic2));
+                ShowAlert(string.Format("帳號 [{0}] 的所屬單位（{1}）、業務權限（核心 {2} 項）與轄區配置已儲存成功！", editUserId, unitLabel, selectedCoreCodes.Count), "alert-success");
                 LoadPUnitTabs();
                 LoadUsers();
             }
