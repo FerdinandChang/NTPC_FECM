@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 裸露地現場巡查作業</title>
+    <title>新北市固定逸散源管理平台 - 裸露地現場巡查作業</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -639,7 +639,7 @@
                                 </label>
                                 <textarea class="form-control" rows="3" placeholder="描述空氣品質、是否有明顯揚塵逸散、出入口防制設施運作狀況..." v-model="form.surroundings" :disabled="mode === 'read'"></textarea>
                                 <div v-if="mode !== 'read'" class="phrase-pill-group">
-                                    <span class="phrase-pill" v-on:click="insertPhrase('surroundings', '現場無明顯揚塵溢散，空氣品質尚屬良好')">無明顯揚塵溢散</span>
+                                    <span class="phrase-pill" v-on:click="insertPhrase('surroundings', '現場無明顯揚塵逸散，空氣品質尚屬良好')">無明顯揚塵逸散</span>
                                     <span class="phrase-pill" v-on:click="insertPhrase('surroundings', '遇強風時局部易有揚塵逸散現象')">遇強風易揚塵</span>
                                     <span class="phrase-pill" v-on:click="insertPhrase('surroundings', '出入口未設洗車設施，車輛行經易夾帶泥沙')">出入口無洗車設施</span>
                                     <span class="phrase-pill" v-on:click="insertPhrase('surroundings', '出入口已設自動洗車台，路面維持濕潤潔淨')">出入口洗車台運作良好</span>

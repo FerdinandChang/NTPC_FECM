@@ -207,21 +207,91 @@
         /* 統計指標卡片 */
         .stat-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
         }
         .stat-chip {
             background: #f8fafc;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 8px 4px;
+            padding: 6px 2px;
             text-align: center;
+            transition: all 0.15s ease;
+        }
+        .stat-chip.clickable:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
         .stat-chip .stat-val {
-            font-size: 1.15rem; font-weight: 700; line-height: 1.2;
+            font-size: 1.05rem; font-weight: 700; line-height: 1.2;
         }
         .stat-chip .stat-lbl {
-            font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;
+            font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap;
+        }
+
+        /* 重點工廠與學校敏感度樣式 */
+        .result-item.priority-high {
+            border-left: 4px solid #dc2626;
+        }
+        .result-item.priority-medium {
+            border-left: 4px solid #ea580c;
+        }
+        .result-item.school-card {
+            border-left: 4px solid #7c3aed;
+            background: #fdfcff;
+        }
+        .badge-school-high {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #ffffff;
+            font-size: 0.7rem;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(220, 38, 38, 0.35);
+        }
+        .badge-school-medium {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: #ffffff;
+            font-size: 0.7rem;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(234, 88, 12, 0.3);
+        }
+        .badge-school-normal {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            font-size: 0.7rem;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+        }
+        .badge-school-normal:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .school-dist-tooltip {
+            background: rgba(15, 23, 42, 0.92) !important;
+            color: #ffffff !important;
+            border: 1px solid #f97316 !important;
+            border-radius: 12px !important;
+            padding: 3px 9px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3) !important;
         }
 
         /* 環域結果主卡片容器 (彈性撐滿剩餘高度，內部滾動) */
@@ -564,6 +634,13 @@
                 </div>
                 <div class="d-flex align-items-center" style="gap: 6px; flex: none;">
                     <button type="button" 
+                            class="btn btn-sm btn-success text-white shadow-sm nav-tool-btn" 
+                            v-on:click="openSchoolExportModal" 
+                            title="匯出固定逸散源距離學校分析清冊 (Excel)">
+                        <i class="fas fa-file-excel"></i>
+                        <span class="d-none d-md-inline ml-1">學校距離Excel</span>
+                    </button>
+                    <button type="button" 
                             class="btn btn-sm btn-warning text-white shadow-sm nav-tool-btn" 
                             v-on:click="openGalleryModal" 
                             title="360全覽圖庫 (共 {{ panoList.length }} 處)">
@@ -679,25 +756,56 @@
                                 <button type="button" class="chip-btn" :class="{ active: currentRadius === 3000 }" v-on:click="setRadius(3000)">3km</button>
                             </div>
 
-                            <!-- 圖層勾選過濾 (預設工廠、裸露地、360環景三種皆勾選) -->
-                            <div class="d-flex align-items-center justify-content-between mt-3 pt-2 border-top">
-                                <div class="custom-control custom-checkbox custom-control-inline">
+                            <!-- 圖層勾選過濾 (預設工廠、裸露地、360環景、各級學校四種皆勾選) -->
+                            <div class="d-flex align-items-center justify-content-between flex-wrap mt-3 pt-2 border-top" style="gap: 4px;">
+                                <div class="custom-control custom-checkbox custom-control-inline mr-1">
                                     <input type="checkbox" class="custom-control-input" id="chkFac" value="fac" v-model="layerOptions" v-on:change="refreshBuffer" />
                                     <label class="custom-control-label small font-weight-bold" for="chkFac" style="cursor: pointer;">
                                         <span class="badge badge-primary mr-1" style="font-size: 0.65rem;">工廠</span>固定源
                                     </label>
                                 </div>
-                                <div class="custom-control custom-checkbox custom-control-inline">
+                                <div class="custom-control custom-checkbox custom-control-inline mr-1">
                                     <input type="checkbox" class="custom-control-input" id="chkBare" value="bare" v-model="layerOptions" v-on:change="refreshBuffer" />
                                     <label class="custom-control-label small font-weight-bold" for="chkBare" style="cursor: pointer;">
                                         <span class="badge badge-secondary mr-1" style="font-size: 0.65rem;">裸露</span>裸露地
                                     </label>
                                 </div>
-                                <div class="custom-control custom-checkbox custom-control-inline">
+                                <div class="custom-control custom-checkbox custom-control-inline mr-1">
                                     <input type="checkbox" class="custom-control-input" id="chkPano" value="pano" v-model="layerOptions" v-on:change="refreshBuffer" />
                                     <label class="custom-control-label small text-warning font-weight-bold" for="chkPano" style="cursor: pointer;">
                                         <i class="fas fa-camera mr-1"></i>360環景
                                     </label>
+                                </div>
+                                <div class="custom-control custom-checkbox custom-control-inline mr-0">
+                                    <input type="checkbox" class="custom-control-input" id="chkSchool" value="school" v-model="layerOptions" v-on:change="refreshBuffer" />
+                                    <label class="custom-control-label small font-weight-bold" for="chkSchool" style="cursor: pointer; color: #7c3aed;">
+                                        <i class="fas fa-graduation-cap mr-1"></i>各級學校
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- 學校敏感受體與重點工廠警戒設定列 -->
+                            <div class="mt-2 pt-2 border-top">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="small font-weight-bold" style="color: #7c3aed; font-size: 0.75rem;">
+                                        <i class="fas fa-school mr-1"></i>學校學制範圍與重點工廠警戒：
+                                    </span>
+                                    <div class="d-flex align-items-center" style="gap: 4px;">
+                                        <span class="small text-muted" style="font-size: 0.7rem;">警戒距：</span>
+                                        <select class="custom-select custom-select-sm py-0 px-1" style="height: 22px; width: auto; font-size: 0.72rem;" v-model.number="priorityThreshold" v-on:change="refreshBuffer">
+                                            <option :value="100">≤ 100m</option>
+                                            <option :value="300">≤ 300m</option>
+                                            <option :value="500">≤ 500m</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap" style="gap: 4px;">
+                                    <button type="button" class="chip-btn py-0 px-2" style="font-size: 0.7rem;" :class="{ active: schoolLevelFilter === '' }" v-on:click="setSchoolLevelFilter('')">全部學制</button>
+                                    <button type="button" class="chip-btn py-0 px-2" style="font-size: 0.7rem;" :class="{ active: schoolLevelFilter === '幼兒園' }" v-on:click="setSchoolLevelFilter('幼兒園')">幼兒園(含附幼)</button>
+                                    <button type="button" class="chip-btn py-0 px-2" style="font-size: 0.7rem;" :class="{ active: schoolLevelFilter === '國小' }" v-on:click="setSchoolLevelFilter('國小')">國小</button>
+                                    <button type="button" class="chip-btn py-0 px-2" style="font-size: 0.7rem;" :class="{ active: schoolLevelFilter === '國中' }" v-on:click="setSchoolLevelFilter('國中')">國中</button>
+                                    <button type="button" class="chip-btn py-0 px-2" style="font-size: 0.7rem;" :class="{ active: schoolLevelFilter === '高中職' }" v-on:click="setSchoolLevelFilter('高中職')">高中職</button>
+                                    <button type="button" class="chip-btn py-0 px-2" style="font-size: 0.7rem;" :class="{ active: schoolLevelFilter === '大專校院' }" v-on:click="setSchoolLevelFilter('大專校院')">大專</button>
                                 </div>
                             </div>
                         </div>
@@ -710,11 +818,16 @@
                                 <i class="fas fa-chart-pie text-success"></i>
                                 <span>環域統計摘要</span>
                             </h3>
-                            <span class="small text-muted" v-if="loading"><i class="fas fa-spinner fa-spin"></i> 計算中…</span>
+                            <div class="d-flex align-items-center" style="gap: 6px;">
+                                <span class="small text-muted" v-if="loading"><i class="fas fa-spinner fa-spin"></i> 計算中…</span>
+                                <button type="button" class="btn btn-xs btn-outline-success py-0 px-2 font-weight-bold" style="font-size: 0.7rem; border-radius: 10px;" v-on:click="openSchoolExportModal" title="匯出學校距離分析 Excel 清冊">
+                                    <i class="fas fa-file-excel mr-1"></i>匯出清冊
+                                </button>
+                            </div>
                         </div>
                         <div class="card-modern-body">
                             <div class="stat-grid">
-                                <div class="stat-chip">
+                                <div class="stat-chip clickable" v-on:click="onlyPriorityFilter = false; drawPlacesMarkers();" title="顯示全部環域結果" style="cursor: pointer;">
                                     <div class="stat-val text-primary">{{ summary.Total }}</div>
                                     <div class="stat-lbl">全部對象</div>
                                 </div>
@@ -722,9 +835,16 @@
                                     <div class="stat-val text-dark">{{ summary.FacCount }}</div>
                                     <div class="stat-lbl">工廠場所</div>
                                 </div>
-                                <div class="stat-chip">
-                                    <div class="stat-val text-secondary">{{ summary.BareCount }}</div>
-                                    <div class="stat-lbl">裸露地</div>
+                                <div class="stat-chip clickable" 
+                                     :style="onlyPriorityFilter ? 'background: #ea580c; border-color: #c2410c; color: #fff; cursor: pointer;' : 'background: #fff7ed; border-color: #fed7aa; cursor: pointer;'"
+                                     v-on:click="toggleOnlyPriorityFilter"
+                                     :title="'點擊切換：僅顯示距學校 ≤' + priorityThreshold + 'm 之重點列管工廠'">
+                                    <div class="stat-val" :style="onlyPriorityFilter ? 'color: #fff;' : 'color: #ea580c;'">{{ summary.PriorityFacCount || 0 }}</div>
+                                    <div class="stat-lbl" :style="onlyPriorityFilter ? 'color: #ffedd5;' : 'color: #c2410c;'">重點工廠</div>
+                                </div>
+                                <div class="stat-chip" style="background: #f5f3ff; border-color: #ddd6fe;">
+                                    <div class="stat-val" style="color: #7c3aed;">{{ summary.SchoolCount || 0 }}</div>
+                                    <div class="stat-lbl" style="color: #6d28d9;">各級學校</div>
                                 </div>
                                 <div class="stat-chip" style="background: #fffbeb; border-color: #fde68a;">
                                     <div class="stat-val text-warning">{{ summary.PanoCount }}</div>
@@ -742,7 +862,10 @@
                                     <i class="fas fa-list-ul text-primary"></i>
                                     <span>環域搜尋結果</span>
                                 </h3>
-                                <div class="d-flex align-items-center" style="gap: 4px;">
+                                <div class="d-flex align-items-center flex-wrap justify-content-end" style="gap: 4px;">
+                                    <span v-if="onlyPriorityFilter" class="badge badge-danger font-weight-bold" style="font-size: 0.7rem; cursor: pointer;" v-on:click="toggleOnlyPriorityFilter" title="點此取消重點工廠過濾">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>重點工廠(≤{{ priorityThreshold }}m) &times;
+                                    </span>
                                     <span v-if="activeFilterIndustry" class="badge badge-warning text-dark font-weight-bold" style="font-size: 0.72rem; cursor: pointer;" v-on:click="clearIndustryFilter" title="點此取消過濾，顯示全部">
                                         <i class="fas fa-filter mr-1"></i>{{ activeFilterIndustry }} &times;
                                     </span>
@@ -774,25 +897,48 @@
                             <div class="result-list" v-if="resultViewMode === 'list' && displayPlacesList.length > 0">
                                 <div v-for="item in displayPlacesList" :key="item.id" 
                                      class="result-item" 
-                                     :class="{ selected: selectedItemId === item.id }"
+                                     :class="{ 
+                                         selected: selectedItemId === item.id,
+                                         'priority-high': item.typeKey === 'fac' && item.schoolRiskLevel === 'high',
+                                         'priority-medium': item.typeKey === 'fac' && item.schoolRiskLevel === 'medium',
+                                         'school-card': item.typeKey === 'school'
+                                     }"
                                      v-on:click="focusItem(item)">
                                     <div class="result-item-header">
                                         <div class="result-item-title">
-                                            <!-- 類型標籤 (工廠 / 裸露地 / 360環景) -->
+                                            <!-- 類型標籤 (工廠 / 裸露地 / 360環景 / 各級學校) -->
                                             <span class="badge mr-1" 
-                                                  :class="item.typeKey === 'fac' ? 'badge-primary' : (item.typeKey === 'bare' ? 'badge-secondary' : 'badge-warning text-dark')"
-                                                  style="font-size: 0.68rem;">
-                                                <i class="fas fa-camera mr-1" v-if="item.typeKey === 'pano'"></i>{{ item.type }}
+                                                  :class="item.typeKey === 'fac' ? (item.isPriorityFac ? 'badge-danger' : 'badge-primary') : (item.typeKey === 'bare' ? 'badge-secondary' : (item.typeKey === 'school' ? 'badge-info' : 'badge-warning text-dark'))"
+                                                  :style="item.typeKey === 'school' ? 'background-color: #7c3aed; font-size: 0.68rem;' : 'font-size: 0.68rem;'">
+                                                <i class="fas fa-camera mr-1" v-if="item.typeKey === 'pano'"></i>
+                                                <i class="fas fa-graduation-cap mr-1" v-else-if="item.typeKey === 'school'"></i>
+                                                <i class="fas fa-exclamation-triangle mr-1" v-else-if="item.isPriorityFac"></i>{{ item.isPriorityFac ? '重點工廠' : item.type }}
                                             </span>
                                             <!-- 行業別徽章 -->
-                                            <span class="badge badge-light border text-success mr-1" style="font-size: 0.68rem;" v-if="item.industry">
+                                            <span class="badge badge-light border text-success mr-1" style="font-size: 0.68rem;" v-if="item.industry && item.typeKey !== 'school'">
                                                 {{ item.industry }}
+                                            </span>
+                                            <span class="badge badge-light border mr-1" style="font-size: 0.68rem; color: #6d28d9;" v-if="item.typeKey === 'school'">
+                                                {{ item.cno }}
                                             </span>
                                             {{ item.name }}
                                         </div>
                                         <div class="result-item-dist">{{ item.dist }}m</div>
                                     </div>
                                     <div class="result-item-addr">{{ item.addr || '無詳細地址紀錄' }}</div>
+
+                                    <!-- 工廠 / 裸露地：顯示「距離最近學校」敏感度連線徽章 -->
+                                    <div class="mt-1" v-if="(item.typeKey === 'fac' || item.typeKey === 'bare') && item.nearestSchoolName">
+                                        <span :class="item.schoolRiskLevel === 'high' ? 'badge-school-high' : (item.schoolRiskLevel === 'medium' ? 'badge-school-medium' : 'badge-school-normal')"
+                                              v-on:click.stop="drawSchoolConnectionLine(item)"
+                                              title="點擊在地圖繪製與最近學校之直線距離連線">
+                                            <i class="fas fa-graduation-cap"></i>
+                                            <span v-if="item.schoolRiskLevel === 'high'">極高敏：距 {{ item.nearestSchoolName }} <b>{{ item.nearestSchoolDist }}m</b></span>
+                                            <span v-else-if="item.schoolRiskLevel === 'medium'">重點列管：距 {{ item.nearestSchoolName }} <b>{{ item.nearestSchoolDist }}m</b></span>
+                                            <span v-else>最近學校：{{ item.nearestSchoolName }} ({{ item.nearestSchoolDist }}m)</span>
+                                            <i class="fas fa-route ml-1" style="opacity: 0.85;"></i>
+                                        </span>
+                                    </div>
 
                                     <!-- 1. 工廠場所專屬快捷列 (許可證 / 巡查紀錄 / 360 環景) -->
                                     <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top" v-if="item.typeKey === 'fac'">
@@ -805,9 +951,10 @@
                                             </button>
                                         </div>
                                         <div v-if="item.hasPano">
-                                            <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)">
-                                                <i class="fas fa-street-view mr-1"></i>360° 實景
+                                            <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)" :title="item.panoMonthText ? ('拍攝期程：' + item.panoMonthText) : '開啟 360° 實景導覽'">
+                                                <i class="fas fa-street-view mr-1"></i>360°<span v-if="item.panoMonthText" class="ml-1" style="font-size: 0.68rem; opacity: 0.9;">({{ item.panoMonthText }})</span>
                                             </button>
+                                            <span v-if="item.panoHistory && item.panoHistory.length > 0" class="badge badge-light border text-muted ml-1" style="font-size: 0.62rem;" :title="'含 ' + item.panoHistory.length + ' 個歷史期程'">+{{ item.panoHistory.length }}歷次</span>
                                         </div>
                                     </div>
 
@@ -818,9 +965,10 @@
                                         </span>
                                         <span v-else></span>
                                         <div v-if="item.hasPano">
-                                            <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)">
-                                                <i class="fas fa-street-view mr-1"></i>360° 實景
+                                            <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)" :title="item.panoMonthText ? ('拍攝期程：' + item.panoMonthText) : '開啟 360° 實景導覽'">
+                                                <i class="fas fa-street-view mr-1"></i>360°<span v-if="item.panoMonthText" class="ml-1" style="font-size: 0.68rem; opacity: 0.9;">({{ item.panoMonthText }})</span>
                                             </button>
+                                            <span v-if="item.panoHistory && item.panoHistory.length > 0" class="badge badge-light border text-muted ml-1" style="font-size: 0.62rem;" :title="'含 ' + item.panoHistory.length + ' 個歷史期程'">+{{ item.panoHistory.length }}歷次</span>
                                         </div>
                                     </div>
 
@@ -828,10 +976,29 @@
                                     <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top" v-else-if="item.typeKey === 'pano'">
                                         <span class="small text-muted" style="font-size: 0.72rem;">
                                             <i class="fas fa-vr-cardboard text-warning mr-1"></i>高解析環景實景
+                                            <span v-if="item.panoMonthText" class="badge badge-info ml-1" style="font-size: 0.65rem;">{{ item.panoMonthText }}</span>
                                         </span>
-                                        <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)">
-                                            <i class="fas fa-street-view mr-1"></i>開啟 360° 實景導覽
-                                        </button>
+                                        <div>
+                                            <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)">
+                                                <i class="fas fa-street-view mr-1"></i>開啟 360° 實景導覽
+                                            </button>
+                                            <span v-if="item.panoHistory && item.panoHistory.length > 0" class="badge badge-light border text-muted ml-1" style="font-size: 0.62rem;" :title="'含 ' + item.panoHistory.length + ' 個歷史期程'">+{{ item.panoHistory.length }}歷次</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- 4. 各級學校專屬動作列 (支援一鍵以該校為中心反查周邊工廠) -->
+                                    <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top" v-else-if="item.typeKey === 'school'">
+                                        <span class="small text-muted text-truncate" style="font-size: 0.72rem; max-width: 190px;" :title="item.phone">
+                                            <i class="fas fa-phone-alt mr-1 text-secondary"></i>{{ item.phone || '新北市各級學校' }}
+                                        </span>
+                                        <div class="d-flex" style="gap: 5px;">
+                                            <a v-if="item.url" :href="item.url" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.7rem;" v-on:click.stop>
+                                                <i class="fas fa-globe"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm py-0 px-2 font-weight-bold text-white" style="background: #7c3aed; font-size: 0.72rem;" v-on:click.stop="setSchoolAsCenter(item)">
+                                                <i class="fas fa-crosshairs mr-1"></i>設為中心反查工廠
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -864,20 +1031,38 @@
                                     <div class="industry-group-body" v-if="isIndExpanded(ind.name)">
                                         <div v-for="item in getItemsByIndustry(ind.name)" :key="item.id" 
                                              class="result-item" 
-                                             :class="{ selected: selectedItemId === item.id }" 
+                                             :class="{ 
+                                                 selected: selectedItemId === item.id,
+                                                 'priority-high': item.typeKey === 'fac' && item.schoolRiskLevel === 'high',
+                                                 'priority-medium': item.typeKey === 'fac' && item.schoolRiskLevel === 'medium',
+                                                 'school-card': item.typeKey === 'school'
+                                             }" 
                                              v-on:click="focusItem(item)">
                                             <div class="result-item-header">
                                                 <div class="result-item-title">
                                                     <span class="badge mr-1" 
-                                                          :class="item.typeKey === 'fac' ? 'badge-primary' : (item.typeKey === 'bare' ? 'badge-secondary' : 'badge-warning text-dark')"
-                                                          style="font-size: 0.65rem;">
-                                                        {{ item.type }}
+                                                          :class="item.typeKey === 'fac' ? (item.isPriorityFac ? 'badge-danger' : 'badge-primary') : (item.typeKey === 'bare' ? 'badge-secondary' : (item.typeKey === 'school' ? 'badge-info' : 'badge-warning text-dark'))"
+                                                          :style="item.typeKey === 'school' ? 'background-color: #7c3aed; font-size: 0.65rem;' : 'font-size: 0.65rem;'">
+                                                        {{ item.isPriorityFac ? '重點工廠' : item.type }}
                                                     </span>
                                                     {{ item.name }}
                                                 </div>
                                                 <div class="result-item-dist">{{ item.dist }}m</div>
                                             </div>
                                             <div class="result-item-addr">{{ item.addr || '無詳細地址紀錄' }}</div>
+
+                                            <!-- 最近學校距離敏感度徽章 -->
+                                            <div class="mt-1" v-if="(item.typeKey === 'fac' || item.typeKey === 'bare') && item.nearestSchoolName">
+                                                <span :class="item.schoolRiskLevel === 'high' ? 'badge-school-high' : (item.schoolRiskLevel === 'medium' ? 'badge-school-medium' : 'badge-school-normal')"
+                                                      v-on:click.stop="drawSchoolConnectionLine(item)"
+                                                      title="點擊在地圖繪製與最近學校之直線距離連線">
+                                                    <i class="fas fa-graduation-cap"></i>
+                                                    <span v-if="item.schoolRiskLevel === 'high'">極高敏：距 {{ item.nearestSchoolName }} <b>{{ item.nearestSchoolDist }}m</b></span>
+                                                    <span v-else-if="item.schoolRiskLevel === 'medium'">重點：距 {{ item.nearestSchoolName }} <b>{{ item.nearestSchoolDist }}m</b></span>
+                                                    <span v-else>最近：{{ item.nearestSchoolName }} ({{ item.nearestSchoolDist }}m)</span>
+                                                    <i class="fas fa-route ml-1" style="opacity: 0.85;"></i>
+                                                </span>
+                                            </div>
 
                                             <!-- 工廠快捷動作列 -->
                                             <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top" v-if="item.typeKey === 'fac'">
@@ -890,15 +1075,23 @@
                                                     </button>
                                                 </div>
                                                 <div v-if="item.hasPano">
-                                                    <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)">
-                                                        <i class="fas fa-street-view mr-1"></i>360°
+                                                    <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)" :title="item.panoMonthText ? ('拍攝期程：' + item.panoMonthText) : '開啟 360° 實景導覽'">
+                                                        <i class="fas fa-street-view mr-1"></i>360°<span v-if="item.panoMonthText" class="ml-1" style="font-size: 0.68rem; opacity: 0.9;">({{ item.panoMonthText }})</span>
                                                     </button>
+                                                    <span v-if="item.panoHistory && item.panoHistory.length > 0" class="badge badge-light border text-muted ml-1" style="font-size: 0.62rem;" :title="'含 ' + item.panoHistory.length + ' 個歷史期程'">+{{ item.panoHistory.length }}歷次</span>
                                                 </div>
                                             </div>
-                                            <div class="mt-2 text-right" v-else-if="item.hasPano">
-                                                <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)">
-                                                    <i class="fas fa-street-view mr-1"></i>360° 實景
+                                            <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top" v-else-if="item.typeKey === 'school'">
+                                                <span class="small text-muted" style="font-size: 0.7rem;">{{ item.cno }}</span>
+                                                <button type="button" class="btn btn-sm py-0 px-2 font-weight-bold text-white" style="background: #7c3aed; font-size: 0.7rem;" v-on:click.stop="setSchoolAsCenter(item)">
+                                                    <i class="fas fa-crosshairs mr-1"></i>設為中心反查
                                                 </button>
+                                            </div>
+                                            <div class="mt-2 text-right" v-else-if="item.hasPano">
+                                                <button type="button" class="badge-pano border-0 cursor-pointer" v-on:click.stop="openPano(item)" :title="item.panoMonthText ? ('拍攝期程：' + item.panoMonthText) : '開啟 360° 實景導覽'">
+                                                    <i class="fas fa-street-view mr-1"></i>360° 實景<span v-if="item.panoMonthText" class="ml-1" style="font-size: 0.68rem; opacity: 0.9;">({{ item.panoMonthText }})</span>
+                                                </button>
+                                                <span v-if="item.panoHistory && item.panoHistory.length > 0" class="badge badge-light border text-muted ml-1" style="font-size: 0.62rem;" :title="'含 ' + item.panoHistory.length + ' 個歷史期程'">+{{ item.panoHistory.length }}歷次</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1167,15 +1360,33 @@
                 </div>
             </div>
 
-            <!-- 360 環景全螢幕彈窗 Modal (單一導覽播放) -->
+            <!-- 360 環景全螢幕彈窗 Modal (單一導覽播放 + 歷史期程快速切換) -->
             <div class="modal fade" id="panoModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
                 <div class="modal-dialog modal-dialog-centered modal-xl pano-modal-dialog" role="document">
                     <div class="modal-content pano-modal-content" style="height: 85vh; border: none; overflow: hidden; background: #000;">
                         <div class="modal-header py-2 px-3 text-white" style="background: #0f172a; border-bottom: 1px solid #334155;">
-                            <h5 class="modal-title font-weight-bold" style="font-size: 1rem;">
-                                <i class="fas fa-street-view text-warning mr-2"></i>{{ currentPanoTitle }} — 360° 實景導覽
-                            </h5>
-                            <button type="button" class="close text-white" v-on:closePano aria-label="Close" style="opacity: 0.8;" v-on:click="closePano">
+                            <div class="d-flex align-items-center flex-wrap" style="gap: 8px; min-width: 0;">
+                                <h5 class="modal-title font-weight-bold text-truncate mb-0" style="font-size: 1rem;">
+                                    <i class="fas fa-street-view text-warning mr-2"></i>{{ currentPanoTitle }}
+                                </h5>
+                                <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 0.72rem;" v-if="currentPanoMonthText">
+                                    <i class="fas fa-calendar-alt mr-1"></i>{{ currentPanoMonthText }}
+                                </span>
+                                <!-- 歷次期程快速切換下拉選單 -->
+                                <div class="d-flex align-items-center ml-md-2" v-if="currentPanoHistoryList && currentPanoHistoryList.length > 0">
+                                    <span class="text-white-50 small mr-1 font-weight-bold" style="font-size: 0.72rem;">歷史期程：</span>
+                                    <select class="custom-select custom-select-sm py-0 px-2" 
+                                            style="height: 26px; font-size: 0.75rem; width: auto; background: #1e293b; color: #f8fafc; border-color: #475569;" 
+                                            v-model="selectedPanoVersionUrl" 
+                                            v-on:change="switchPanoVersion">
+                                        <option :value="currentPanoOriginalUrl">{{ currentPanoMonthText || '最新版本' }} (最新)</option>
+                                        <option v-for="h in currentPanoHistoryList" :key="h.Url" :value="h.Url">
+                                            {{ h.MonthText }} (歷次)
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="button" class="close text-white" aria-label="Close" style="opacity: 0.8;" v-on:click="closePano">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
@@ -1195,7 +1406,7 @@
                 </div>
             </div>
 
-            <!-- 360° 實景導覽全覽圖庫 Modal (解決 167 筆點位瀏覽難題) -->
+            <!-- 360° 實景導覽全覽圖庫 Modal (解決 167 筆點位瀏覽難題 + 月份篩選) -->
             <div class="modal fade" id="panoGalleryModal" tabindex="-1" role="dialog" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
                     <div class="modal-content" style="border-radius: 14px; overflow: hidden; max-height: 90vh;">
@@ -1207,7 +1418,7 @@
                                         新北市 360° 實景導覽圖庫全覽
                                     </h5>
                                     <span class="small text-muted" style="color: #cbd5e1 !important; font-size: 0.75rem;">
-                                        共收錄 {{ panoList.length }} 處高解析 3DVista 環景影像
+                                        共收錄 {{ panoList.length }} 處高解析 3DVista 環景影像 (跨 {{ monthList.length }} 個拍攝期程)
                                     </span>
                                 </div>
                             </div>
@@ -1219,14 +1430,27 @@
                         <div class="modal-body p-3" style="background: #f8fafc; overflow-y: auto;">
                             <!-- 篩選列 -->
                             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3" style="gap: 10px;">
-                                <!-- 關鍵字搜尋 -->
-                                <div class="input-group input-group-sm" style="max-width: 320px;">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
+                                <div class="d-flex flex-column flex-sm-row align-items-sm-center" style="gap: 8px;">
+                                    <!-- 關鍵字搜尋 -->
+                                    <div class="input-group input-group-sm" style="max-width: 260px;">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
+                                        </div>
+                                        <input type="text" class="form-control border-left-0" placeholder="搜尋場所名稱或關鍵字..." v-model="gallerySearchKey" />
+                                        <div class="input-group-append" v-if="gallerySearchKey">
+                                            <button class="btn btn-outline-secondary py-0" type="button" v-on:click="gallerySearchKey = ''">&times;</button>
+                                        </div>
                                     </div>
-                                    <input type="text" class="form-control border-left-0" placeholder="搜尋場所名稱或關鍵字..." v-model="gallerySearchKey" />
-                                    <div class="input-group-append" v-if="gallerySearchKey">
-                                        <button class="btn btn-outline-secondary py-0" type="button" v-on:click="gallerySearchKey = ''">&times;</button>
+
+                                    <!-- 拍攝期程月份篩選下拉選單 -->
+                                    <div class="d-flex align-items-center" style="gap: 5px;">
+                                        <span class="small font-weight-bold text-muted text-nowrap"><i class="fas fa-calendar-alt mr-1"></i>期程：</span>
+                                        <select class="custom-select custom-select-sm" style="width: auto; min-width: 140px;" v-model="galleryActiveMonth">
+                                            <option value="">-- 全部期程 (共 {{ panoList.length }} 處) --</option>
+                                            <option v-for="m in monthList" :key="m.value" :value="m.value">
+                                                {{ m.text }} ({{ m.count }}處)
+                                            </option>
+                                        </select>
                                     </div>
                                 </div>
 
@@ -1247,11 +1471,19 @@
                                     <div class="gallery-card">
                                         <div>
                                             <div class="d-flex align-items-start justify-content-between mb-2">
-                                                <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 0.72rem;">
-                                                    <i class="fas fa-map-marker-alt mr-1"></i>{{ p.town || '新北市' }}
-                                                </span>
+                                                <div class="d-flex align-items-center flex-wrap" style="gap: 4px;">
+                                                    <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-map-marker-alt mr-1"></i>{{ p.town || '新北市' }}
+                                                    </span>
+                                                    <span class="badge badge-info font-weight-bold" style="font-size: 0.68rem;" v-if="p.monthText">
+                                                        <i class="fas fa-calendar-alt mr-1"></i>{{ p.monthText }}
+                                                    </span>
+                                                    <span class="badge badge-light border text-muted" style="font-size: 0.65rem;" v-if="p.history && p.history.length > 0" :title="'含 ' + p.history.length + ' 個歷史期程'">
+                                                        <i class="fas fa-history mr-1"></i>含{{ p.history.length }}歷次
+                                                    </span>
+                                                </div>
                                                 <span class="badge badge-light border text-muted" style="font-size: 0.68rem;" v-if="p.lat">
-                                                    有定位座標
+                                                    有定位
                                                 </span>
                                             </div>
                                             <div class="gallery-card-title" :title="p.title">
@@ -1275,6 +1507,7 @@
                             <div v-else class="text-center py-5 text-muted">
                                 <i class="fas fa-folder-open fa-3x mb-3 text-black-50"></i>
                                 <div>查無符合條件之 360 環景場所</div>
+                            </div>
                             </div>
                         </div>
                     </div>
@@ -1346,6 +1579,15 @@
                                                     <td>360 環景圖資數量</td>
                                                     <td><b>{{ debugInfo.PanoCount }}</b> 筆目錄</td>
                                                 </tr>
+                                                <tr>
+                                                    <td>新北市各級學校空間圖資</td>
+                                                    <td class="d-flex align-items-center justify-content-between">
+                                                        <span><b>{{ debugInfo.SchoolCount || 0 }}</b> 所學校 (含幼兒園~大專)</span>
+                                                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 font-weight-bold" style="font-size: 0.72rem;" v-on:click="syncSchoolsToDb" :disabled="syncingSchools">
+                                                            <i class="fas fa-database mr-1"></i>{{ syncingSchools ? '寫入中...' : '同步建表至資料庫' }}
+                                                        </button>
+                                                    </td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -1371,6 +1613,94 @@
                             <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">關閉</button>
                             <button type="button" class="btn btn-sm btn-primary" v-on:click="fetchDebugInfo">
                                 <i class="fas fa-sync-alt mr-1"></i>重新整理
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 固定逸散源距離各級學校分析清冊 Excel 匯出 Modal -->
+            <div class="modal fade" id="schoolExportModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content" style="border-radius: 14px; overflow: hidden;">
+                        <div class="modal-header py-2 px-3 text-white" style="background: linear-gradient(135deg, #059669, #047857);">
+                            <h5 class="modal-title font-weight-bold mb-0" style="font-size: 1rem;">
+                                <i class="fas fa-file-excel mr-2"></i>匯出「固定逸散源距離各級學校」敏感度清冊
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body p-3" style="font-size: 0.85rem; background: #f8fafc;">
+                            <div class="alert alert-success py-2 px-3 mb-3 small">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                系統已載入新北市各級學校（含<b>幼兒園、國小、國中、高中職、大專校院</b>共 504 校區），以 TWD97 二度分帶計算<b>點到點直線距離</b>，並自動標記紅/橘燈重點工廠。
+                            </div>
+
+                            <!-- 匯出範圍模式 -->
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark mb-1">1. 選擇匯出資料範圍：</label>
+                                <div class="custom-control custom-radio mb-2">
+                                    <input type="radio" id="expModeBuffer" name="expMode" class="custom-control-input" value="buffer" v-model="exportConfig.mode" />
+                                    <label class="custom-control-label font-weight-bold text-dark" for="expModeBuffer" style="cursor: pointer;">
+                                        當前環域範圍內之固定源 (中心半徑 {{ currentRadius }}m，共 {{ summary.FacCount || 0 }} 家工廠)
+                                    </label>
+                                </div>
+                                <div class="custom-control custom-radio">
+                                    <input type="radio" id="expModePriorityAll" name="expMode" class="custom-control-input" value="priority_all" v-model="exportConfig.mode" />
+                                    <label class="custom-control-label font-weight-bold text-danger" for="expModePriorityAll" style="cursor: pointer;">
+                                        全區/全新北市「鄰近學校重點列管工廠」專案清冊 (距學校 ≤ 警戒距離)
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- 行政區篩選 (當選取全區模式時可指定特定行政區或全新北市) -->
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark mb-1">2. 行政區篩選：</label>
+                                <select class="form-control form-control-sm" v-model="exportConfig.town">
+                                    <option value="">-- 全新北市 (不限行政區) --</option>
+                                    <option v-for="t in townList" :key="t.no" :value="t.name">{{ t.name }}</option>
+                                </select>
+                            </div>
+
+                            <!-- 重點工廠警戒距離門檻 -->
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark mb-1">3. 重點工廠警戒距離門檻：</label>
+                                <div class="d-flex align-items-center" style="gap: 8px;">
+                                    <select class="form-control form-control-sm" v-model.number="exportConfig.priorityThreshold" style="max-width: 180px;">
+                                        <option :value="100">≤ 100 公尺 (極高敏)</option>
+                                        <option :value="200">≤ 200 公尺</option>
+                                        <option :value="300">≤ 300 公尺 (建議標準)</option>
+                                        <option :value="500">≤ 500 公尺 (擴大警戒)</option>
+                                        <option :value="1000">≤ 1,000 公尺</option>
+                                    </select>
+                                    <div class="custom-control custom-checkbox" v-if="exportConfig.mode === 'buffer'">
+                                        <input type="checkbox" class="custom-control-input" id="chkExpOnlyPri" v-model="exportConfig.onlyPriority" />
+                                        <label class="custom-control-label small font-weight-bold text-danger" for="chkExpOnlyPri" style="cursor: pointer;">
+                                            僅匯出重點工廠
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 學校學制範圍 -->
+                            <div class="form-group mb-1">
+                                <label class="font-weight-bold text-dark mb-1">4. 比對學校學制範圍：</label>
+                                <select class="form-control form-control-sm" v-model="exportConfig.schoolLevels">
+                                    <option value="">全部學制 (含幼兒園、國小、國中、高中職、大專校院)</option>
+                                    <option value="幼兒園">僅比對：幼兒園 (含國中小附設幼兒園)</option>
+                                    <option value="幼兒園,國小">僅比對：幼兒園 + 國小 (學齡前與學童敏感受體)</option>
+                                    <option value="國小">僅比對：國小</option>
+                                    <option value="國中">僅比對：國中</option>
+                                    <option value="高中職">僅比對：高中職</option>
+                                    <option value="大專校院">僅比對：大專校院</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer py-2 px-3 bg-light d-flex justify-content-between">
+                            <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">取消</button>
+                            <button type="button" class="btn btn-sm btn-success font-weight-bold px-3" v-on:click="triggerExportSchoolExcel">
+                                <i class="fas fa-download mr-1"></i>立即下載 Excel 清冊 (.xls)
                             </button>
                         </div>
                     </div>
@@ -1424,13 +1754,16 @@
                         searching: false,
                         searchResults: [],
 
-                        // 圖層與篩選 (預設三種皆勾選：工廠、裸露地、360環景)
-                        layerOptions: ['fac', 'bare', 'pano'],
+                        // 圖層與篩選 (預設四種皆勾選：工廠、裸露地、360環景、各級學校)
+                        layerOptions: ['fac', 'bare', 'pano', 'school'],
+                        schoolLevelFilter: '',
+                        priorityThreshold: 300,
+                        onlyPriorityFilter: false,
 
                         // 結果與統計
                         loading: false,
                         resultList: [],
-                        summary: { Total: 0, FacCount: 0, BareCount: 0, PanoCount: 0 },
+                        summary: { Total: 0, FacCount: 0, BareCount: 0, PanoCount: 0, SchoolCount: 0, PriorityFacCount: 0 },
                         industrySummary: [],
                         resultViewMode: 'list',
                         activeFilterIndustry: '',
@@ -1438,15 +1771,32 @@
                         selectedItemId: '',
                         dbError: '',
 
+                        // 學校距離敏感度清冊 Excel 匯出設定
+                        exportConfig: {
+                            mode: 'buffer',
+                            town: '',
+                            priorityThreshold: 300,
+                            onlyPriority: false,
+                            schoolLevels: ''
+                        },
+                        syncingSchools: false,
+
                         // 360 環景導覽
                         panoList: [],
                         panoActiveTown: '',
                         showPanoMapPins: true,
                         currentPanoTitle: '',
                         currentPanoUrl: '',
+                        currentPanoOriginalUrl: '',
+                        currentPanoMonth: '',
+                        currentPanoMonthText: '',
+                        selectedPanoVersionUrl: '',
+                        currentPanoHistoryList: [],
                         panoLoading: false,
 
-                        // 全覽圖庫 Modal
+                        // 全覽圖庫 Modal 與月份期程版本控制
+                        monthList: [],
+                        galleryActiveMonth: '',
                         gallerySearchKey: '',
                         galleryActiveTown: '',
 
@@ -1464,12 +1814,13 @@
                     };
                 },
                 computed: {
-                    // 當前顯示之場所清單 (支援單一行業聚焦過濾)
+                    // 當前顯示之場所清單 (支援單一行業聚焦與重點工廠過濾)
                     displayPlacesList: function () {
                         var self = this;
-                        if (!self.activeFilterIndustry) return self.resultList;
                         return self.resultList.filter(function (item) {
-                            return item.industry === self.activeFilterIndustry;
+                            if (self.onlyPriorityFilter && !item.isPriorityFac) return false;
+                            if (self.activeFilterIndustry && item.industry !== self.activeFilterIndustry) return false;
+                            return true;
                         });
                     },
 
@@ -1499,17 +1850,27 @@
                         return arr;
                     },
 
-                    // 全覽圖庫 Modal 過濾後的 360 清單
+                    // 全覽圖庫 Modal 過濾後的 360 清單 (整合行政區、期程月份與關鍵字)
                     galleryFilteredPanoList: function () {
                         var self = this;
                         return self.panoList.filter(function (p) {
                             var matchTown = !self.galleryActiveTown || (p.town === self.galleryActiveTown);
+                            var matchMonth = true;
+                            if (self.galleryActiveMonth) {
+                                if (p.month === self.galleryActiveMonth) {
+                                    matchMonth = true;
+                                } else if (p.history && p.history.length > 0) {
+                                    matchMonth = p.history.some(function (h) { return h.Month === self.galleryActiveMonth; });
+                                } else {
+                                    matchMonth = false;
+                                }
+                            }
                             var matchKey = true;
                             if (self.gallerySearchKey && self.gallerySearchKey.trim()) {
                                 var q = self.gallerySearchKey.trim().toLowerCase();
                                 matchKey = (p.title && p.title.toLowerCase().indexOf(q) >= 0) || (p.addr && p.addr.toLowerCase().indexOf(q) >= 0);
                             }
-                            return matchTown && matchKey;
+                            return matchTown && matchMonth && matchKey;
                         });
                     }
                 },
@@ -1552,6 +1913,7 @@
 
                         window.markerLayerGroup = L.layerGroup().addTo(window.map);
                         window.panoMapLayerGroup = L.layerGroup().addTo(window.map);
+                        window.schoolLineLayerGroup = L.layerGroup().addTo(window.map);
 
                         // 即時渲染中心標記與半徑圓形
                         self.renderCenterMarkerImmediate();
@@ -1632,6 +1994,9 @@
                             if (res.data && res.data.Success) {
                                 self.townList = res.data.Towns || [];
                                 self.currentRadius = res.data.DefaultRadius || 500;
+                                if (res.data.MonthList && res.data.MonthList.length > 0) {
+                                    self.monthList = res.data.MonthList;
+                                }
                                 if (res.data.Layers && res.data.Layers.length > 0) {
                                     self.layerOptions = res.data.Layers;
                                 }
@@ -1648,6 +2013,9 @@
                         axios.get(API_URL + '?action=getpanolist').then(function (res) {
                             if (res.data && res.data.Success) {
                                 self.panoList = res.data.Data || [];
+                                if (res.data.MonthList && res.data.MonthList.length > 0) {
+                                    self.monthList = res.data.MonthList;
+                                }
                                 self.renderPanoMapPins();
                             }
                         }).catch(function (err) {
@@ -1686,9 +2054,17 @@
 
                             var marker = L.marker([p.lat, p.lng], { icon: panoPin }).addTo(window.panoMapLayerGroup);
 
-                            var popupHtml = '<div style="min-width:210px;padding:2px;">' +
+                            var panoInfoText = '行政區：' + (p.town || '新北市');
+                            if (p.monthText) {
+                                panoInfoText += ' | 期程：' + p.monthText;
+                            }
+                            if (p.history && p.history.length > 0) {
+                                panoInfoText += ' (含' + p.history.length + '歷次)';
+                            }
+
+                            var popupHtml = '<div style="min-width:220px;padding:2px;">' +
                                 '<div style="font-weight:bold;font-size:13px;color:#b45309;margin-bottom:2px;"><i class="fas fa-camera mr-1"></i>' + p.title + '</div>' +
-                                '<div style="font-size:11px;color:#64748b;margin-bottom:6px;">行政區：' + (p.town || '新北市') + '</div>' +
+                                '<div style="font-size:11px;color:#64748b;margin-bottom:6px;">' + panoInfoText + '</div>' +
                                 '<div class="d-flex" style="gap:4px;">' +
                                 '<button type="button" class="btn btn-warning btn-sm text-white font-weight-bold flex-fill py-1" style="font-size:11px;" onclick="window.triggerOpenPanoDirect(\'' + p.id + '\')"><i class="fas fa-street-view mr-1"></i>看 360</button>' +
                                 '<button type="button" class="btn btn-outline-primary btn-sm flex-fill py-1" style="font-size:11px;" onclick="window.triggerPanoBufferCenter(' + p.lat + ',' + p.lng + ')"><i class="fas fa-crosshairs mr-1"></i>環域定位</button>' +
@@ -1718,15 +2094,22 @@
                         var self = this;
                         self.loading = true;
                         self.dbError = '';
+                        if (window.schoolLineLayerGroup) {
+                            window.schoolLineLayerGroup.clearLayers();
+                        }
 
                         var layersParam = self.layerOptions.join(',');
-                        var url = API_URL + '?action=querybuffer&lat=' + self.centerLat + '&lng=' + self.centerLng + '&radius=' + self.currentRadius + '&layers=' + layersParam;
+                        var url = API_URL + '?action=querybuffer&lat=' + self.centerLat + '&lng=' + self.centerLng +
+                            '&radius=' + self.currentRadius +
+                            '&layers=' + layersParam +
+                            '&schoolLevels=' + encodeURIComponent(self.schoolLevelFilter || '') +
+                            '&priorityThreshold=' + (self.priorityThreshold || 300);
 
                         axios.get(url).then(function (res) {
                             self.loading = false;
                             if (res.data && res.data.Success) {
                                 self.resultList = res.data.Data || [];
-                                self.summary = res.data.Summary || { Total: 0, FacCount: 0, BareCount: 0, PanoCount: 0 };
+                                self.summary = res.data.Summary || { Total: 0, FacCount: 0, BareCount: 0, PanoCount: 0, SchoolCount: 0, PriorityFacCount: 0 };
                                 self.industrySummary = res.data.IndustrySummary || [];
                                 self.activeFilterIndustry = '';
                                 self.drawPlacesMarkers();
@@ -1744,12 +2127,17 @@
                         });
                     },
 
-                    // 繪製周邊場所標記 Pin (整合行業別聚焦與許可證巡查快捷調閱)
+                    // 繪製周邊場所標記 Pin (整合重點工廠紅橘燈、各級學校學士帽、行業別聚焦與許可證巡查快捷調閱)
                     drawPlacesMarkers: function () {
                         var self = this;
                         window.markerLayerGroup.clearLayers();
 
                         var targetList = self.resultList;
+                        if (self.onlyPriorityFilter) {
+                            targetList = targetList.filter(function (item) {
+                                return !!item.isPriorityFac;
+                            });
+                        }
                         if (self.activeFilterIndustry) {
                             targetList = targetList.filter(function (item) {
                                 return item.industry === self.activeFilterIndustry;
@@ -1761,8 +2149,14 @@
                             var p = [item.lat, item.lng];
 
                             var markerHtml = '';
-                            if (item.typeKey === 'pano') {
+                            if (item.typeKey === 'school') {
+                                markerHtml = '<div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 3px 8px rgba(109,40,217,0.55);display:flex;align-items:center;justify-content:center;font-size:13px;"><i class="fas fa-graduation-cap"></i></div>';
+                            } else if (item.typeKey === 'pano') {
                                 markerHtml = '<div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 3px 8px rgba(245,158,11,0.6);display:flex;align-items:center;justify-content:center;font-size:13px;"><i class="fas fa-camera"></i></div>';
+                            } else if (item.typeKey === 'fac' && item.schoolRiskLevel === 'high') {
+                                markerHtml = '<div style="background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 3px rgba(239,68,68,0.45), 0 3px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:11px;"><i class="fas fa-exclamation"></i></div>';
+                            } else if (item.typeKey === 'fac' && item.schoolRiskLevel === 'medium') {
+                                markerHtml = '<div style="background:linear-gradient(135deg,#f97316,#c2410c);color:#fff;width:24px;height:24px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px rgba(249,115,22,0.4), 0 2px 6px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:11px;"><i class="fas fa-industry"></i></div>';
                             } else if (item.hasPano) {
                                 markerHtml = '<div style="background:linear-gradient(135deg,#0284c7,#0b1f7d);color:#f59e0b;width:24px;height:24px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:12px;"><i class="fas fa-camera"></i></div>';
                             } else if (item.typeKey === 'fac') {
@@ -1780,22 +2174,41 @@
 
                             var m = L.marker(p, { icon: customIcon }).addTo(window.markerLayerGroup);
 
-                            var popupContent = '<div style="min-width:240px;padding:2px;">' +
-                                '<div style="font-size:11px;font-weight:bold;color:#059669;margin-bottom:2px;"><i class="fas fa-industry mr-1"></i>' + (item.industry || item.type) + '</div>' +
+                            var headerColor = item.typeKey === 'school' ? '#7c3aed' : (item.isPriorityFac ? '#ea580c' : '#059669');
+                            var headerIcon = item.typeKey === 'school' ? 'fa-graduation-cap' : 'fa-industry';
+
+                            var popupContent = '<div style="min-width:250px;padding:2px;">' +
+                                '<div style="font-size:11px;font-weight:bold;color:' + headerColor + ';margin-bottom:2px;"><i class="fas ' + headerIcon + ' mr-1"></i>' + (item.industry || item.type) + '</div>' +
                                 '<div style="font-weight:bold;font-size:14px;color:#0f172a;margin-bottom:3px;">' + item.name + '</div>' +
-                                (item.cno ? '<div style="font-size:11px;color:#64748b;margin-bottom:2px;">管制編號：' + item.cno + '</div>' : '') +
+                                (item.cno ? '<div style="font-size:11px;color:#64748b;margin-bottom:2px;">' + (item.typeKey === 'school' ? '學制屬性：' : '管制編號：') + item.cno + '</div>' : '') +
                                 '<div style="font-size:12px;color:#64748b;margin-bottom:2px;">距離中心：' + item.dist + ' 公尺</div>' +
-                                '<div style="font-size:12px;color:#64748b;margin-bottom:8px;">地址：' + (item.addr || '無詳細地址紀錄') + '</div>';
+                                '<div style="font-size:12px;color:#64748b;margin-bottom:6px;">地址：' + (item.addr || '無詳細地址紀錄') + '</div>';
+
+                            if ((item.typeKey === 'fac' || item.typeKey === 'bare') && item.nearestSchoolName) {
+                                var riskBg = item.schoolRiskLevel === 'high' ? '#fef2f2' : (item.schoolRiskLevel === 'medium' ? '#fff7ed' : '#f8fafc');
+                                var riskBorder = item.schoolRiskLevel === 'high' ? '#fecaca' : (item.schoolRiskLevel === 'medium' ? '#fed7aa' : '#e2e8f0');
+                                var riskColor = item.schoolRiskLevel === 'high' ? '#dc2626' : (item.schoolRiskLevel === 'medium' ? '#ea580c' : '#475569');
+                                popupContent += '<div style="background:' + riskBg + ';border:1px solid ' + riskBorder + ';color:' + riskColor + ';border-radius:6px;padding:5px 8px;font-size:11px;margin-bottom:8px;cursor:pointer;" onclick="window.triggerDrawSchoolLine(\'' + item.id + '\')" title="點擊在地圖畫出與該校之直線連線">' +
+                                    '<b><i class="fas fa-graduation-cap mr-1"></i>最近學校：</b>' + item.nearestSchoolName + ' (' + item.nearestSchoolLevel + ')<br/>' +
+                                    '<b><i class="fas fa-ruler-horizontal mr-1"></i>直線距離：' + item.nearestSchoolDist + ' 公尺</b> <span style="text-decoration:underline;margin-left:4px;">[畫出連線]</span>' +
+                                    '</div>';
+                            }
 
                             if (item.typeKey === 'fac') {
                                 popupContent += '<div class="d-flex mb-2" style="gap:4px;">' +
                                     '<button type="button" class="btn btn-primary btn-sm flex-fill py-1 font-weight-bold" style="font-size:11px;" onclick="window.triggerOpenFacProfile(\'' + item.id + '\', \'license\')"><i class="fas fa-file-contract mr-1"></i>許可證</button>' +
                                     '<button type="button" class="btn btn-outline-info btn-sm flex-fill py-1 font-weight-bold" style="font-size:11px;" onclick="window.triggerOpenFacProfile(\'' + item.id + '\', \'inspection\')"><i class="fas fa-clipboard-check mr-1"></i>巡查紀錄</button>' +
                                     '</div>';
+                            } else if (item.typeKey === 'school') {
+                                popupContent += '<button type="button" class="btn btn-sm btn-block text-white font-weight-bold py-1 mb-1" style="background:#7c3aed;font-size:11px;" onclick="window.triggerPanoBufferCenter(' + item.lat + ',' + item.lng + ')"><i class="fas fa-crosshairs mr-1"></i>以此學校為中心反查周邊工廠</button>';
                             }
 
                             if (item.hasPano) {
-                                popupContent += '<button type="button" class="btn btn-warning btn-sm btn-block text-white font-weight-bold py-1" style="font-size:12px;" onclick="window.triggerOpenPano(\'' + item.id + '\')"><i class="fas fa-street-view mr-1"></i>開啟 360° 實景導覽</button>';
+                                var panoBtnText = '開啟 360° 實景導覽' + (item.panoMonthText ? ' (' + item.panoMonthText + ')' : '');
+                                if (item.panoHistory && item.panoHistory.length > 0) {
+                                    panoBtnText += ' [含' + item.panoHistory.length + '歷次]';
+                                }
+                                popupContent += '<button type="button" class="btn btn-warning btn-sm btn-block text-white font-weight-bold py-1 mt-1" style="font-size:12px;" onclick="window.triggerOpenPano(\'' + item.id + '\')"><i class="fas fa-street-view mr-1"></i>' + panoBtnText + '</button>';
                             }
                             popupContent += '</div>';
 
@@ -1818,6 +2231,12 @@
                                 self.openFacProfile({ id: facId, name: facId, cno: '' }, tab);
                             }
                         };
+
+                        window.triggerDrawSchoolLine = function (itemId) {
+                            var target = null;
+                            self.resultList.forEach(function (it) { if (it.id === itemId) target = it; });
+                            if (target) self.drawSchoolConnectionLine(target);
+                        };
                     },
 
                     // 行業別分組互動輔助函式
@@ -1835,7 +2254,9 @@
                         return !!this.expandedIndustries[indName];
                     },
                     getItemsByIndustry: function (indName) {
+                        var self = this;
                         return this.resultList.filter(function (it) {
+                            if (self.onlyPriorityFilter && !it.isPriorityFac) return false;
                             return it.industry === indName;
                         });
                     },
@@ -2079,20 +2500,50 @@
                         });
                     },
 
-                    // 開啟 360 環景導覽 Modal
+                    // 開啟 360 環景導覽 Modal (自動帶入期程與歷次版本)
                     openPano: function (item) {
                         this.currentPanoTitle = item.name;
                         this.panoLoading = true;
+                        this.currentPanoMonth = item.panoMonth || '';
+                        this.currentPanoMonthText = item.panoMonthText || '';
+                        this.currentPanoOriginalUrl = item.panoUrl;
                         this.currentPanoUrl = item.panoUrl;
+                        this.selectedPanoVersionUrl = item.panoUrl;
+                        this.currentPanoHistoryList = item.panoHistory || [];
                         $('#panoModal').modal('show');
                     },
 
-                    // 從推薦清單直接開啟
+                    // 從全覽圖庫或地圖圖標直接開啟
                     openPanoDirect: function (p) {
                         this.currentPanoTitle = p.title;
                         this.panoLoading = true;
+                        this.currentPanoMonth = p.month || '';
+                        this.currentPanoMonthText = p.monthText || '';
+                        this.currentPanoOriginalUrl = p.url;
                         this.currentPanoUrl = p.url;
+                        this.selectedPanoVersionUrl = p.url;
+                        this.currentPanoHistoryList = p.history || [];
                         $('#panoModal').modal('show');
+                    },
+
+                    // 切換 360 歷次歷史期程
+                    switchPanoVersion: function () {
+                        if (this.selectedPanoVersionUrl && this.selectedPanoVersionUrl !== this.currentPanoUrl) {
+                            this.panoLoading = true;
+                            this.currentPanoUrl = this.selectedPanoVersionUrl;
+                        }
+                    },
+
+                    // 關閉 360 導覽時清空 iframe 釋放記憶體
+                    closePano: function () {
+                        this.currentPanoUrl = '';
+                        this.currentPanoOriginalUrl = '';
+                        this.selectedPanoVersionUrl = '';
+                        this.currentPanoHistoryList = [];
+                        this.currentPanoMonth = '';
+                        this.currentPanoMonthText = '';
+                        this.panoLoading = false;
+                        $('#panoModal').modal('hide');
                     },
 
                     // 從卡片一鍵定位並開啟環域
@@ -2128,11 +2579,124 @@
                         this.locatePanoDirect(p);
                     },
 
-                    // 關閉 360 導覽時清空 iframe 釋放記憶體
-                    closePano: function () {
-                        this.currentPanoUrl = '';
-                        this.panoLoading = false;
-                        $('#panoModal').modal('hide');
+                    // 切換學校學制範圍篩選
+                    setSchoolLevelFilter: function (lvl) {
+                        this.schoolLevelFilter = lvl;
+                        this.refreshBuffer();
+                    },
+
+                    // 切換「僅顯示重點工廠」快速篩選
+                    toggleOnlyPriorityFilter: function () {
+                        this.onlyPriorityFilter = !this.onlyPriorityFilter;
+                        this.drawPlacesMarkers();
+                    },
+
+                    // 將各級學校設為環域中心，反查該學校周邊所有列管工廠
+                    setSchoolAsCenter: function (schoolItem) {
+                        if (!schoolItem || !schoolItem.lat || !schoolItem.lng) return;
+                        this.centerLat = schoolItem.lat;
+                        this.centerLng = schoolItem.lng;
+                        this.centerCoordStr = schoolItem.lat + ', ' + schoolItem.lng;
+                        this.renderCenterMarkerImmediate();
+                        window.map.flyTo([schoolItem.lat, schoolItem.lng], 15, { duration: 0.7 });
+                        this.refreshBuffer();
+
+                        if (window.innerWidth < 768) {
+                            this.switchMobileTab('map');
+                        }
+                    },
+
+                    // 在地圖上繪製「固定逸散源 <-> 最近學校」點對點直線距離連線與標籤
+                    drawSchoolConnectionLine: function (item) {
+                        if (!item || !item.lat || !item.lng || !item.nearestSchoolLat || !item.nearestSchoolLng) return;
+
+                        if (window.innerWidth < 768) {
+                            this.switchMobileTab('map');
+                        }
+
+                        if (!window.schoolLineLayerGroup) {
+                            window.schoolLineLayerGroup = L.layerGroup().addTo(window.map);
+                        }
+                        window.schoolLineLayerGroup.clearLayers();
+
+                        var pFac = [item.lat, item.lng];
+                        var pSch = [item.nearestSchoolLat, item.nearestSchoolLng];
+                        var lineColor = item.schoolRiskLevel === 'high' ? '#dc2626' : (item.schoolRiskLevel === 'medium' ? '#ea580c' : '#7c3aed');
+
+                        var poly = L.polyline([pFac, pSch], {
+                            color: lineColor,
+                            weight: 3.5,
+                            dashArray: '8, 6',
+                            opacity: 0.95
+                        }).addTo(window.schoolLineLayerGroup);
+
+                        poly.bindTooltip('<i class="fas fa-graduation-cap mr-1"></i>' + item.name + ' ⟷ ' + item.nearestSchoolName + '：<b>' + item.nearestSchoolDist + 'm</b>', {
+                            permanent: true,
+                            direction: 'center',
+                            className: 'school-dist-tooltip'
+                        }).openTooltip();
+
+                        // 在目標學校畫一個醒目紫光學士帽高亮標記 (避免該校剛好在環域圓圈外而沒顯示)
+                        var schIconHtml = '<div style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;width:32px;height:32px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 4px rgba(124,58,237,0.35), 0 4px 10px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:15px;"><i class="fas fa-graduation-cap"></i></div>';
+                        var schPin = L.divIcon({
+                            className: 'nearest-school-highlight-pin',
+                            html: schIconHtml,
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16]
+                        });
+                        var schMarker = L.marker(pSch, { icon: schPin, zIndexOffset: 1500 }).addTo(window.schoolLineLayerGroup);
+                        schMarker.bindPopup('<div style="min-width:210px;padding:2px;">' +
+                            '<div style="font-size:11px;font-weight:bold;color:#7c3aed;"><i class="fas fa-graduation-cap mr-1"></i>最近學校 (' + (item.nearestSchoolLevel || '學校') + ')</div>' +
+                            '<div style="font-weight:bold;font-size:14px;color:#0f172a;margin-bottom:4px;">' + item.nearestSchoolName + '</div>' +
+                            '<div style="font-size:12px;color:#ea580c;font-weight:bold;margin-bottom:6px;">距「' + item.name + '」直線距離：' + item.nearestSchoolDist + ' 公尺</div>' +
+                            '<button type="button" class="btn btn-sm btn-block text-white font-weight-bold py-1" style="background:#7c3aed;font-size:11px;" onclick="window.triggerPanoBufferCenter(' + item.nearestSchoolLat + ',' + item.nearestSchoolLng + ')"><i class="fas fa-crosshairs mr-1"></i>設此學校為環域中心</button>' +
+                            '</div>');
+
+                        window.map.fitBounds(L.latLngBounds([pFac, pSch]), { padding: [70, 70], maxZoom: 16 });
+                    },
+
+                    // 開啟學校距離敏感度清冊 Excel 匯出設定彈窗
+                    openSchoolExportModal: function () {
+                        this.exportConfig.town = this.selectedTownName || '';
+                        this.exportConfig.priorityThreshold = this.priorityThreshold || 300;
+                        this.exportConfig.schoolLevels = this.schoolLevelFilter || '';
+                        this.exportConfig.onlyPriority = this.onlyPriorityFilter || false;
+                        $('#schoolExportModal').modal('show');
+                    },
+
+                    // 觸發下載固定逸散源距離學校清冊 Excel (.xls)
+                    triggerExportSchoolExcel: function () {
+                        var cfg = this.exportConfig;
+                        var url = API_URL + '?action=exportschooldist' +
+                            '&mode=' + encodeURIComponent(cfg.mode || 'buffer') +
+                            '&lat=' + this.centerLat +
+                            '&lng=' + this.centerLng +
+                            '&radius=' + this.currentRadius +
+                            '&town=' + encodeURIComponent(cfg.town || '') +
+                            '&priorityThreshold=' + (cfg.priorityThreshold || 300) +
+                            '&onlyPriority=' + (cfg.onlyPriority ? '1' : '0') +
+                            '&schoolLevels=' + encodeURIComponent(cfg.schoolLevels || '');
+
+                        $('#schoolExportModal').modal('hide');
+                        window.location.href = url;
+                    },
+
+                    // 一鍵同步 504 所學校圖資寫入資料庫 School_Main 表
+                    syncSchoolsToDb: function () {
+                        var self = this;
+                        self.syncingSchools = true;
+                        axios.get(API_URL + '?action=syncschoolsdb').then(function (res) {
+                            self.syncingSchools = false;
+                            if (res.data && res.data.Success) {
+                                alert(res.data.Message);
+                                self.fetchDebugInfo();
+                            } else {
+                                alert('同步寫入資料庫失敗：' + (res.data ? res.data.Message : '未知錯誤'));
+                            }
+                        }).catch(function (err) {
+                            self.syncingSchools = false;
+                            alert('通訊失敗：' + (err.message || err));
+                        });
                     },
 
                     // 開啟診斷 Modal

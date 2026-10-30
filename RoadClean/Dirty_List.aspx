@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 道路髒污管理清單</title>
+    <title>新北市固定逸散源管理平台 - 道路髒污管理清單</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -893,8 +893,9 @@
                         </span>
                     </h2>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold" v-on:click="exportExcel" :disabled="loading || totalCount === 0" title="匯出當前篩選案件為 EXCEL">
-                            <i class="fas fa-file-excel mr-1"></i> 匯出 EXCEL
+                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold" v-on:click="exportExcel" :disabled="loading || exporting || totalCount === 0" title="匯出當前篩選案件為 EXCEL">
+                            <i class="fas" :class="exporting ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
+                            <span class="ml-1">{{ exporting ? '匯出中...' : '匯出 EXCEL' }}</span>
                         </button>
                         <button type="button" class="btn btn-sm btn-light border font-weight-bold" v-on:click="loadList" title="重新整理">
                             <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
@@ -1321,7 +1322,8 @@
                     caseList: [],
                     previewCase: null,
                     deleteTarget: null,
-                    lightboxImgUrl: null
+                    lightboxImgUrl: null,
+                    exporting: false
                 };
             },
             computed: {
@@ -1563,22 +1565,41 @@
                     return 'fas fa-tag';
                 },
 
-                // 14. 匯出篩選結果為 EXCEL
+                // 14. 匯出篩選結果為 EXCEL (全載具自適應，採用隱藏 iframe GET 下載機制，避開 CSRF 攔截並防止頁面跳轉白屏)
                 exportExcel() {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = 'Dirty_List.aspx?action=export';
-                    form.style.display = 'none';
+                    if (this.exporting || this.totalCount === 0) return;
+                    this.exporting = true;
 
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'filterJson';
-                    input.value = JSON.stringify(this.filter);
-                    form.appendChild(input);
+                    const params = new URLSearchParams();
+                    params.append('action', 'export');
+                    params.append('mode', this.filter.Mode || 'DirtyEdit');
+                    if (this.filter.ShowId) params.append('showId', this.filter.ShowId.trim());
+                    if (this.filter.ReportDateS) params.append('reportDateS', this.filter.ReportDateS);
+                    if (this.filter.ReportDateE) params.append('reportDateE', this.filter.ReportDateE);
+                    if (this.filter.SetComDateS) params.append('setComDateS', this.filter.SetComDateS);
+                    if (this.filter.SetComDateE) params.append('setComDateE', this.filter.SetComDateE);
+                    if (this.filter.ImproveDateS) params.append('improveDateS', this.filter.ImproveDateS);
+                    if (this.filter.ImproveDateE) params.append('improveDateE', this.filter.ImproveDateE);
+                    if (this.filter.Kinds && this.filter.Kinds.length > 0) {
+                        params.append('kinds', this.filter.Kinds.join(','));
+                    }
+                    if (this.filter.Units && this.filter.Units.length > 0) {
+                        params.append('units', this.filter.Units.join(','));
+                    }
 
-                    document.body.appendChild(form);
-                    form.submit();
-                    document.body.removeChild(form);
+                    const downloadUrl = 'Dirty_List.aspx?' + params.toString();
+                    let iframe = document.getElementById('exportIframe');
+                    if (!iframe) {
+                        iframe = document.createElement('iframe');
+                        iframe.id = 'exportIframe';
+                        iframe.style.display = 'none';
+                        document.body.appendChild(iframe);
+                    }
+                    iframe.src = downloadUrl;
+
+                    setTimeout(() => {
+                        this.exporting = false;
+                    }, 2500);
                 }
             }
         }).mount('#dirtyListApp');

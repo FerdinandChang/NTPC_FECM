@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理審查平台 - 裸露地案件審查作業</title>
+    <title>新北市固定逸散源管理審查平台 - 裸露地案件審查作業</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -708,7 +708,7 @@
 
         <!-- 2. 列印專用報表頁首 (螢幕隱藏，列印時顯現) -->
         <div class="print-only-header">
-            <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 4px;">新北市固定溢散源管理審查平台</h2>
+            <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 4px;">新北市固定逸散源管理審查平台</h2>
             <h3 style="font-size: 16px; margin-bottom: 8px;">裸露地案件現場巡查與審核紀錄表</h3>
             <div style="font-size: 12px; color: #555;">
                 場址編號：{{ main.BareGroundNo || '--' }} ｜ 巡查次數：第 {{ inv.INV_NO || 1 }} 次 ｜ 列印時間：{{ printTime }}

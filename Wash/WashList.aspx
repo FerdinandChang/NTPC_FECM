@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 道路認養洗/掃街里程日誌</title>
+    <title>新北市固定逸散源管理平台 - 道路認養洗/掃街里程日誌</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -617,7 +617,7 @@
                     <!-- 純白模組圖標 (依規範嚴禁雜色或刺眼黃色) -->
                     <i class="fas fa-truck-pickup text-white mr-2 flex-shrink-0"></i>
                     <span class="text-truncate">
-                        <span class="d-none d-md-inline">新北市固定溢散源 - </span>道路認養洗/掃街里程日誌
+                        <span class="d-none d-md-inline">新北市固定逸散源 - </span>道路認養洗/掃街里程日誌
                     </span>
                     <span class="badge badge-light text-dark font-weight-bold ml-2 d-none d-sm-inline flex-shrink-0" style="font-size: 0.8rem;">
                         {{ records.length }} 筆

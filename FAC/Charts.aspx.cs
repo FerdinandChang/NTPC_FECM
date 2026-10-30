@@ -544,7 +544,7 @@ namespace NTPC_FEC.FAC
             titleRow.HeightInPoints = 32;
             ICell titleCell = titleRow.CreateCell(0);
             string filterText = filter == "ALL" ? "全部" : filter;
-            titleCell.SetCellValue(string.Format("新北市固定溢散源統計 - {0}（篩選條件：{1}，共 {2} 筆）", dimTitle, filterText, dt.Rows.Count));
+            titleCell.SetCellValue(string.Format("新北市固定逸散源統計 - {0}（篩選條件：{1}，共 {2} 筆）", dimTitle, filterText, dt.Rows.Count));
             titleCell.CellStyle = titleStyle;
 
             if (exportCols.Count > 1)

@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 道路潔淨統計</title>
+    <title>新北市固定逸散源管理平台 - 道路潔淨統計</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -724,6 +724,7 @@
                     <!-- 快捷日期按鈕與搜尋列 -->
                     <div class="d-flex flex-wrap align-items-center justify-content-between pt-2 border-top">
                         <div class="btn-group btn-group-sm mb-2 mb-md-0" role="group">
+                            <button type="button" class="btn btn-outline-secondary" v-on:click="setDateShortcut('curmonth')">當月</button>
                             <button type="button" class="btn btn-outline-secondary" v-on:click="setDateShortcut('ytd')">今年至今</button>
                             <button type="button" class="btn btn-outline-secondary" v-on:click="setDateShortcut('m3')">近 3 個月</button>
                             <button type="button" class="btn btn-outline-secondary" v-on:click="setDateShortcut('m6')">近 6 個月</button>
@@ -1472,7 +1473,7 @@
                 }
             },
             mounted() {
-                this.setDateShortcut('ytd', false);
+                this.setDateShortcut('curmonth', false);
                 this.loadTowns();
                 this.loadData();
             },
@@ -1486,7 +1487,12 @@
                 setDateShortcut(type, autoLoad = true) {
                     const now = new Date();
                     const y = now.getFullYear();
-                    if (type === 'ytd') {
+                    if (type === 'curmonth') {
+                        const first = new Date(y, now.getMonth(), 1);
+                        const last = new Date(y, now.getMonth() + 1, 0);
+                        this.filter.dateS = this.formatDate(first);
+                        this.filter.dateE = this.formatDate(last);
+                    } else if (type === 'ytd') {
                         this.filter.dateS = y + '-01-01';
                         this.filter.dateE = this.formatDate(now);
                     } else if (type === 'm3') {
@@ -1574,7 +1580,7 @@
                     this.filter.rdLv = '';
                     this.filter.disS = '';
                     this.filter.disE = '';
-                    this.setDateShortcut('ytd', true);
+                    this.setDateShortcut('curmonth', true);
                 },
                 loadData() {
                     this.loading = true;

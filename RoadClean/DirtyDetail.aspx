@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 道路髒污通報單詳情</title>
+    <title>新北市固定逸散源管理平台 - 道路髒污通報單詳情</title>
     
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
 
@@ -453,7 +453,7 @@
             <main class="container-fluid-custom">
                 <!-- 列印專用抬頭 (僅在列印時顯示) -->
                 <div class="print-header">
-                    <h3>新北市固定溢散源管理系統 - 道路污染通報報告單</h3>
+                    <h3>新北市固定逸散源管理系統 - 道路污染通報報告單</h3>
                     <p>列印時間：{{ printTime }} ｜ 通報案號：{{ detail.ShowId }}</p>
                     <hr />
                 </div>

@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 裸露地調查管理清單</title>
+    <title>新北市固定逸散源管理平台 - 裸露地調查管理清單</title>
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
     <!-- 本地化依賴：Bootstrap 4, FontAwesome 5, Leaflet 1.9.4 -->
@@ -534,7 +534,7 @@
                     <i class="fas fa-mountain text-warning"></i>
                     <span>裸露地調查管理</span>
                     <span class="badge badge-light text-dark font-weight-bold ml-1">
-                        {{ counts.Sites }} 處場址
+                        列管 {{ counts.SitesActive || 0 }} 處 / 全場址 {{ counts.Sites || 0 }} 處
                     </span>
                 </a>
             </div>
@@ -642,7 +642,7 @@
                 <div class="card-modern-body" v-show="!filterCollapsed">
                     <div class="row">
                         <!-- 編號關鍵字 -->
-                        <div class="col-12 col-md-3 mb-2">
+                        <div class="col-12 col-md-2 mb-2">
                             <label class="font-weight-bold text-muted small mb-1">裸露地編號</label>
                             <input type="text" class="form-control form-control-sm" v-model="filter.bareGroundNo" placeholder="請輸入編號關鍵字..." v-on:keyup.enter="handleSearch" />
                         </div>
@@ -656,8 +656,17 @@
                             <label class="font-weight-bold text-muted small mb-1">地目</label>
                             <input type="text" class="form-control form-control-sm" v-model="filter.landUse" placeholder="例如：林、田、建..." v-on:keyup.enter="handleSearch" />
                         </div>
+                        <!-- 列管狀態 (預設篩選全部，可自選列管中/已解列) -->
+                        <div class="col-12 col-md-2 mb-2">
+                            <label class="font-weight-bold text-muted small mb-1">列管狀態</label>
+                            <select class="form-control form-control-sm font-weight-bold" v-model="filter.closedFilter" v-on:change="handleSearch">
+                                <option value="all">全部狀態 (預設)</option>
+                                <option value="active">🟢 列管中</option>
+                                <option value="closed">⚪ 已解列</option>
+                            </select>
+                        </div>
                         <!-- 查核日期區間 -->
-                        <div class="col-12 col-md-4 mb-2">
+                        <div class="col-12 col-md-3 mb-2">
                             <label class="font-weight-bold text-muted small mb-1">最近查核日期區間</label>
                             <div class="d-flex align-items-center gap-2">
                                 <input type="date" class="form-control form-control-sm" v-model="filter.dateS" />
@@ -784,7 +793,7 @@
                                             <input type="checkbox" v-model="selectAll" v-on:change="toggleSelectAll" title="全選本頁" />
                                         </th>
                                         <th style="width: 100px;">案號</th>
-                                        <th style="width: 130px;">場址編號</th>
+                                        <th style="width: 165px;">場址編號</th>
                                         <th>場址地址</th>
                                         <th style="width: 140px; min-width: 120px; white-space: nowrap;">地目</th>
                                         <th style="width: 150px;">查核時間</th>
@@ -802,7 +811,21 @@
                                             <span class="badge badge-light border font-weight-bold text-dark">#{{ item.INV_NO }}</span>
                                         </td>
                                         <td>
-                                            <strong class="text-primary font-weight-bold">{{ item.BareGroundNo }}</strong>
+                                            <div class="d-flex align-items-center flex-wrap">
+                                                <strong :class="item.IsClosed ? 'text-secondary' : 'text-primary'" class="font-weight-bold" style="font-size: 14px;">{{ item.BareGroundNo }}</strong>
+                                                <span v-if="item.IsClosed" class="badge badge-danger ml-1 font-weight-bold" style="font-size: 11px;">
+                                                    <i class="fas fa-ban mr-1"></i>已解列
+                                                </span>
+                                            </div>
+                                            <!-- 顯眼醒目的解列資訊標籤 (呈現在編號下方) -->
+                                            <div v-if="item.IsClosed" class="mt-1">
+                                                <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 11px; border: 1px solid #f59e0b; padding: 2px 7px; display: inline-block;">
+                                                    <i class="fas fa-calendar-check mr-1 text-danger"></i>{{ item.Closed_Memo || '已解除列管' }}
+                                                </span>
+                                                <div v-if="item.Closed_Date" class="text-muted small mt-1" style="font-size: 11px;">
+                                                    <i class="far fa-clock mr-1"></i>解列日期：{{ item.Closed_Date }}
+                                                </div>
+                                            </div>
                                         </td>
                                         <td>
                                             <span class="font-weight-bold text-dark">{{ item.ADDR }}</span>
@@ -873,10 +896,20 @@
                         <div class="d-lg-none p-3">
                             <div v-for="item in list" :key="item.INV_NO" class="mobile-card">
                                 <div class="mobile-card-header">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <input v-if="item.CanUpload" type="checkbox" v-model="item.Selected" v-on:change="onItemSelectChange" />
-                                        <span class="badge badge-light border text-dark font-weight-bold">#{{ item.INV_NO }}</span>
-                                        <span class="mobile-card-title text-primary">{{ item.BareGroundNo }}</span>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <input v-if="item.CanUpload" type="checkbox" v-model="item.Selected" v-on:change="onItemSelectChange" />
+                                            <span class="badge badge-light border text-dark font-weight-bold">#{{ item.INV_NO }}</span>
+                                            <span class="mobile-card-title" :class="item.IsClosed ? 'text-secondary' : 'text-primary'">{{ item.BareGroundNo }}</span>
+                                            <span v-if="item.IsClosed" class="badge badge-danger font-weight-bold" style="font-size: 10px;">
+                                                <i class="fas fa-ban mr-1"></i>已解列
+                                            </span>
+                                        </div>
+                                        <div v-if="item.IsClosed" class="mt-1">
+                                            <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 11px; border: 1px solid #f59e0b; padding: 1px 6px;">
+                                                <i class="fas fa-calendar-check mr-1 text-danger"></i>{{ item.Closed_Memo || '已解除列管' }}
+                                            </span>
+                                        </div>
                                     </div>
                                     <span :class="getStatusClass(item.INV_State)">
                                         {{ item.State_Name }}
@@ -972,6 +1005,22 @@
                     </div>
                     <div class="modal-body p-3">
                         <div v-if="currentSite" class="mb-3 p-3 bg-white border rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <div>
+                                    <strong class="h6 mb-0 text-dark">{{ currentSite.BareGroundNo }}</strong>
+                                    <span v-if="currentSite.IsClosed" class="badge badge-secondary ml-2">已解列</span>
+                                    <span v-else class="badge badge-success ml-2">列管中</span>
+                                    <small v-if="currentSite.Closed_Memo" class="text-muted ml-2 font-italic">({{ currentSite.Closed_Memo }})</small>
+                                </div>
+                                <div>
+                                    <button v-if="!currentSite.IsClosed" type="button" class="btn btn-sm btn-outline-danger font-weight-bold" v-on:click="toggleSiteClosed(currentSite, true)">
+                                        <i class="fas fa-ban mr-1"></i> 場址解列
+                                    </button>
+                                    <button v-else type="button" class="btn btn-sm btn-outline-success font-weight-bold" v-on:click="toggleSiteClosed(currentSite, false)">
+                                        <i class="fas fa-undo mr-1"></i> 恢復列管
+                                    </button>
+                                </div>
+                            </div>
                             <div class="row small">
                                 <div class="col-12 col-md-6 mb-1">
                                     <strong>場址地址：</strong>{{ currentSite.ADDR }}
@@ -1081,6 +1130,8 @@
                         Examine: 0,
                         Done: 0,
                         Sites: 0,
+                        SitesActive: 0,
+                        SitesClosed: 0,
                         TotalInv: 0
                     },
                     filter: {
@@ -1089,7 +1140,8 @@
                         landUse: '',
                         dateS: '',
                         dateE: '',
-                        stateFilter: ''
+                        stateFilter: '',
+                        closedFilter: 'all'
                     },
                     pagination: {
                         pageIndex: 1,
@@ -1181,6 +1233,7 @@
                         DateS: this.filter.dateS,
                         DateE: this.filter.dateE,
                         StateFilter: this.filter.stateFilter,
+                        ClosedFilter: this.filter.closedFilter,
                         PageIndex: this.pagination.pageIndex,
                         PageSize: this.pagination.pageSize
                     };
@@ -1214,6 +1267,7 @@
                     if (this.filter.dateS) params.append('dateS', this.filter.dateS);
                     if (this.filter.dateE) params.append('dateE', this.filter.dateE);
                     if (this.filter.stateFilter) params.append('stateFilter', this.filter.stateFilter);
+                    if (this.filter.closedFilter) params.append('closedFilter', this.filter.closedFilter);
                     const downloadUrl = 'Bare_List.aspx?' + params.toString();
                     let iframe = document.getElementById('exportIframe');
                     if (!iframe) {
@@ -1239,10 +1293,12 @@
                                     if (m.Lat > 0 && m.Lng > 0) {
                                         const latLng = [m.Lat, m.Lng];
                                         bounds.push(latLng);
-                                        // 自訂 HTML Marker Pin
+                                        // 自訂 HTML Marker Pin (列管中: 金褐色, 已解列: 灰階)
+                                        const pinBg = m.IsClosed ? '#64748b' : '#9b741e';
+                                        const pinIcon = m.IsClosed ? 'fa-check' : 'fa-mountain';
                                         const customIcon = L.divIcon({
                                             className: 'custom-map-marker',
-                                            html: '<div class="marker-pin-custom"><i class="fas fa-mountain"></i></div>',
+                                            html: `<div class="marker-pin-custom" style="background: ${pinBg};"><i class="fas ${pinIcon}"></i></div>`,
                                             iconSize: [32, 32],
                                             iconAnchor: [16, 32],
                                             popupAnchor: [0, -32]
@@ -1251,6 +1307,7 @@
                                             <div style="min-width: 220px; font-size: 13px;">
                                                 <div style="font-weight: 700; color: #0284c7; font-size: 14px; margin-bottom: 4px;">
                                                     <i class="fas fa-hashtag"></i> ${m.BareGroundNo}
+                                                    ${m.IsClosed ? '<span class="badge badge-secondary ml-1">已解列</span>' : '<span class="badge badge-success ml-1">列管中</span>'}
                                                 </div>
                                                 <div style="margin-bottom: 4px;"><strong>地址：</strong>${m.ADDR}</div>
                                                 <div style="margin-bottom: 4px;"><strong>地目：</strong>${m.LAND_USE}</div>
@@ -1407,6 +1464,35 @@
                             alert('送審作業發生異常');
                         });
                 },
+                // 7. 切換場址解列狀態
+                toggleSiteClosed(site, toClosed) {
+                    const actName = toClosed ? '解列' : '恢復列管';
+                    let memo = '';
+                    if (toClosed) {
+                        memo = prompt('請輸入解列說明或備註 (例如：11404已解列 / 工地已完工鋪封 / 植生綠化覆蓋)：', site.Closed_Memo || '');
+                        if (memo === null) return;
+                    } else {
+                        if (!confirm('是否確定將場址 ' + site.BareGroundNo + ' 恢復為【列管中】？')) return;
+                    }
+
+                    axios.post('Bare_List.aspx?action=togglesiteclosed&bareId=' + site.Bare_ID + '&isClosed=' + (toClosed ? '1' : '0') + '&memo=' + encodeURIComponent(memo || ''))
+                        .then(res => {
+                            if (res.data && res.data.Success) {
+                                alert(res.data.Message);
+                                site.IsClosed = toClosed;
+                                site.Closed_Memo = memo;
+                                this.fetchCounts();
+                                this.fetchList();
+                                this.fetchMapData();
+                            } else {
+                                alert(res.data.Message || '操作失敗');
+                            }
+                        })
+                        .catch(err => {
+                            alert('操作發生異常：' + err);
+                        });
+                },
+
                 // 批次送審
                 batchUploadCheck() {
                     if (this.selectedInvNos.length === 0) return;

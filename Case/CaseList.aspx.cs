@@ -207,6 +207,9 @@ namespace NTPC_FEC.Case
                 case "gettoken":
                     GetToken();
                     break;
+                case "compareinvs":
+                    CompareInvs();
+                    break;
                 default:
                     Response.Write(json.Serialize(new { Success = false, Message = "未知的操作指令：" + action }));
                     break;
@@ -1195,6 +1198,866 @@ namespace NTPC_FEC.Case
         }
         #endregion
     
+        #region 歷次查核雙向比對 (CompareInvs)
+        private void CompareInvs()
+        {
+            string facId = Request["facId"] != null ? Request["facId"].Trim() : "";
+            string invNoAStr = Request["invNoA"] != null ? Request["invNoA"].Trim() : "";
+            string invNoBStr = Request["invNoB"] != null ? Request["invNoB"].Trim() : "";
+
+            if (string.IsNullOrEmpty(facId))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "缺少場所編號 (facId)" }));
+                return;
+            }
+
+            // 1. 取得場所名稱與基本資訊
+            string sqlFac = "SELECT FAC_ID, C_NO, FAC_NAME, TOWN, ADDR FROM FAC_Main WHERE FAC_ID = @FAC_ID";
+            DataTable dtFac = DbHelper.ExecuteDataTable(sqlFac, new SqlParameter("@FAC_ID", facId));
+            if (dtFac == null || dtFac.Rows.Count == 0)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "查無此場所資料" }));
+                return;
+            }
+            DataRow facRow = dtFac.Rows[0];
+            string facName = facRow["FAC_NAME"] != null ? facRow["FAC_NAME"].ToString().Trim() : "";
+            string cNo = facRow["C_NO"] != null ? facRow["C_NO"].ToString().Trim() : "";
+
+            int invNoA = 0;
+            int invNoB = 0;
+            int.TryParse(invNoAStr, out invNoA);
+            int.TryParse(invNoBStr, out invNoB);
+
+            // 若未指定 invNoA 或 invNoB，預設抓該場所最新的 2 筆紀錄
+            if (invNoA <= 0 || invNoB <= 0)
+            {
+                string sqlTop2 = "SELECT TOP 2 INV_NO FROM INV_DATA WHERE FAC_ID = @FAC_ID AND INV_State <> 'Z00' ORDER BY INV_NO DESC";
+                DataTable dtTop2 = DbHelper.ExecuteDataTable(sqlTop2, new SqlParameter("@FAC_ID", facId));
+                if (dtTop2 == null || dtTop2.Rows.Count < 2)
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "該場所有效查核紀錄不足 2 筆，無法進行歷程比對！" }));
+                    return;
+                }
+                invNoA = Convert.ToInt32(dtTop2.Rows[0]["INV_NO"]);
+                invNoB = Convert.ToInt32(dtTop2.Rows[1]["INV_NO"]);
+            }
+
+            // 2. 取得兩次查核之 INV_DATA (含狀態名稱)
+            string sqlInvA = "SELECT i.*, s.State_Name FROM INV_DATA i LEFT JOIN INV_State_List s ON i.INV_State = s.State_ID WHERE i.FAC_ID = @FAC_ID AND i.INV_NO = @INV_NO";
+            DataTable dtInvA = DbHelper.ExecuteDataTable(sqlInvA, new SqlParameter("@FAC_ID", facId), new SqlParameter("@INV_NO", invNoA));
+
+            string sqlInvB = "SELECT i.*, s.State_Name FROM INV_DATA i LEFT JOIN INV_State_List s ON i.INV_State = s.State_ID WHERE i.FAC_ID = @FAC_ID AND i.INV_NO = @INV_NO";
+            DataTable dtInvB = DbHelper.ExecuteDataTable(sqlInvB, new SqlParameter("@FAC_ID", facId), new SqlParameter("@INV_NO", invNoB));
+
+            if (dtInvA == null || dtInvA.Rows.Count == 0 || dtInvB == null || dtInvB.Rows.Count == 0)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "查無指定的查核紀錄資料" }));
+                return;
+            }
+
+            DataRow rowA = dtInvA.Rows[0];
+            DataRow rowB = dtInvB.Rows[0];
+
+            // 3. 取得兩筆查核各自的照片字典 (key: fbase, value: web url，支援正式機 NTPC_FECM/Upload/PIC)
+            DateTime dateA = DateTime.MinValue;
+            DateTime dateB = DateTime.MinValue;
+            if (rowA["INV_DATE"] != DBNull.Value) DateTime.TryParse(rowA["INV_DATE"].ToString(), out dateA);
+            if (rowB["INV_DATE"] != DBNull.Value) DateTime.TryParse(rowB["INV_DATE"].ToString(), out dateB);
+            Dictionary<string, string> photosA = GetInvPhotos(facId, invNoA, cNo, dateA);
+            Dictionary<string, string> photosB = GetInvPhotos(facId, invNoB, cNo, dateB);
+
+            // 4. 解析兩次查核之九大防制設施 (含違規/合格清單與照片清單)
+            List<Dictionary<string, object>> sectionsA = BuildCompareSections(rowA, photosA);
+            List<Dictionary<string, object>> sectionsB = BuildCompareSections(rowB, photosB);
+
+            // 5. 兩筆查核的基本摘要資訊
+            Dictionary<string, object> infoA = BuildInvSummary(rowA);
+            Dictionary<string, object> infoB = BuildInvSummary(rowB);
+
+            // 6. 整合計算九大防制設施雙向比對差額 (Diff List)
+            List<Dictionary<string, object>> diffSections = new List<Dictionary<string, object>>();
+            int improvedCount = 0;
+            int worsenedCount = 0;
+            int continuedCount = 0;
+            int normalCount = 0;
+            int infoChangedCount = 0;
+
+            for (int i = 0; i < sectionsA.Count; i++)
+            {
+                Dictionary<string, object> secA = sectionsA[i];
+                Dictionary<string, object> secB = (i < sectionsB.Count) ? sectionsB[i] : null;
+
+                bool isInfo = secA.ContainsKey("IsInfo") && (bool)secA["IsInfo"];
+                if (isInfo)
+                {
+                    bool changed = IsInfoSectionChanged(secA, secB);
+                    if (changed) infoChangedCount++;
+
+                    Dictionary<string, object> infoDiff = new Dictionary<string, object>();
+                    infoDiff["Id"] = secA["Id"];
+                    infoDiff["Title"] = secA["Title"];
+                    infoDiff["DiffStatus"] = changed ? "changed" : "same";
+                    infoDiff["DiffBadge"] = changed ? "填報內容有差異" : "填報內容相同";
+                    infoDiff["DiffClass"] = changed ? "badge-info" : "badge-light text-muted border";
+                    infoDiff["HasDifference"] = changed;
+                    infoDiff["SectionA"] = secA;
+                    infoDiff["SectionB"] = secB;
+                    diffSections.Add(infoDiff);
+                    continue;
+                }
+
+                int lossA = secA.ContainsKey("LossPoint") ? Convert.ToInt32(secA["LossPoint"]) : 0;
+                int lossB = (secB != null && secB.ContainsKey("LossPoint")) ? Convert.ToInt32(secB["LossPoint"]) : 0;
+
+                string diffStatus = "normal";
+                string diffBadge = "均合規正常";
+                string diffClass = "badge-light text-muted border";
+
+                if (lossA == 0 && lossB > 0)
+                {
+                    diffStatus = "improved";
+                    diffBadge = string.Format("已改善解除 (-{0}點)", lossB);
+                    diffClass = "badge-success";
+                    improvedCount++;
+                }
+                else if (lossA > 0 && lossB == 0)
+                {
+                    diffStatus = "worsened";
+                    diffBadge = string.Format("新發生缺失 (+{0}點)", lossA);
+                    diffClass = "badge-danger";
+                    worsenedCount++;
+                }
+                else if (lossA > 0 && lossB > 0)
+                {
+                    diffStatus = "continued";
+                    diffBadge = string.Format("持續未改善 ({0}點)", lossA);
+                    diffClass = "badge-warning text-dark";
+                    continuedCount++;
+                }
+                else
+                {
+                    normalCount++;
+                }
+
+                Dictionary<string, object> diffItem = new Dictionary<string, object>();
+                diffItem["Id"] = secA["Id"];
+                diffItem["Title"] = secA["Title"];
+                diffItem["DiffStatus"] = diffStatus;
+                diffItem["DiffBadge"] = diffBadge;
+                diffItem["DiffClass"] = diffClass;
+                diffItem["HasDifference"] = (diffStatus != "normal" || lossA > 0 || lossB > 0);
+                diffItem["SectionA"] = secA;
+                diffItem["SectionB"] = secB;
+
+                diffSections.Add(diffItem);
+            }
+
+            int lossPointA = Convert.ToInt32(infoA["TotalLossPoint"]);
+            int lossPointB = Convert.ToInt32(infoB["TotalLossPoint"]);
+            int deltaLoss = lossPointA - lossPointB;
+
+            string deltaText = "缺失點數相同";
+            string deltaClass = "text-secondary";
+            string deltaIcon = "fa-equals";
+
+            if (deltaLoss < 0)
+            {
+                deltaText = string.Format("改善減少 {0} 點", Math.Abs(deltaLoss));
+                deltaClass = "text-success";
+                deltaIcon = "fa-arrow-down";
+            }
+            else if (deltaLoss > 0)
+            {
+                deltaText = string.Format("缺失惡化增加 {0} 點", deltaLoss);
+                deltaClass = "text-danger";
+                deltaIcon = "fa-arrow-up";
+            }
+
+            Response.Write(json.Serialize(new
+            {
+                Success = true,
+                FacName = facName,
+                CNo = cNo,
+                InvA = infoA,
+                InvB = infoB,
+                DiffSummary = new
+                {
+                    LossDelta = deltaLoss,
+                    DeltaText = deltaText,
+                    DeltaClass = deltaClass,
+                    DeltaIcon = deltaIcon,
+                    ImprovedCount = improvedCount,
+                    WorsenedCount = worsenedCount,
+                    ContinuedCount = continuedCount,
+                    NormalCount = normalCount,
+                    InfoChangedCount = infoChangedCount
+                },
+                DiffSections = diffSections
+            }));
+        }
+
+        private Dictionary<string, string> GetInvPhotos(string facId, int invNo, string cNo, DateTime invDate)
+        {
+            string appPath = HttpContext.Current.Request.ApplicationPath;
+            if (string.IsNullOrEmpty(appPath) || appPath == "/")
+            {
+                appPath = "/NTPC_FECM";
+            }
+            else
+            {
+                appPath = appPath.TrimEnd('/');
+            }
+
+            Dictionary<string, string> existingPhotos = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            // 與 CaseResult.aspx 共用 InvPhotoHelper：只取該筆巡查專屬目錄，不跨目錄合併
+            string urlPrefix;
+            string[] files = NTPC_FEC.Helpers.InvPhotoHelper.GetPhotoFiles(facId, invNo, cNo, invDate, out urlPrefix);
+
+            foreach (string f in files)
+            {
+                string fname = Path.GetFileName(f);
+                string fbase = Path.GetFileNameWithoutExtension(f);
+                string fUrl = appPath + urlPrefix + HttpUtility.UrlPathEncode(fname);
+
+                if (!existingPhotos.ContainsKey(fbase))
+                {
+                    existingPhotos[fbase] = fUrl;
+                }
+                MapLegacyPhotoKey(fbase, fUrl, existingPhotos);
+            }
+
+            return existingPhotos;
+        }
+
+        private void MapLegacyPhotoKey(string fbase, string fUrl, Dictionary<string, string> photos)
+        {
+            // 1. 堆置逸散 (堆罝 / 堆置)
+            if (fbase.Contains("堆罝") || fbase.Contains("堆置"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_1a", fUrl);
+                else if (fbase.Contains("水表") || fbase.Contains("自動灑水")) AssignIfEmpty(photos, "File_1b", fUrl);
+                else if (fbase.Contains("上月")) AssignIfEmpty(photos, "File_1c", fUrl);
+                else if (fbase.Contains("本月")) AssignIfEmpty(photos, "File_1d", fUrl);
+                else AssignIfEmpty(photos, "File_1", fUrl);
+            }
+            // 2. 輸送逸散
+            else if (fbase.Contains("輸送"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_2a", fUrl);
+                else AssignIfEmpty(photos, "File_2", fUrl);
+            }
+            // 3. 運輸車輛
+            else if (fbase.Contains("運輸車輛"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_3a", fUrl);
+                else AssignIfEmpty(photos, "File_3", fUrl);
+            }
+            // 4. 車輛通行路徑
+            else if (fbase.Contains("通行路徑") || fbase.Contains("車輛通行"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_4a", fUrl);
+                else AssignIfEmpty(photos, "File_4", fUrl);
+            }
+            // 5. 車輛清洗
+            else if (fbase.Contains("車輛清洗") || fbase.Contains("洗車"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_5a", fUrl);
+                else if (fbase.Contains("水槽") || fbase.Contains("水深")) AssignIfEmpty(photos, "File_5b", fUrl);
+                else if (fbase.Contains("有效水深") || fbase.Contains("換水")) AssignIfEmpty(photos, "File_5c", fUrl);
+                else if (fbase.Contains("噴水") || fbase.Contains("沖洗長度")) AssignIfEmpty(photos, "File_5d", fUrl);
+                else if (fbase.Contains("告示牌") || fbase.Contains("閘門")) AssignIfEmpty(photos, "File_5e", fUrl);
+                else if (fbase.Contains("馬達")) AssignIfEmpty(photos, "File_5f", fUrl);
+                else if (fbase.Contains("廢水") || fbase.Contains("加壓")) AssignIfEmpty(photos, "File_5g", fUrl);
+                else if (fbase.Contains("上月")) AssignIfEmpty(photos, "File_5h", fUrl);
+                else if (fbase.Contains("本月")) AssignIfEmpty(photos, "File_5i", fUrl);
+                else AssignIfEmpty(photos, "File_5", fUrl);
+            }
+            // 6. 製程、操作或裝卸作業
+            else if (fbase.Contains("製程") || fbase.Contains("操作") || fbase.Contains("裝卸"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_6a", fUrl);
+                else if (fbase.Contains("儀表") || fbase.Contains("監測")) AssignIfEmpty(photos, "File_6b", fUrl);
+                else if (fbase.Contains("上月")) AssignIfEmpty(photos, "File_6c", fUrl);
+                else if (fbase.Contains("本月")) AssignIfEmpty(photos, "File_6d", fUrl);
+                else AssignIfEmpty(photos, "File_6", fUrl);
+            }
+            // 7. 裸露區域
+            else if (fbase.Contains("裸露"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_7a", fUrl);
+                else AssignIfEmpty(photos, "File_7", fUrl);
+            }
+            // 8. 管理之道路
+            else if (fbase.Contains("管理之道路") || fbase.Contains("管理道路"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_8a", fUrl);
+                else AssignIfEmpty(photos, "File_8", fUrl);
+            }
+            // 9. 監視系統
+            else if (fbase.Contains("監視系統") || fbase.Contains("攝錄影") || fbase.Contains("監視"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_9a", fUrl);
+                else AssignIfEmpty(photos, "File_9", fUrl);
+            }
+            // 10. 許可不符
+            else if (fbase.Contains("許可不符") || fbase.Contains("10a"))
+            {
+                AssignIfEmpty(photos, "File_10a", fUrl);
+            }
+            else if (fbase.Contains("10b"))
+            {
+                AssignIfEmpty(photos, "File_10b", fUrl);
+            }
+            // 11. 道路抽查
+            else if (fbase.Contains("道路抽查") || fbase.Contains("認養道路") || fbase.Contains("11a"))
+            {
+                AssignIfEmpty(photos, "File_11a", fUrl);
+            }
+            else if (fbase.Contains("11b"))
+            {
+                AssignIfEmpty(photos, "File_11b", fUrl);
+            }
+            // 全景照片與工廠正門口
+            else if (fbase.Contains("全景"))
+            {
+                AssignIfEmpty(photos, "File_AllView", fUrl);
+                AssignIfEmpty(photos, "全景照片", fUrl);
+            }
+            else if (fbase.Contains("正門口") || fbase.Contains("門口"))
+            {
+                AssignIfEmpty(photos, "File_Entrance", fUrl);
+                AssignIfEmpty(photos, "工廠正門口", fUrl);
+            }
+
+            // 雙向映射：若為英文 File_* 檔名，亦補足中文 Key
+            if (fbase.Equals("File_1", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "堆罝逸散性粒狀污染物質", fUrl);
+            else if (fbase.Equals("File_1a", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "堆罝逸散性粒狀污染物質_2", fUrl);
+            else if (fbase.Equals("File_2", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "輸送逸散性粒狀污染物質", fUrl);
+            else if (fbase.Equals("File_3", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "運輸車輛", fUrl);
+            else if (fbase.Equals("File_4", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "車輛通行路徑", fUrl);
+            else if (fbase.Equals("File_5", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "車輛清洗", fUrl);
+            else if (fbase.Equals("File_6", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "易致粒狀污染物逸散之製程、操作或裝卸作業_1", fUrl);
+            else if (fbase.Equals("File_7", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "公私場所管理之裸露區域", fUrl);
+            else if (fbase.Equals("File_8", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "公私場所管理之道路_1", fUrl);
+            else if (fbase.Equals("File_9", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "攝錄影監視系統_1", fUrl);
+            else if (fbase.Equals("File_10a", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "其他潛勢調查照片1", fUrl);
+            else if (fbase.Equals("File_10b", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "其他潛勢調查照片2", fUrl);
+            else if (fbase.Equals("File_11a", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "執行道路髒污抽查照片1", fUrl);
+            else if (fbase.Equals("File_11b", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "執行道路髒污抽查照片2", fUrl);
+            else if (fbase.Equals("File_AllView", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "全景照片", fUrl);
+            else if (fbase.Equals("File_Entrance", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "工廠正門口", fUrl);
+        }
+
+        private void AssignIfEmpty(Dictionary<string, string> dict, string key, string value)
+        {
+            if (!dict.ContainsKey(key) || string.IsNullOrEmpty(dict[key]))
+            {
+                dict[key] = value;
+            }
+        }
+
+        private Dictionary<string, object> BuildInvSummary(DataRow r)
+        {
+            var d = new Dictionary<string, object>();
+            d["InvNo"] = r["INV_NO"];
+            DateTime invDate;
+            if (DateTime.TryParse(r["INV_DATE"].ToString(), out invDate))
+            {
+                d["InvDate"] = invDate.ToString("yyyy/MM/dd HH:mm");
+            }
+            else
+            {
+                d["InvDate"] = r["INV_DATE"].ToString();
+            }
+
+            d["InvType"] = r.Table.Columns.Contains("INV_TYPE") ? r["INV_TYPE"].ToString() : "定期巡查";
+            d["WorkState"] = r.Table.Columns.Contains("Work_State") ? r["Work_State"].ToString() : "正常運作";
+            d["StateName"] = r.Table.Columns.Contains("State_Name") ? r["State_Name"].ToString() : (r["INV_State"] != null ? r["INV_State"].ToString() : "");
+            d["Inspector"] = r.Table.Columns.Contains("INV_User") && r["INV_User"] != DBNull.Value ? r["INV_User"].ToString() : (r.Table.Columns.Contains("Up_User") && r["Up_User"] != DBNull.Value ? r["Up_User"].ToString() : "查核員");
+
+            int ptLoss = managerList.LossPointCalculator.CalTotalLossPoint(r);
+            string detailLoss = managerList.LossPointCalculator.GetAllLossDetail(r);
+            d["TotalLossPoint"] = ptLoss;
+            d["LossDetail"] = detailLoss;
+            return d;
+        }
+
+        private List<Dictionary<string, object>> BuildCompareSections(DataRow r, Dictionary<string, string> photos)
+        {
+            List<Dictionary<string, object>> list = new List<Dictionary<string, object>>();
+
+            // 1. 堆置
+            list.Add(CreateCompareSection(1, "堆置逸散性粒狀污染物質", r, photos,
+                new string[] { "INV_01_01", "INV_01_02", "INV_01_03" },
+                new string[] { "INV_01_04", "INV_01_05" },
+                new string[] { "INV_01_07", "INV_01_08", "INV_01_09", "INV_01_09a", "INV_01_09b", "INV_01_09c", "INV_01_09d", "INV_01_10", "INV_01_10a", "INV_01_10b", "INV_01_11", "INV_01_11a", "INV_01_11b", "INV_01_11c", "INV_01_12", "INV_01_12a", "INV_01_12b", "INV_01_12c", "INV_01_13", "INV_01_14" },
+                new string[] { "File_1", "File_1a", "File_1b", "File_1c", "File_1d" },
+                new string[] { "FileMemo_1", "FileMemo_1a", "FileMemo_1b", "FileMemo_1c", "FileMemo_1d" },
+                new string[] { "堆置逸散照片 1", "堆置逸散照片 2", "自動灑水水表", "上月紀錄表", "本月紀錄表" }
+            ));
+
+            // 2. 輸送
+            list.Add(CreateCompareSection(2, "輸送逸散性粒狀污染物質", r, photos,
+                new string[] { "INV_02_01", "INV_02_02", "INV_02_03", "INV_02_04" },
+                new string[] { "INV_02_05", "INV_02_06" },
+                new string[] { "INV_02_07", "INV_02_08", "INV_02_09", "INV_02_09a", "INV_02_09b", "INV_02_10", "INV_02_10a", "INV_02_10b", "INV_02_10c", "INV_02_11" },
+                new string[] { "File_2", "File_2a" },
+                new string[] { "FileMemo_2", "FileMemo_2a" },
+                new string[] { "輸送作業照片 1", "輸送作業照片 2" }
+            ));
+
+            // 3. 運輸車輛
+            list.Add(CreateCompareSection(3, "運輸車輛", r, photos,
+                new string[] { "INV_03_01", "INV_03_02", "INV_03_03" },
+                new string[] { "INV_03_04", "INV_03_05", "INV_03_06" },
+                new string[] { "INV_03_07", "INV_03_08", "INV_03_09" },
+                new string[] { "File_3", "File_3a" },
+                new string[] { "FileMemo_3", "FileMemo_3a" },
+                new string[] { "運輸車輛照片 1", "運輸車輛照片 2" }
+            ));
+
+            // 4. 車輛通行路徑
+            list.Add(CreateCompareSection(4, "車輛通行路徑", r, photos,
+                new string[] { "INV_04_01", "INV_04_02", "INV_04_03" },
+                new string[] { "INV_04_04", "INV_04_05" },
+                new string[] { "INV_04_06", "INV_04_07", "INV_04_08", "INV_04_09" },
+                new string[] { "File_4", "File_4a" },
+                new string[] { "FileMemo_4", "FileMemo_4a" },
+                new string[] { "通行路徑照片 1", "通行路徑照片 2" }
+            ));
+
+            // 5. 車輛清洗
+            list.Add(CreateCompareSection(5, "車輛清洗", r, photos,
+                new string[] { "INV_05_01", "INV_05_02", "INV_05_03" },
+                new string[] { "INV_05_04", "INV_05_05", "INV_05_06" },
+                new string[] { "INV_05_07", "INV_05_08", "INV_05_09", "INV_05_10", "INV_05_11" },
+                new string[] { "File_5", "File_5a", "File_5b", "File_5c", "File_5d", "File_5e", "File_5f", "File_5g", "File_5h", "File_5i" },
+                new string[] { "FileMemo_5", "FileMemo_5a", "FileMemo_5b", "FileMemo_5c", "FileMemo_5d", "FileMemo_5e", "FileMemo_5f", "FileMemo_5g", "FileMemo_5h", "FileMemo_5i" },
+                new string[] { "洗車台照片 1", "洗車台照片 2", "水槽水深量測", "有效水深", "沖洗長度", "告示牌", "馬達規格", "加壓沖洗", "上月紀錄表", "本月紀錄表" }
+            ));
+
+            // 6. 易致粒狀污染物逸散之製程裝卸作業
+            list.Add(CreateCompareSection(6, "易致粒狀污染物逸散之製程裝卸作業", r, photos,
+                new string[] { "INV_06_01", "INV_06_02", "INV_06_03", "INV_06_04" },
+                new string[] { "INV_06_05", "INV_06_06" },
+                new string[] { "INV_06_07", "INV_06_07a", "INV_06_07b", "INV_06_08", "INV_06_08a", "INV_06_08b", "INV_06_09", "INV_06_10", "INV_06_11", "INV_06_12" },
+                new string[] { "File_6", "File_6a", "File_6b", "File_6c", "File_6d" },
+                new string[] { "FileMemo_6", "FileMemo_6a", "FileMemo_6b", "FileMemo_6c", "FileMemo_6d" },
+                new string[] { "製程裝卸照片 1", "製程裝卸照片 2", "監測儀表", "上月紀錄表", "本月紀錄表" }
+            ));
+
+            // 7. 公私場所管理之裸露區域
+            list.Add(CreateCompareSection(7, "公私場所管理之裸露區域", r, photos,
+                new string[] { "INV_07_01", "INV_07_02", "INV_07_03" },
+                new string[] { "INV_07_04", "INV_07_05" },
+                new string[] { "INV_07_06", "INV_07_07", "INV_07_08", "INV_07_09", "INV_07_10", "INV_07_11" },
+                new string[] { "File_7", "File_7a" },
+                new string[] { "FileMemo_7", "FileMemo_7a" },
+                new string[] { "裸露區域照片 1", "裸露區域照片 2" }
+            ));
+
+            // 8. 公私場所管理之道路
+            list.Add(CreateCompareSection(8, "公私場所管理之道路", r, photos,
+                new string[] { "INV_08_01", "INV_08_02", "INV_08_03" },
+                new string[] { "INV_08_04", "INV_08_05" },
+                new string[] { "INV_08_06", "INV_08_07", "INV_08_08", "INV_08_09", "INV_08_10" },
+                new string[] { "File_8", "File_8a" },
+                new string[] { "FileMemo_8", "FileMemo_8a" },
+                new string[] { "管理道路照片 1", "管理道路照片 2" }
+            ));
+
+            // 9. 攝錄影監視系統
+            list.Add(CreateCompareSection(9, "攝錄影監視系統", r, photos,
+                new string[] { "INV_09_01", "INV_09_02", "INV_09_03" },
+                new string[] { "INV_09_04", "INV_09_05", "INV_09_06" },
+                new string[] { "INV_09_07", "INV_09_08" },
+                new string[] { "File_9", "File_9a" },
+                new string[] { "FileMemo_9", "FileMemo_9a" },
+                new string[] { "監視系統照片 1", "監視系統照片 2" }
+            ));
+
+            // 10. 全景照片及其他查核佐證 (僅照片，無文字欄位)
+            list.Add(CreateInfoSection(10, "全景照片及其他查核佐證", r, photos,
+                new List<Dictionary<string, string>>(),
+                new string[][] {
+                    new string[] { "全景照片", "FileMemo_AllView", "全景照片", "File_AllView" },
+                    new string[] { "工廠正門口照片", "FileMemo_Entrance", "工廠正門口", "File_Entrance" },
+                    new string[] { "輔導簽認單 1", "FileMemo_Counseling1", "輔導簽認單_1", "File_Counseling1" },
+                    new string[] { "輔導簽認單 2", "FileMemo_Counseling2", "輔導簽認單_2", "File_Counseling2" },
+                    new string[] { "局部集氣評估 1", "FileMemo_CollGasEfficiency1", "局部集氣效率評估_1", "File_CollGasEfficiency1" },
+                    new string[] { "局部集氣評估 2", "FileMemo_CollGasEfficiency2", "局部集氣效率評估_2", "File_CollGasEfficiency2" },
+                    new string[] { "空品感測數據 1", "FileMemo_AirQualityValue1", "空品感測數據_1", "File_AirQualityValue1" },
+                    new string[] { "空品感測數據 2", "FileMemo_AirQualityValue2", "空品感測數據_2", "File_AirQualityValue2" }
+                }
+            ));
+
+            // 11. 環境潛勢調查及許可不符項目
+            list.Add(CreateInfoSection(11, "環境潛勢調查及許可不符項目", r, photos,
+                BuildEnvDetails(r),
+                new string[][] {
+                    new string[] { "潛勢調查照片 1", "FileMemo_10a", "其他潛勢調查照片1", "File_10a" },
+                    new string[] { "潛勢調查照片 2", "FileMemo_10b", "其他潛勢調查照片2", "File_10b" }
+                }
+            ));
+
+            // 12. 執行道路髒污抽查
+            list.Add(CreateInfoSection(12, "執行道路髒污抽查", r, photos,
+                BuildCleanRoadDetails(r),
+                new string[][] {
+                    new string[] { "道路抽查照片 1", "FileMemo_11a", "執行道路髒污抽查照片1", "File_11a" },
+                    new string[] { "道路抽查照片 2", "FileMemo_11b", "執行道路髒污抽查照片2", "File_11b" }
+                }
+            ));
+
+            return list;
+        }
+
+        private Dictionary<string, object> CreateCompareSection(int id, string title, DataRow r, Dictionary<string, string> photos,
+            string[] keys0, string[] keys10, string[] keys4,
+            string[] photoKeys, string[] memoKeys, string[] photoLabels)
+        {
+            Dictionary<string, object> sec = new Dictionary<string, object>();
+            sec["Id"] = id;
+            sec["Title"] = title;
+
+            int loss = 0;
+            List<string> violations = new List<string>();
+            List<string> compliantItems = new List<string>();
+
+            // 檢查 10 點違規
+            foreach (string k in keys10)
+            {
+                if (r.Table.Columns.Contains(k) && (r[k].ToString() == "Y" || r[k].ToString() == "V"))
+                {
+                    loss = 10;
+                    violations.Add(GetCheckItemName(k));
+                }
+            }
+
+            // 檢查 4 點違規
+            foreach (string k in keys4)
+            {
+                if (r.Table.Columns.Contains(k) && (r[k].ToString() == "Y" || r[k].ToString() == "V"))
+                {
+                    if (loss < 4) loss = 4;
+                    violations.Add(GetCheckItemName(k));
+                }
+            }
+
+            // 檢查合格項
+            foreach (string k in keys0)
+            {
+                if (r.Table.Columns.Contains(k) && (r[k].ToString() == "Y" || r[k].ToString() == "V"))
+                {
+                    compliantItems.Add(GetCheckItemName(k));
+                }
+            }
+
+            sec["LossPoint"] = loss;
+            sec["Violations"] = violations;
+            sec["CompliantItems"] = compliantItems;
+
+            // 附加照片 (支援代號 File_*、中文標籤 photoLabels 雙重比對)
+            List<Dictionary<string, string>> photoList = new List<Dictionary<string, string>>();
+            for (int i = 0; i < photoKeys.Length; i++)
+            {
+                string pKey = photoKeys[i];
+                string pLabel = i < photoLabels.Length ? photoLabels[i] : pKey;
+                string memoCol = i < memoKeys.Length ? memoKeys[i] : "";
+                string memoVal = (r.Table.Columns.Contains(memoCol) && r[memoCol] != DBNull.Value) ? r[memoCol].ToString().Trim() : "";
+
+                // 優先從 photos 字典以 pKey 查詢 (如 File_1, File_1a)
+                string pUrl = "";
+                if (photos.ContainsKey(pKey) && !string.IsNullOrEmpty(photos[pKey]))
+                {
+                    pUrl = photos[pKey];
+                }
+                else if (photos.ContainsKey(pLabel) && !string.IsNullOrEmpty(photos[pLabel]))
+                {
+                    pUrl = photos[pLabel];
+                }
+
+                if (!string.IsNullOrEmpty(pUrl) || !string.IsNullOrEmpty(memoVal))
+                {
+                    Dictionary<string, string> p = new Dictionary<string, string>();
+                    p["Key"] = pKey;
+                    p["Label"] = pLabel;
+                    p["Memo"] = memoVal;
+                    p["Url"] = pUrl;
+                    photoList.Add(p);
+                }
+            }
+            sec["Photos"] = photoList;
+
+            return sec;
+        }
+
+        private string GetStr(DataRow r, string col)
+        {
+            if (r == null || string.IsNullOrEmpty(col) || !r.Table.Columns.Contains(col) || r[col] == DBNull.Value) return "";
+            return r[col].ToString().Trim();
+        }
+
+        private void AddDetail(List<Dictionary<string, string>> list, string label, string value)
+        {
+            if (string.IsNullOrEmpty(value)) return;
+            Dictionary<string, string> d = new Dictionary<string, string>();
+            d["Label"] = label;
+            d["Value"] = value;
+            list.Add(d);
+        }
+
+        private List<Dictionary<string, string>> BuildEnvDetails(DataRow r)
+        {
+            List<Dictionary<string, string>> list = new List<Dictionary<string, string>>();
+            AddDetail(list, "調查項目", GetStr(r, "EnvirCheck_Item"));
+            AddDetail(list, "其他調查說明", GetStr(r, "EnvirCheck_Other"));
+            string ans1 = GetStr(r, "OtherChkAns1");
+            AddDetail(list, "狀態", ans1);
+            if (ans1 != "無")
+            {
+                AddDetail(list, "事項", GetStr(r, "OtherChkAns2"));
+            }
+            AddDetail(list, "詳細說明", GetStr(r, "OtherChkMemo"));
+            return list;
+        }
+
+        private string CleanLevelText(DataRow r, string lv, string extraName)
+        {
+            string flag = GetStr(r, "CleanRoad_Ans2_CleanLV_" + lv);
+            if (flag != "Y" && flag != "V") return "";
+            string len = GetStr(r, "CleanRoad_Ans2_CleanLength_" + lv);
+            string txt = "";
+            if (!string.IsNullOrEmpty(extraName)) txt = extraName + " ";
+            txt += (string.IsNullOrEmpty(len) ? "0" : len) + " 公尺";
+            return txt;
+        }
+
+        private List<Dictionary<string, string>> BuildCleanRoadDetails(DataRow r)
+        {
+            List<Dictionary<string, string>> list = new List<Dictionary<string, string>>();
+            string ans1 = GetStr(r, "CleanRoad_Ans1");
+            AddDetail(list, "是否執行道路髒污抽查", ans1);
+            if (ans1 == "是")
+            {
+                AddDetail(list, "抽查道路名稱", GetStr(r, "CleanRoad_Ans2_RoadName"));
+                AddDetail(list, "良好 (A級)", CleanLevelText(r, "A", ""));
+                AddDetail(list, "普通 (B級)", CleanLevelText(r, "B", ""));
+                AddDetail(list, "待改進 (C級)", CleanLevelText(r, "C", GetStr(r, "CleanRoad_Ans2_CleanRoadName")));
+                AddDetail(list, "認養道路旁水溝是否暢通", GetStr(r, "CleanRoad_Ans3"));
+                AddDetail(list, "說明", GetStr(r, "CleanRoad_Ans4"));
+            }
+            return list;
+        }
+
+        private Dictionary<string, object> CreateInfoSection(int id, string title, DataRow r, Dictionary<string, string> photos,
+            List<Dictionary<string, string>> details, string[][] photoDefs)
+        {
+            Dictionary<string, object> sec = new Dictionary<string, object>();
+            sec["Id"] = id;
+            sec["Title"] = title;
+            sec["IsInfo"] = true;
+            sec["LossPoint"] = 0;
+            sec["Violations"] = new List<string>();
+            sec["CompliantItems"] = new List<string>();
+            sec["Details"] = details;
+
+            List<Dictionary<string, string>> photoList = new List<Dictionary<string, string>>();
+            foreach (string[] def in photoDefs)
+            {
+                string pUrl = "";
+                for (int k = 2; k < def.Length; k++)
+                {
+                    if (photos.ContainsKey(def[k]) && !string.IsNullOrEmpty(photos[def[k]]))
+                    {
+                        pUrl = photos[def[k]];
+                        break;
+                    }
+                }
+                string memoVal = GetStr(r, def[1]);
+
+                if (!string.IsNullOrEmpty(pUrl) || !string.IsNullOrEmpty(memoVal))
+                {
+                    Dictionary<string, string> p = new Dictionary<string, string>();
+                    p["Key"] = def[2];
+                    p["Label"] = def[0];
+                    p["Memo"] = memoVal;
+                    p["Url"] = pUrl;
+                    photoList.Add(p);
+                }
+            }
+            sec["Photos"] = photoList;
+            return sec;
+        }
+
+        private bool IsInfoSectionChanged(Dictionary<string, object> a, Dictionary<string, object> b)
+        {
+            if (b == null) return true;
+
+            List<Dictionary<string, string>> da = a["Details"] as List<Dictionary<string, string>>;
+            List<Dictionary<string, string>> db = b["Details"] as List<Dictionary<string, string>>;
+            StringBuilder sa = new StringBuilder();
+            StringBuilder sb2 = new StringBuilder();
+            if (da != null) foreach (Dictionary<string, string> d in da) sa.Append(d["Label"]).Append("=").Append(d["Value"]).Append("|");
+            if (db != null) foreach (Dictionary<string, string> d in db) sb2.Append(d["Label"]).Append("=").Append(d["Value"]).Append("|");
+            if (sa.ToString() != sb2.ToString()) return true;
+
+            // 照片：比較「有哪些欄位有照片」(不比內容，兩次巡查照片本來就不同)
+            List<Dictionary<string, string>> pa = a["Photos"] as List<Dictionary<string, string>>;
+            List<Dictionary<string, string>> pb = b["Photos"] as List<Dictionary<string, string>>;
+            StringBuilder ka = new StringBuilder();
+            StringBuilder kb = new StringBuilder();
+            if (pa != null) foreach (Dictionary<string, string> p in pa) ka.Append(p["Key"]).Append(string.IsNullOrEmpty(p["Url"]) ? "0" : "1").Append("|");
+            if (pb != null) foreach (Dictionary<string, string> p in pb) kb.Append(p["Key"]).Append(string.IsNullOrEmpty(p["Url"]) ? "0" : "1").Append("|");
+            return ka.ToString() != kb.ToString();
+        }
+
+                private static readonly Dictionary<string, string> CheckItemNames = InitCheckItemNames();
+
+        private static Dictionary<string, string> InitCheckItemNames()
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            dict["INV_01_01"] = "無本製程";
+            dict["INV_01_02"] = "全項符合防制規範";
+            dict["INV_01_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_01_04"] = "未設置或採行第四條規定防制設施之一 (記10點)";
+            dict["INV_01_05"] = "未依直轄市、主管機關同意後之替代方法執行 (記10點)";
+            dict["INV_01_07"] = "堆置高度超過阻隔設施高度 (記4點)";
+            dict["INV_01_08"] = "採堆置於封閉式建築物內者，未符合第二條第二款規定 (記4點)";
+            dict["INV_01_09"] = "堆置區周界阻隔設施未符規定 (記4點)";
+            dict["INV_01_09a"] = "阻隔設施高度未達堆置高度 1.25 倍";
+            dict["INV_01_09b"] = "未完全圍封堆置區";
+            dict["INV_01_09c"] = "阻隔設施破損面積達百分之十以上";
+            dict["INV_01_09d"] = "堆置體積3000立方公尺以上未符規定";
+            dict["INV_01_10"] = "覆蓋防塵布或防塵網未符規定 (記4點)";
+            dict["INV_01_10a"] = "覆蓋面積未達 80%";
+            dict["INV_01_10b"] = "三級防制區覆蓋未達 90%";
+            dict["INV_01_11"] = "噴灑化學穩定劑未符規定 (記4點)";
+            dict["INV_01_11a"] = "噴灑面積未達 80%";
+            dict["INV_01_11b"] = "未依第十條記錄施作與保存憑證";
+            dict["INV_01_11c"] = "三級防制區噴灑未達 90%";
+            dict["INV_01_12"] = "設置自動灑水設備未符規定 (記4點)";
+            dict["INV_01_12a"] = "灑水水量及頻率不足保持濕潤";
+            dict["INV_01_12b"] = "需人工操作無法自動灑水";
+            dict["INV_01_12c"] = "未設水表每日記錄用水量";
+            dict["INV_01_13"] = "四周未設置阻隔防溢座或物料掉落溢流至區外 (記4點)";
+            dict["INV_01_14"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_02_01"] = "無本製程";
+            dict["INV_02_02"] = "採濕式作業免設置";
+            dict["INV_02_03"] = "全項符合防制規範";
+            dict["INV_02_04"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_02_05"] = "未設置防制設施之一 (記10點)";
+            dict["INV_02_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_02_07"] = "於封閉式建築物內操作未符規定 (記4點)";
+            dict["INV_02_08"] = "密閉式輸送系統未完全密閉或破損 (記4點)";
+            dict["INV_02_09"] = "採集氣系統未符規定 (記4點)";
+            dict["INV_02_09a"] = "集氣系統捕捉速度不足";
+            dict["INV_02_09b"] = "未設電表、流量計、壓差計等監測儀表並記錄";
+            dict["INV_02_10"] = "採自動灑水設施未符規定 (記4點)";
+            dict["INV_02_10a"] = "灑水水量及頻率不足保持濕潤";
+            dict["INV_02_10b"] = "需人工操作無法自動灑水";
+            dict["INV_02_10c"] = "未設水表每日記錄用水量";
+            dict["INV_02_11"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_03_01"] = "無本作業";
+            dict["INV_03_02"] = "全項符合防制規範";
+            dict["INV_03_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_03_04"] = "運輸車輛未使用密閉式貨箱或未緊密覆蓋 (記10點)";
+            dict["INV_03_05"] = "貨箱未具防滴落污水污泥之功能或設施 (記10點)";
+            dict["INV_03_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_03_07"] = "封蓋未緊密覆蓋 (邊緣未延伸覆蓋至貨箱上緣15公分以下) (記4點)";
+            dict["INV_03_08"] = "具有設施但運輸過程仍滴落污水、污泥或掉落物料於地面 (記4點)";
+            dict["INV_03_09"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_04_01"] = "無本作業";
+            dict["INV_04_02"] = "全項符合防制規範";
+            dict["INV_04_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_04_04"] = "車輛通行路徑及區域未依規定設置防制設施 (記10點)";
+            dict["INV_04_05"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_04_06"] = "設置或採行防制設施面積不足 (記4點)";
+            dict["INV_04_07"] = "舖設混凝土、瀝青混凝土或鋼板惟有路面色差 (記4點)";
+            dict["INV_04_08"] = "舖設粗級配粒料厚度不足或未灑水保持濕潤 (記4點)";
+            dict["INV_04_09"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_05_01"] = "無本作業";
+            dict["INV_05_02"] = "全項符合防制規範";
+            dict["INV_05_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_05_04"] = "未依規定以加壓沖洗設備清洗車體及輪胎 (記10點)";
+            dict["INV_05_05"] = "須洗掃鄰接道路並設自動洗車設備而未依規定洗掃或設置 (記10點)";
+            dict["INV_05_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_05_07"] = "運輸車輛未清洗乾淨致門口路面有帶出污泥物料 (記4點)";
+            dict["INV_05_08"] = "洗車設備無加壓沖洗功能 (記4點)";
+            dict["INV_05_09"] = "自動洗車設備規格未符附表二規定 (記4點)";
+            dict["INV_05_10"] = "未設水表電表並記錄用水或用電度數 (記4點)";
+            dict["INV_05_11"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_06_01"] = "無本製程";
+            dict["INV_06_02"] = "採濕式作業免設置";
+            dict["INV_06_03"] = "全項符合防制規範";
+            dict["INV_06_04"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_06_05"] = "未設置或採行第七條防制設施之一 (記10點)";
+            dict["INV_06_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_06_07"] = "採負壓操作之密閉式作業未符規定 (記4點)";
+            dict["INV_06_07a"] = "未維持負壓操作狀態";
+            dict["INV_06_07b"] = "未設電表、流量計、壓差計等監測儀表並記錄";
+            dict["INV_06_08"] = "採集氣系統未符規定 (記4點)";
+            dict["INV_06_08a"] = "捕捉速度不足";
+            dict["INV_06_08b"] = "未設電表等監測儀表並記錄";
+            dict["INV_06_09"] = "密閉式作業未妥善密閉或破損 (記4點)";
+            dict["INV_06_10"] = "封閉式建築未符合規定 (記4點)";
+            dict["INV_06_11"] = "灑水設施噴灑範圍、水量及頻率不足 (記4點)";
+            dict["INV_06_12"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_07_01"] = "無本區域";
+            dict["INV_07_02"] = "全項符合防制規範";
+            dict["INV_07_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_07_04"] = "未設置或採行第八條防制設施之一 (記10點)";
+            dict["INV_07_05"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_07_06"] = "防制設施實施面積未完整涵蓋裸露區域 (記4點)";
+            dict["INV_07_07"] = "植生綠化覆蓋稻草蓆碎木厚度不足 (記4點)";
+            dict["INV_07_08"] = "舖設粗級配粒料粒徑厚度不足或未灑水保持濕潤 (記4點)";
+            dict["INV_07_09"] = "噴灑化學穩定劑或灑水量及頻率不足 (記4點)";
+            dict["INV_07_10"] = "噴灑穩定劑未記錄保存購買證明 (記4點)";
+            dict["INV_07_11"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_08_01"] = "無本道路";
+            dict["INV_08_02"] = "全項符合防制規範";
+            dict["INV_08_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_08_04"] = "交通島及人行道裸露區域未設置防制設施之一 (記10點)";
+            dict["INV_08_05"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_08_06"] = "路面有破損、髒污致路面色差 (記4點)";
+            dict["INV_08_07"] = "交通島及人行道裸露區域防制面積不足 (記4點)";
+            dict["INV_08_08"] = "植生綠化覆蓋稻草蓆碎木厚度不足 (記4點)";
+            dict["INV_08_09"] = "舖設粗級配粒料粒徑厚度不足或未灑水 (記4點)";
+            dict["INV_08_10"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_09_01"] = "無須設置";
+            dict["INV_09_02"] = "全項符合防制規範";
+            dict["INV_09_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_09_04"] = "須設置攝錄影監視系統而未設置 (記10點)";
+            dict["INV_09_05"] = "監視系統故障未於次日起算七日內修復完成 (記10點)";
+            dict["INV_09_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_09_07"] = "未符合附表四規定或記錄影像資料未保存一個月 (記4點)";
+            dict["INV_09_08"] = "監視系統故障未即時通報主管機關 (記4點)";
+            dict["INV_09_09"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            return dict;
+        }
+
+        private string GetCheckItemName(string colName)
+        {
+            if (string.IsNullOrEmpty(colName)) return "";
+            if (CheckItemNames.ContainsKey(colName))
+            {
+                return CheckItemNames[colName];
+            }
+            // 後備大項辨識，避免顯示孤立英文代號
+            if (colName.StartsWith("INV_01_")) return "一、堆置逸散防制缺失項目";
+            if (colName.StartsWith("INV_02_")) return "二、輸送逸散防制缺失項目";
+            if (colName.StartsWith("INV_03_")) return "三、運輸車輛防制缺失項目";
+            if (colName.StartsWith("INV_04_")) return "四、車輛通行路徑防制缺失項目";
+            if (colName.StartsWith("INV_05_")) return "五、洗車設施防制缺失項目";
+            if (colName.StartsWith("INV_06_")) return "六、製程防制缺失項目";
+            if (colName.StartsWith("INV_07_")) return "七、裸露區域防制缺失項目";
+            if (colName.StartsWith("INV_08_")) return "八、管轄道路防制缺失項目";
+            if (colName.StartsWith("INV_09_")) return "九、監視系統防制缺失項目";
+            return colName;
+        }
+        #endregion
+
         #region 匯出 Excel 報表
         private void HandleExportExcel()
         {

@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    新北市固定溢散源管理平台 (NTPC_FEC) - 正式機安全發布與自動化防呆打包工具 (PowerShell 繁體中文標準版)
+    新北市固定逸散源管理平台 (NTPC_FEC) - 正式機安全發布與自動化防呆打包工具 (PowerShell 繁體中文標準版)
 #>
 
 [CmdletBinding()]

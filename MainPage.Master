@@ -26,7 +26,7 @@
 
 
 
-    <title><%: Page.Title %> - 新北市固定溢散源管理平台</title>
+    <title><%: Page.Title %> - 新北市固定逸散源管理平台</title>
 
 
 
@@ -1388,7 +1388,7 @@
 
 
 
-                <span class="d-none d-md-inline">新北市固定溢散源管理平台</span>
+                <span class="d-none d-md-inline">新北市固定逸散源管理平台</span>
 
 
 
@@ -1929,6 +1929,8 @@
 
                 <div class="pwd-field-group">
                     <label class="pwd-field-label">登入帳號</label>
+                    <!-- 專供瀏覽器與密碼管理員識別此 Modal 密碼區塊所屬帳號，防止瀏覽器往上抓取首頁搜尋欄位當作帳號自動填入 -->
+                    <input type="text" name="fec_modal_username" value="<%= Session["LoginUser"] %>" autocomplete="username" style="display:none;" tabindex="-1" aria-hidden="true" />
                     <div class="pwd-account-display">
                         <i class="fas fa-user-circle mr-2 text-primary"></i><%= Session["LoginUser"] %>
                     </div>
@@ -2413,4 +2415,5 @@
 </body>
 
 </html>
+
 

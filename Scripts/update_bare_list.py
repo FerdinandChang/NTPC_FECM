@@ -13,7 +13,7 @@ old_nav = """        <!-- 頂部品牌導覽列 -->
         <header class="top-navbar">
             <a href="Bare_List.aspx" class="navbar-brand-title">
                 <i class="fas fa-mountain text-warning"></i>
-                <span>新北市固定溢散源 - 裸露地調查管理</span>
+                <span>新北市固定逸散源 - 裸露地調查管理</span>
             </a>
             <div class="d-flex align-items-center gap-2">
                 <a href="NewBare.aspx?mode=new" class="btn btn-warning font-weight-bold text-dark px-3 shadow-sm mr-2" style="border-radius: 8px;">

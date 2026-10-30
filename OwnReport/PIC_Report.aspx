@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 固定污染源現場查核缺失改善與自主回報</title>
+    <title>新北市固定逸散源管理平台 - 固定污染源現場查核缺失改善與自主回報</title>
     
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
 
@@ -605,7 +605,7 @@
 
             <!-- 列印專用報表頁首 -->
             <div class="print-only-header">
-                <h2>新北市固定溢散源管理平台</h2>
+                <h2>新北市固定逸散源管理平台</h2>
                 <h3>公私場所固定污染源現場查核缺失改善與自主回報表</h3>
                 <p v-if="detail && detail.FacInfo">
                     公私場所：{{ detail.FacInfo.FacName }} ({{ detail.FacInfo.CNo }}) ｜ 查核日期：{{ detail.InvSummary ? detail.InvSummary.InvDate : '無' }} ｜ 列印時間：{{ printTime }}

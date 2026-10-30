@@ -39,7 +39,7 @@
         }
         [v-cloak] { display: none !important; }
 
-        /* 置頂深青藍導覽列 (全載具自適應 RWD，嚴格杜絕中文字折行直排與按鈕溢出) */
+        /* 置頂深青藍導覽列 (全載具自適應 RWD) */
         .top-navbar {
             background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
             color: #ffffff;
@@ -85,7 +85,7 @@
             padding: 16px;
         }
 
-        /* 現代卡片樣式 */
+        /* 現代卡片樣式 (確保每個卡片寬度 100% 繼承欄位容器) */
         .card-modern {
             background: var(--surface);
             border-radius: 12px;
@@ -93,6 +93,7 @@
             margin-bottom: 16px;
             border: 1px solid var(--border-color);
             overflow: hidden;
+            width: 100%;
         }
         .card-modern-header {
             padding: 12px 16px;
@@ -107,7 +108,7 @@
         .card-modern-body { padding: 16px; }
 
         /* 桌面端側欄固頂 */
-        @media screen and (min-width: 1200px) {
+        @media screen and (min-width: 992px) {
             .sticky-sidebar {
                 position: sticky; top: 72px;
                 max-height: calc(100vh - 88px);
@@ -201,20 +202,6 @@
             height: 90px !important;
         }
 
-        /* 地圖座標標記 (Marker Pin) */
-        .marker-pin {
-            width: 32px; height: 32px;
-            border-radius: 50% 50% 50% 0;
-            background: #0284c7;
-            position: absolute; transform: rotate(-45deg);
-            left: 50%; top: 50%; margin: -20px 0 0 -16px;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
-            border: 2px solid #ffffff;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-        }
-        .marker-num { transform: rotate(45deg); color: #ffffff; font-weight: 800; font-size: 13px; }
-
         /* 污染物削減量輸入卡片 */
         .pollutant-card {
             background: #ffffff;
@@ -251,6 +238,7 @@
         }
 
         /* 手機底部懸浮列 */
+        .mobile-bottom-bar { display: none; }
         @media screen and (max-width: 991px) {
             body { padding-bottom: 76px; }
             .mobile-bottom-bar {
@@ -418,35 +406,35 @@
                     <span class="d-none d-sm-inline">返回清單</span>
                 </a>
                 <i class="fas fa-wind text-white mr-1 d-none d-sm-inline-block"></i>
-
-                <!-- 標題：小尺寸手機簡潔展示，大尺寸完整顯示，嚴格禁止垂直折行直排 -->
+                
+                <!-- 標題：小尺寸簡短顯示，大尺寸完整顯示，嚴格杜絕中文字折行直排 -->
                 <span class="brand-text-truncate font-weight-bold">
                     <span class="d-none d-md-inline">公私場所空品不良應變回報單</span>
-                    <span class="d-inline d-md-none">空品應變回報</span>
+                    <span class="d-inline d-md-none">空品應變回報單</span>
                 </span>
-
-                <!-- 管制編號 Badge：維持緊湊單行 -->
-                <span v-if="reportData.C_NO" class="badge badge-light text-dark font-weight-bold ml-1 ml-sm-2" style="font-size: 0.8rem; white-space: nowrap;">
+                
+                <!-- 管制編號 Badge：始終保持完整水平 -->
+                <span v-if="reportData.C_NO" class="badge badge-light text-dark font-weight-bold ml-1 ml-sm-2" style="font-size: 0.82rem; white-space: nowrap !important; flex-shrink: 0;">
                     {{ reportData.C_NO }}
                 </span>
-
-                <!-- 案件狀態 Badge：小螢幕極簡顯示避免撐破邊界 -->
-                <span class="badge ml-1 d-none d-sm-inline-block" :class="mode === 'edit' ? 'badge-warning text-dark' : 'badge-success text-white'" style="font-size: 0.8rem; white-space: nowrap;">
+                
+                <!-- 案件狀態 Badge：小螢幕簡化避免擠壓 -->
+                <span class="badge ml-1 d-none d-sm-inline-block" :class="mode === 'edit' ? 'badge-warning text-dark' : 'badge-success text-white'" style="font-size: 0.8rem; white-space: nowrap !important; flex-shrink: 0;">
                     {{ mode === 'edit' ? '編輯案件 #' + reportData.pIndex : '新增通報' }}
                 </span>
-                <span class="badge ml-1 d-inline-block d-sm-none" :class="mode === 'edit' ? 'badge-warning text-dark' : 'badge-success text-white'" style="font-size: 0.75rem; white-space: nowrap;">
+                <span class="badge ml-1 d-inline-block d-sm-none" :class="mode === 'edit' ? 'badge-warning text-dark' : 'badge-success text-white'" style="font-size: 0.75rem; white-space: nowrap !important; flex-shrink: 0;">
                     {{ mode === 'edit' ? '#' + reportData.pIndex : '新增' }}
                 </span>
             </div>
 
             <div class="d-flex align-items-center flex-shrink-0">
-                <!-- 列印按鈕：中大螢幕才顯示 (手機螢幕原生通常無印表機驅動，留空間給關鍵元素) -->
+                <!-- 列印按鈕：大螢幕才顯示 (手機端通常無印表機，留空間給其他元素) -->
                 <button type="button" class="nav-btn bg-white text-dark shadow-sm mr-2 d-none d-md-inline-flex" v-on:click="printReport">
                     <i class="fas fa-print"></i>
                     <span>列印案件</span>
                 </button>
-
-                <!-- 頂部確定送出按鈕：電腦端完整文字，手機小螢幕緊湊圖示按鈕 (亦可透過底部常駐浮動條送出) -->
+                
+                <!-- 確定送出按鈕：電腦端帶文字，小螢幕圖示+縮寫 (外勤外巡隨手滑動隨時送出) -->
                 <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm px-2 px-sm-3" v-on:click="submitForm" :disabled="isSaving" style="height: 34px; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;">
                     <i v-if="isSaving" class="fas fa-spinner fa-spin mr-1"></i>
                     <i v-else class="fas fa-save mr-1"></i>
@@ -477,11 +465,11 @@
                 </button>
             </div>
 
-            <!-- 主佈局格網 -->
+            <!-- 主佈局格網：雙欄完美對齊 (大螢幕左5右7並排，小螢幕上下滿版一致) -->
             <div class="row">
                 
-                <!-- 左欄 (40% 寬度，Desktop Sticky 浮動) -->
-                <div class="col-12 col-xl-5">
+                <!-- 左欄 (Desktop: 41.6% 寬度 Sticky 固頂，Mobile/Tablet: 100% 滿版) -->
+                <div class="col-12 col-lg-5 mb-4 mb-lg-0">
                     <div class="sticky-sidebar">
                         
                         <!-- 卡片 1: 工廠基本資訊卡片 -->
@@ -493,9 +481,9 @@
                                 </h3>
                                 <div class="header-actions-row">
                                     <span class="badge badge-info">
-                                    {{ facInfo.TownName || '新北市' }}
-                                </span>
-                            </div>
+                                        {{ facInfo.TownName || '新北市' }}
+                                    </span>
+                                </div>
                             </div>
                             <div class="card-modern-body">
                                 
@@ -585,7 +573,6 @@
                                     <span v-if="facInfo.Lat && facInfo.Lng" class="badge badge-light border text-success">
                                         <i class="fas fa-check-circle mr-1"></i>座標已定位
                                     </span>
-                            </div>
                                 </div>
                             </div>
                         </div>
@@ -611,8 +598,8 @@
                     </div>
                 </div>
 
-                <!-- 右欄 (60% 寬度，主表單填報作業區) -->
-                <div class="col-12 col-xl-7">
+                <!-- 右欄 (Desktop: 58.3% 寬度主表單作業區，Mobile/Tablet: 100% 滿版) -->
+                <div class="col-12 col-lg-7">
                     
                     <!-- 卡片 A: 空品不良應變通知與操作狀況 -->
                     <div class="card-modern">
@@ -701,8 +688,8 @@
                             </h3>
                             <div class="header-actions-row">
                                 <span class="badge badge-pill" :class="reportData.Less === '是' ? 'badge-success' : 'badge-danger'">
-                                {{ reportData.Less === '是' ? '已配合' : '未配合' }}
-                            </span>
+                                    {{ reportData.Less === '是' ? '已配合' : '未配合' }}
+                                </span>
                             </div>
                         </div>
                         <div class="card-modern-body">
@@ -740,7 +727,6 @@
                                         <i class="fas fa-clipboard-check text-success mr-1"></i>
                                         具體減排措施說明 <span class="text-danger">*</span>
                                     </span>
-                            </div>
                                     <span class="badge badge-light text-muted font-weight-normal">若前項為「是」本項為必填</span>
                                 </label>
 
@@ -792,33 +778,32 @@
                             
                             <!-- 執行時間起訖 -->
                             <div class="form-group row align-items-center mb-4">
-                                <label class="col-md-3 col-form-label font-weight-bold text-dark">
+                                <label class="col-md-3 col-form-label font-weight-bold text-dark mb-1 mb-md-0">
                                     <i class="fas fa-clock text-primary mr-1"></i> 減排執行時間：
                                 </label>
                                 <div class="col-md-9">
                                     <div class="time-picker-wrapper">
                                         <div class="time-select-item">
                                             <select class="form-control font-weight-bold" v-model="reportData.RunTimeStart" aria-label="執行起始時間">
-                                            <option v-for="t in timeOptions" :key="t.val" :value="t.val">
-                                                {{ t.text }}
-                                            </option>
-                                        </select>
+                                                <option v-for="t in timeOptions" :key="t.val" :value="t.val">
+                                                    {{ t.text }}
+                                                </option>
+                                            </select>
                                         </div>
                                         <span class="time-separator-text">至</span>
                                         <div class="time-select-item">
                                             <select class="form-control font-weight-bold" v-model="reportData.RunTimeEnd" aria-label="執行結束時間">
-                                            <option v-for="t in timeOptions" :key="t.val" :value="t.val">
-                                                {{ t.text }}
-                                            </option>
-                                        </select>
+                                                <option v-for="t in timeOptions" :key="t.val" :value="t.val">
+                                                    {{ t.text }}
+                                                </option>
+                                            </select>
                                         </div>
                                         <div class="time-hours-chip">
                                             <span class="badge badge-light border text-dark shadow-xs">
-                                            <i class="fas fa-hourglass-half text-warning mr-1"></i>
-                                            時數：{{ calculatedHours }} 小時
+                                                <i class="fas fa-hourglass-half text-warning mr-1"></i>
+                                                時數：{{ calculatedHours }} 小時
                                             </span>
                                         </div>
-
                                     </div>
                                 </div>
                             </div>
@@ -937,7 +922,7 @@
                         </div>
                     </div>
 
-                    <!-- 填報人員資訊與動作列 (電腦端底欄) -->
+                    <!-- 填報人員資訊與動作列 (電腦端底欄卡片) -->
                     <div class="card-modern no-print">
                         <div class="card-modern-body d-flex flex-wrap align-items-center justify-content-between">
                             <div class="text-muted small">
@@ -965,7 +950,7 @@
         </main>
 
         <!-- 4. 手機行動端常駐浮動底欄 (Sticky Bottom Bar) -->
-        <footer class="mobile-bottom-bar d-xl-none no-print">
+        <footer class="mobile-bottom-bar d-lg-none no-print">
             <a href="AirQuality_List.aspx" class="btn btn-outline-secondary">
                 <i class="fas fa-times mr-1"></i> 取消
             </a>

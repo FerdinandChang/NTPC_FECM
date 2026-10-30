@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    新北市固定溢散源管理平台 (NTPC_FEC)
+    新北市固定逸散源管理平台 (NTPC_FEC)
     道路髒污案件 (RoadDirty_CaseMain) - TWD97 坐標批次轉換 WGS84 經緯度工具
 #>
 
@@ -63,7 +63,7 @@ if (-not ([System.Management.Automation.PSTypeName]'CoordConverter').Type) {
 }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "  新北市固定溢散源 - 道路髒污坐標批次轉換 WGS84 工具" -ForegroundColor Green
+Write-Host "  新北市固定逸散源 - 道路髒污坐標批次轉換 WGS84 工具" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 # 2. 自動嘗試連線候選伺服器

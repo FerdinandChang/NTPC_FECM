@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.IO;
+using System.Text;
 using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
@@ -41,6 +42,9 @@ namespace NTPC_FEC.RoadClean
             {
                 case "init":
                     InitPageData();
+                    break;
+                case "reversegeocode":
+                    ReverseGeocode();
                     break;
                 case "save":
                     SaveDirtyRecord();
@@ -201,6 +205,8 @@ namespace NTPC_FEC.RoadClean
             result["Lat1"] = lat1;
             result["Lon1"] = lon1;
             result["Comm"] = row.Table.Columns.Contains("COMM") && row["COMM"] != DBNull.Value ? row["COMM"].ToString() : "";
+            result["Address"] = row.Table.Columns.Contains("Address") && row["Address"] != DBNull.Value ? row["Address"].ToString().Trim() : "";
+            result["Address1"] = row.Table.Columns.Contains("Address1") && row["Address1"] != DBNull.Value ? row["Address1"].ToString().Trim() : "";
 
             // 讀取伺服器上已存在的照片
             result["Photos1"] = GetExistingPhotos(dirtyId, "疑似髒污點現場照片");
@@ -329,31 +335,52 @@ namespace NTPC_FEC.RoadClean
                 }
                 dirtyId = datePrefix + string.Format("{0:000}", seq);
 
-                string insertSql = "INSERT INTO RoadDirty_CaseMain "
-                                 + " (Dirty_ID, Show_ID, Report_Date, Report_User, S_UTME, S_UTMN, S_UTME1, S_UTMN1, Lat, Lon, Lat1, Lon1, COMM, KIND) "
-                                 + " VALUES "
-                                 + " (@Dirty_ID, @Show_ID, @Report_Date, @Report_User, @S_UTME, @S_UTMN, @S_UTME1, @S_UTMN1, @Lat, @Lon, @Lat1, @Lon1, @COMM, @KIND)";
+                bool hasAddrCol = CheckColumnExists("RoadDirty_CaseMain", "Address");
+                bool hasAddr1Col = CheckColumnExists("RoadDirty_CaseMain", "Address1");
+                string insertCols = "Dirty_ID, Show_ID, Report_Date, Report_User, S_UTME, S_UTMN, S_UTME1, S_UTMN1, Lat, Lon, Lat1, Lon1, COMM, KIND";
+                string insertVals = "@Dirty_ID, @Show_ID, @Report_Date, @Report_User, @S_UTME, @S_UTMN, @S_UTME1, @S_UTMN1, @Lat, @Lon, @Lat1, @Lon1, @COMM, @KIND";
+                if (hasAddrCol)
+                {
+                    insertCols += ", Address";
+                    insertVals += ", @Address";
+                }
+                if (hasAddr1Col)
+                {
+                    insertCols += ", Address1";
+                    insertVals += ", @Address1";
+                }
 
-                DbHelper.ExecuteNonQuery(insertSql,
-                    new SqlParameter("@Dirty_ID", dirtyId),
-                    new SqlParameter("@Show_ID", dirtyId),
-                    new SqlParameter("@Report_Date", reportDate),
-                    new SqlParameter("@Report_User", loginUser),
-                    new SqlParameter("@S_UTME", input.S_UTME),
-                    new SqlParameter("@S_UTMN", input.S_UTMN),
-                    new SqlParameter("@S_UTME1", input.S_UTME1.HasValue && input.S_UTME1.Value > 0 ? (object)input.S_UTME1.Value : DBNull.Value),
-                    new SqlParameter("@S_UTMN1", input.S_UTMN1.HasValue && input.S_UTMN1.Value > 0 ? (object)input.S_UTMN1.Value : DBNull.Value),
-                    new SqlParameter("@Lat", saveLat.HasValue && saveLat.Value > 0 ? (object)saveLat.Value : DBNull.Value),
-                    new SqlParameter("@Lon", saveLon.HasValue && saveLon.Value > 0 ? (object)saveLon.Value : DBNull.Value),
-                    new SqlParameter("@Lat1", saveLat1.HasValue && saveLat1.Value > 0 ? (object)saveLat1.Value : DBNull.Value),
-                    new SqlParameter("@Lon1", saveLon1.HasValue && saveLon1.Value > 0 ? (object)saveLon1.Value : DBNull.Value),
-                    new SqlParameter("@COMM", input.Comm ?? ""),
-                    new SqlParameter("@KIND", input.Kind ?? "EF")
-                );
+                string insertSql = "INSERT INTO RoadDirty_CaseMain (" + insertCols + ") VALUES (" + insertVals + ")";
+                List<SqlParameter> pList = new List<SqlParameter>();
+                pList.Add(new SqlParameter("@Dirty_ID", dirtyId));
+                pList.Add(new SqlParameter("@Show_ID", dirtyId));
+                pList.Add(new SqlParameter("@Report_Date", reportDate));
+                pList.Add(new SqlParameter("@Report_User", loginUser));
+                pList.Add(new SqlParameter("@S_UTME", input.S_UTME));
+                pList.Add(new SqlParameter("@S_UTMN", input.S_UTMN));
+                pList.Add(new SqlParameter("@S_UTME1", input.S_UTME1.HasValue && input.S_UTME1.Value > 0 ? (object)input.S_UTME1.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@S_UTMN1", input.S_UTMN1.HasValue && input.S_UTMN1.Value > 0 ? (object)input.S_UTMN1.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@Lat", saveLat.HasValue && saveLat.Value > 0 ? (object)saveLat.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@Lon", saveLon.HasValue && saveLon.Value > 0 ? (object)saveLon.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@Lat1", saveLat1.HasValue && saveLat1.Value > 0 ? (object)saveLat1.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@Lon1", saveLon1.HasValue && saveLon1.Value > 0 ? (object)saveLon1.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@COMM", input.Comm ?? ""));
+                pList.Add(new SqlParameter("@KIND", input.Kind ?? "EF"));
+                if (hasAddrCol)
+                {
+                    pList.Add(new SqlParameter("@Address", input.Address ?? ""));
+                }
+                if (hasAddr1Col)
+                {
+                    pList.Add(new SqlParameter("@Address1", input.Address1 ?? ""));
+                }
+                DbHelper.ExecuteNonQuery(insertSql, pList.ToArray());
             }
             else
             {
                 // 更新已存在案件
+                bool hasAddrCol = CheckColumnExists("RoadDirty_CaseMain", "Address");
+                bool hasAddr1Col = CheckColumnExists("RoadDirty_CaseMain", "Address1");
                 string updateSql = "UPDATE RoadDirty_CaseMain SET "
                                  + " Report_Date = @Report_Date, "
                                  + " S_UTME = @S_UTME, "
@@ -365,23 +392,42 @@ namespace NTPC_FEC.RoadClean
                                  + " Lat1 = @Lat1, "
                                  + " Lon1 = @Lon1, "
                                  + " COMM = @COMM, "
-                                 + " KIND = @KIND "
-                                 + " WHERE Dirty_ID = @Dirty_ID";
+                                 + " KIND = @KIND ";
 
-                DbHelper.ExecuteNonQuery(updateSql,
-                    new SqlParameter("@Report_Date", reportDate),
-                    new SqlParameter("@S_UTME", input.S_UTME),
-                    new SqlParameter("@S_UTMN", input.S_UTMN),
-                    new SqlParameter("@S_UTME1", input.S_UTME1.HasValue && input.S_UTME1.Value > 0 ? (object)input.S_UTME1.Value : DBNull.Value),
-                    new SqlParameter("@S_UTMN1", input.S_UTMN1.HasValue && input.S_UTMN1.Value > 0 ? (object)input.S_UTMN1.Value : DBNull.Value),
-                    new SqlParameter("@Lat", saveLat.HasValue && saveLat.Value > 0 ? (object)saveLat.Value : DBNull.Value),
-                    new SqlParameter("@Lon", saveLon.HasValue && saveLon.Value > 0 ? (object)saveLon.Value : DBNull.Value),
-                    new SqlParameter("@Lat1", saveLat1.HasValue && saveLat1.Value > 0 ? (object)saveLat1.Value : DBNull.Value),
-                    new SqlParameter("@Lon1", saveLon1.HasValue && saveLon1.Value > 0 ? (object)saveLon1.Value : DBNull.Value),
-                    new SqlParameter("@COMM", input.Comm ?? ""),
-                    new SqlParameter("@KIND", input.Kind ?? "EF"),
-                    new SqlParameter("@Dirty_ID", dirtyId)
-                );
+                if (hasAddrCol)
+                {
+                    updateSql += ", Address = @Address ";
+                }
+                if (hasAddr1Col)
+                {
+                    updateSql += ", Address1 = @Address1 ";
+                }
+
+                updateSql += " WHERE Dirty_ID = @Dirty_ID";
+
+                List<SqlParameter> pList = new List<SqlParameter>();
+                pList.Add(new SqlParameter("@Report_Date", reportDate));
+                pList.Add(new SqlParameter("@S_UTME", input.S_UTME));
+                pList.Add(new SqlParameter("@S_UTMN", input.S_UTMN));
+                pList.Add(new SqlParameter("@S_UTME1", input.S_UTME1.HasValue && input.S_UTME1.Value > 0 ? (object)input.S_UTME1.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@S_UTMN1", input.S_UTMN1.HasValue && input.S_UTMN1.Value > 0 ? (object)input.S_UTMN1.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@Lat", saveLat.HasValue && saveLat.Value > 0 ? (object)saveLat.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@Lon", saveLon.HasValue && saveLon.Value > 0 ? (object)saveLon.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@Lat1", saveLat1.HasValue && saveLat1.Value > 0 ? (object)saveLat1.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@Lon1", saveLon1.HasValue && saveLon1.Value > 0 ? (object)saveLon1.Value : DBNull.Value));
+                pList.Add(new SqlParameter("@COMM", input.Comm ?? ""));
+                pList.Add(new SqlParameter("@KIND", input.Kind ?? "EF"));
+                pList.Add(new SqlParameter("@Dirty_ID", dirtyId));
+                if (hasAddrCol)
+                {
+                    pList.Add(new SqlParameter("@Address", input.Address ?? ""));
+                }
+                if (hasAddr1Col)
+                {
+                    pList.Add(new SqlParameter("@Address1", input.Address1 ?? ""));
+                }
+
+                DbHelper.ExecuteNonQuery(updateSql, pList.ToArray());
             }
 
             // 儲存照片實體檔案
@@ -534,6 +580,131 @@ namespace NTPC_FEC.RoadClean
             }
         }
 
+        // 檢查資料庫資料表是否具備特定欄位 (防止未擴充 SQL 時發生例外)
+        private static bool CheckColumnExists(string tableName, string columnName)
+        {
+            try
+            {
+                string sql = "SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @tableName AND COLUMN_NAME = @colName";
+                int count = Convert.ToInt32(DbHelper.ExecuteScalar(sql,
+                    new SqlParameter("@tableName", tableName),
+                    new SqlParameter("@colName", columnName)
+                ));
+                return count > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // 逆地理編碼：座標轉換門牌地址 (支援 NLSC 國土測繪雲與本地道路圖資離線比對)
+        private void ReverseGeocode()
+        {
+            string xStr = Request["x"];
+            string yStr = Request["y"];
+            string latStr = Request["lat"];
+            string lonStr = Request["lon"];
+
+            double lat = 0, lon = 0, x = 0, y = 0;
+            if (!string.IsNullOrEmpty(latStr)) double.TryParse(latStr, out lat);
+            if (!string.IsNullOrEmpty(lonStr)) double.TryParse(lonStr, out lon);
+            if (!string.IsNullOrEmpty(xStr)) double.TryParse(xStr, out x);
+            if (!string.IsNullOrEmpty(yStr)) double.TryParse(yStr, out y);
+
+            if ((lat <= 0 || lon <= 0) && x > 0 && y > 0)
+            {
+                Twd97ToWgs84(x, y, out lat, out lon);
+            }
+
+            if (lat <= 0 || lon <= 0)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "座標參數無效或為空" }));
+                return;
+            }
+
+            string resolvedAddr = "";
+
+            // 1. 嘗試呼叫內政部國土測繪圖資服務雲 (NLSC) 村里/門牌反查
+            try
+            {
+                string nlscUrl = string.Format("https://api.nlsc.gov.tw/other/TownVillagePointQuery/{0:0.000000}/{1:0.000000}/4326", lon, lat);
+                System.Net.HttpWebRequest req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(nlscUrl);
+                req.Timeout = 2500;
+                req.UserAgent = "NTPC_FEC";
+                using (System.Net.WebResponse resp = req.GetResponse())
+                using (StreamReader reader = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                {
+                    string xml = reader.ReadToEnd();
+                    System.Xml.XmlDocument doc = new System.Xml.XmlDocument();
+                    doc.LoadXml(xml);
+                    System.Xml.XmlNode ctyNode = doc.SelectSingleNode("//ctyName");
+                    System.Xml.XmlNode townNode = doc.SelectSingleNode("//townName");
+                    System.Xml.XmlNode villageNode = doc.SelectSingleNode("//villageName");
+
+                    string cty = ctyNode != null ? ctyNode.InnerText.Trim() : "";
+                    string town = townNode != null ? townNode.InnerText.Trim() : "";
+                    string village = villageNode != null ? villageNode.InnerText.Trim() : "";
+                    if (!string.IsNullOrEmpty(town))
+                    {
+                        resolvedAddr = cty + town + village;
+                    }
+                }
+            }
+            catch { }
+
+            // 2. 本地資料庫巡查路段空間比對 (100% 離線 / 內網支援)
+            if (x > 0 && y > 0)
+            {
+                try
+                {
+                    string sqlNearest = "SELECT TOP 1 M.TOWN, M.RoadName, M.StartPlace, "
+                                      + " SQRT(POWER(L.Point_X - @x, 2) + POWER(L.Point_Y - @y, 2)) AS Dist "
+                                      + " FROM RoadClean_CheckPointList L "
+                                      + " JOIN RoadClean_CheckPointMain M ON L.RDID = M.RDID "
+                                      + " WHERE L.Point_X > 0 AND L.Point_Y > 0 "
+                                      + " ORDER BY Dist ASC";
+
+                    DataTable dtNear = DbHelper.ExecuteDataTable(sqlNearest,
+                        new SqlParameter("@x", x),
+                        new SqlParameter("@y", y)
+                    );
+
+                    if (dtNear.Rows.Count > 0)
+                    {
+                        DataRow r = dtNear.Rows[0];
+                        double dist = Convert.ToDouble(r["Dist"]);
+                        string town = r["TOWN"] != DBNull.Value ? r["TOWN"].ToString().Trim() : "";
+                        string road = r["RoadName"] != DBNull.Value ? r["RoadName"].ToString().Trim() : "";
+                        string startP = r["StartPlace"] != DBNull.Value ? r["StartPlace"].ToString().Trim() : "";
+
+                        if (dist < 2000) // 2 公里內之最近道路
+                        {
+                            string localRoad = "新北市" + town + road;
+                            if (!string.IsNullOrEmpty(startP) && dist < 350)
+                            {
+                                localRoad += " (" + startP + "附近)";
+                            }
+                            if (string.IsNullOrEmpty(resolvedAddr) || resolvedAddr.Length < localRoad.Length)
+                            {
+                                resolvedAddr = localRoad;
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            if (!string.IsNullOrEmpty(resolvedAddr))
+            {
+                Response.Write(json.Serialize(new { Success = true, Address = resolvedAddr }));
+            }
+            else
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "無法解析該座標對應之地址" }));
+            }
+        }
+
         // 資料傳輸模型定義
         public class DirtySaveModel
         {
@@ -551,6 +722,8 @@ namespace NTPC_FEC.RoadClean
             public double? Lat1 { get; set; }
             public double? Lon1 { get; set; }
             public string Comm { get; set; }
+            public string Address { get; set; }
+            public string Address1 { get; set; }
             public List<PhotoUploadItem> Photos1 { get; set; }
             public List<PhotoUploadItem> Photos2 { get; set; }
         }

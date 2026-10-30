@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 固定污染源查核結果確認單</title>
+    <title>新北市固定逸散源管理平台 - 固定污染源查核結果確認單</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -1053,16 +1053,16 @@
                                 </div>
 
                                 <!-- 許可不符照片 -->
-                                <div v-if="existingPhotos.File_10a || existingPhotos.File_10b">
+                                <div v-if="getExistingPhoto('File_10a') || getExistingPhoto('File_10b') || getExistingPhoto('其他潛勢調查照片1') || getExistingPhoto('其他潛勢調查照片2')">
                                     <small class="text-muted font-weight-bold d-block"><i class="fas fa-camera text-info mr-1"></i> 許可不符佐證照片：</small>
                                     <div class="photo-gallery-grid">
-                                        <div v-if="existingPhotos.File_10a" class="photo-thumb-card" v-on:click="openLightbox(existingPhotos.File_10a, '許可不符照片 1', recordData.FileMemo_10a)">
-                                            <img :src="existingPhotos.File_10a" class="photo-thumb-img" alt="許可不符照片 1" />
+                                        <div v-if="getExistingPhoto('File_10a') || getExistingPhoto('其他潛勢調查照片1')" class="photo-thumb-card" v-on:click="openLightbox(getExistingPhoto('File_10a') || getExistingPhoto('其他潛勢調查照片1'), '許可不符照片 1', recordData.FileMemo_10a)">
+                                            <img :src="getExistingPhoto('File_10a') || getExistingPhoto('其他潛勢調查照片1')" class="photo-thumb-img" alt="許可不符照片 1" />
                                             <div class="photo-thumb-label">許可不符照片 1</div>
                                             <div class="photo-thumb-memo">{{ recordData.FileMemo_10a || '無說明' }}</div>
                                         </div>
-                                        <div v-if="existingPhotos.File_10b" class="photo-thumb-card" v-on:click="openLightbox(existingPhotos.File_10b, '許可不符照片 2', recordData.FileMemo_10b)">
-                                            <img :src="existingPhotos.File_10b" class="photo-thumb-img" alt="許可不符照片 2" />
+                                        <div v-if="getExistingPhoto('File_10b') || getExistingPhoto('其他潛勢調查照片2')" class="photo-thumb-card" v-on:click="openLightbox(getExistingPhoto('File_10b') || getExistingPhoto('其他潛勢調查照片2'), '許可不符照片 2', recordData.FileMemo_10b)">
+                                            <img :src="getExistingPhoto('File_10b') || getExistingPhoto('其他潛勢調查照片2')" class="photo-thumb-img" alt="許可不符照片 2" />
                                             <div class="photo-thumb-label">許可不符照片 2</div>
                                             <div class="photo-thumb-memo">{{ recordData.FileMemo_10b || '無說明' }}</div>
                                         </div>
@@ -1106,19 +1106,39 @@
                                 </div>
 
                                 <!-- 道路抽查照片 -->
-                                <div v-if="existingPhotos.File_11a || existingPhotos.File_11b" class="mt-2">
+                                <div v-if="getExistingPhoto('File_11a') || getExistingPhoto('File_11b') || getExistingPhoto('執行道路髒污抽查照片1') || getExistingPhoto('執行道路髒污抽查照片2')" class="mt-2">
                                     <small class="text-muted font-weight-bold d-block"><i class="fas fa-camera text-info mr-1"></i> 道路抽查照片：</small>
                                     <div class="photo-gallery-grid">
-                                        <div v-if="existingPhotos.File_11a" class="photo-thumb-card" v-on:click="openLightbox(existingPhotos.File_11a, '道路抽查照片 1', recordData.FileMemo_11a)">
-                                            <img :src="existingPhotos.File_11a" class="photo-thumb-img" alt="道路抽查照片 1" />
+                                        <div v-if="getExistingPhoto('File_11a') || getExistingPhoto('執行道路髒污抽查照片1')" class="photo-thumb-card" v-on:click="openLightbox(getExistingPhoto('File_11a') || getExistingPhoto('執行道路髒污抽查照片1'), '道路抽查照片 1', recordData.FileMemo_11a)">
+                                            <img :src="getExistingPhoto('File_11a') || getExistingPhoto('執行道路髒污抽查照片1')" class="photo-thumb-img" alt="道路抽查照片 1" />
                                             <div class="photo-thumb-label">道路抽查照片 1</div>
                                             <div class="photo-thumb-memo">{{ recordData.FileMemo_11a || '無說明' }}</div>
                                         </div>
-                                        <div v-if="existingPhotos.File_11b" class="photo-thumb-card" v-on:click="openLightbox(existingPhotos.File_11b, '道路抽查照片 2', recordData.FileMemo_11b)">
-                                            <img :src="existingPhotos.File_11b" class="photo-thumb-img" alt="道路抽查照片 2" />
+                                        <div v-if="getExistingPhoto('File_11b') || getExistingPhoto('執行道路髒污抽查照片2')" class="photo-thumb-card" v-on:click="openLightbox(getExistingPhoto('File_11b') || getExistingPhoto('執行道路髒污抽查照片2'), '道路抽查照片 2', recordData.FileMemo_11b)">
+                                            <img :src="getExistingPhoto('File_11b') || getExistingPhoto('執行道路髒污抽查照片2')" class="photo-thumb-img" alt="道路抽查照片 2" />
                                             <div class="photo-thumb-label">道路抽查照片 2</div>
                                             <div class="photo-thumb-memo">{{ recordData.FileMemo_11b || '無說明' }}</div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 卡片 5: 現場整體照片與輔導紀錄 (全景、門口、輔導簽認、量測數據等) -->
+                        <div v-if="otherGeneralPhotos.length > 0" class="card-modern">
+                            <div class="card-modern-header">
+                                <h3 class="card-modern-title">
+                                    <i class="fas fa-images text-primary"></i>
+                                    現場整體照片與輔導紀錄
+                                </h3>
+                                <small class="text-muted">共 {{ otherGeneralPhotos.length }} 張佐證照片</small>
+                            </div>
+                            <div class="card-modern-body">
+                                <div class="photo-gallery-grid">
+                                    <div v-for="p in otherGeneralPhotos" :key="p.Key" class="photo-thumb-card" v-on:click="openLightbox(p.Url, p.Label, p.Memo)">
+                                        <img :src="p.Url" class="photo-thumb-img" :alt="p.Label" />
+                                        <div class="photo-thumb-label">{{ p.Label }}</div>
+                                        <div class="photo-thumb-memo" :title="p.Memo">{{ p.Memo || '無說明' }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -1214,9 +1234,9 @@
     </form>
 
     <!-- 本地核心腳本引用 (嚴禁依賴外部 CDN) -->
+    <script src="../Scripts/jquery.min.js"></script>
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
-    <script src="../Scripts/bootstrap.bundle.min.js"></script>
     <script src="../Scripts/leaflet/leaflet.js"></script>
 
     <script>
@@ -1275,6 +1295,33 @@
                 },
                 hasAllSignatures() {
                     return Boolean(this.signatures.sig1 && this.signatures.sig3);
+                },
+                otherGeneralPhotos() {
+                    const list = [
+                        { key: 'File_AllView', alt: '全景照片', label: '全景照片', memo: this.recordData.FileMemo_AllView },
+                        { key: 'File_Entrance', alt: '工廠正門口', label: '工廠正門口', memo: this.recordData.FileMemo_Entrance },
+                        { key: 'File_Counseling1', alt: '輔導簽認單_1', label: '輔導簽認單 1', memo: this.recordData.FileMemo_Counseling1 },
+                        { key: 'File_Counseling2', alt: '輔導簽認單_2', label: '輔導簽認單 2', memo: this.recordData.FileMemo_Counseling2 },
+                        { key: 'File_CollGasEfficiency1', alt: '局部集氣效率評估_1', label: '局部集氣評估 1', memo: this.recordData.FileMemo_CollGasEfficiency1 },
+                        { key: 'File_CollGasEfficiency2', alt: '局部集氣效率評估_2', label: '局部集氣評估 2', memo: this.recordData.FileMemo_CollGasEfficiency2 },
+                        { key: 'File_CollGasEfficiency3', alt: '局部集氣效率評估_3', label: '局部集氣評估 3', memo: this.recordData.FileMemo_CollGasEfficiency3 },
+                        { key: 'File_CollGasEfficiency4', alt: '局部集氣效率評估_4', label: '局部集氣評估 4', memo: this.recordData.FileMemo_CollGasEfficiency4 },
+                        { key: 'File_AirQualityValue1', alt: '空品感測數據_1', label: '空品感測數據 1', memo: this.recordData.FileMemo_AirQualityValue1 },
+                        { key: 'File_AirQualityValue2', alt: '空品感測數據_2', label: '空品感測數據 2', memo: this.recordData.FileMemo_AirQualityValue2 }
+                    ];
+                    const res = [];
+                    list.forEach(item => {
+                        const url = this.getExistingPhoto(item.key) || this.getExistingPhoto(item.alt);
+                        if (url) {
+                            res.push({
+                                Key: item.key,
+                                Label: item.label,
+                                Memo: item.memo || '',
+                                Url: url
+                            });
+                        }
+                    });
+                    return res;
                 }
             },
             mounted() {
@@ -1383,17 +1430,31 @@
                     }
                 },
 
+                // 照片安全查詢 (支援大小寫與別名容錯)
+                getExistingPhoto(key) {
+                    if (!key || !this.existingPhotos) return '';
+                    if (this.existingPhotos[key]) return this.existingPhotos[key];
+                    const lowerKey = key.toLowerCase();
+                    for (const k in this.existingPhotos) {
+                        if (k.toLowerCase() === lowerKey) {
+                            return this.existingPhotos[k];
+                        }
+                    }
+                    return '';
+                },
+
                 // 3. 獲取項目照片清單
                 getSectionPhotos(sec) {
                     if (!sec || !sec.Photos) return [];
                     const res = [];
                     sec.Photos.forEach(p => {
-                        if (this.existingPhotos[p.Key]) {
+                        const url = this.getExistingPhoto(p.Key);
+                        if (url) {
                             res.push({
                                 Key: p.Key,
                                 Label: p.Label,
                                 Memo: p.Memo,
-                                Url: this.existingPhotos[p.Key]
+                                Url: url
                             });
                         }
                     });

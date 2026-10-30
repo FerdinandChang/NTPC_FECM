@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 固定污染源管辦改善歷程追蹤統計</title>
+    <title>新北市固定逸散源管理平台 - 固定污染源管辦改善歷程追蹤統計</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -528,7 +528,7 @@
 
             <!-- 2. 列印專用報表頁首 (螢幕隱藏，列印時顯現) -->
             <div class="print-only-header">
-                <h2>新北市固定溢散源管理平台</h2>
+                <h2>新北市固定逸散源管理平台</h2>
                 <h3>固定污染源管辦改善歷程追蹤統計表</h3>
                 <p>統計區間：{{ filter.DateStart }} ～ {{ filter.DateEnd }} ｜ 列印日期：{{ printDate }}</p>
             </div>

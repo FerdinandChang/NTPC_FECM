@@ -1,13 +1,13 @@
 ---
 name: inspection-ui-standard
 description: >-
-  新北市固定溢散源管理平台 (NTPC_FEC) 巡檢與現場查核頁面之現代化全載具自適應 UI/UX 標準規範與程式碼樣板。
+  新北市固定逸散源管理平台 (NTPC_FEC) 巡檢與現場查核頁面之現代化全載具自適應 UI/UX 標準規範與程式碼樣板。
   適用於道路潔淨巡檢、裸露地巡查、營建工地巡查、車行路段巡查等所有外勤與內勤查核頁面開發與重構。
 ---
 
 # NTPC_FEC 現場巡查頁面 UI/UX 標準規範 (Inspection UI Standard)
 
-本規範提煉自 [`RoadClean/NewCleanChk.aspx`](file:///d:/NTPC_FEC/RoadClean/NewCleanChk.aspx)，定義新北市固定溢散源管理平台全載具（Desktop、Tablet、Mobile）自適應巡檢頁面的標準架構、視覺樣式與核心互動元件。後續所有巡查模組（如裸露地、營建工地、洗掃街查核等）均須延續套用此規範。
+本規範提煉自 [`RoadClean/NewCleanChk.aspx`](file:///d:/NTPC_FEC/RoadClean/NewCleanChk.aspx)，定義新北市固定逸散源管理平台全載具（Desktop、Tablet、Mobile）自適應巡檢頁面的標準架構、視覺樣式與核心互動元件。後續所有巡查模組（如裸露地、營建工地、洗掃街查核等）均須延續套用此規範。
 
 ---
 

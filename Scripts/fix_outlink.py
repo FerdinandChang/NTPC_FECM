@@ -10,7 +10,7 @@ old_nav = """        <!-- 頂部品牌導覽列 (與 Clean_List 一致) -->
         <header class="top-navbar">
             <a href="OutLink.aspx" class="navbar-brand-title">
                 <i class="fas fa-network-wired"></i>
-                <span>新北市固定溢散源 - 相關外部系統連結</span>
+                <span>新北市固定逸散源 - 相關外部系統連結</span>
             </a>
             <div class="d-flex align-items-center gap-2">
                 <a href="MainPage.aspx" class="btn btn-outline-light font-weight-bold px-3" style="border-radius: 8px;">

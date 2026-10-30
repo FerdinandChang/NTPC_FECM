@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 系統登入</title>
+    <title>新北市固定逸散源管理平台 - 系統登入</title>
     
     <!-- 專屬 Favicon & 手機主畫面圖標 -->
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
@@ -510,9 +510,9 @@
 <body>
     <div id="loginApp" v-cloak>
         <div class="login-wrap">
-            <!-- 頂部經典大標題圖 (新北環保局 + 固定溢散源管理平台) -->
+            <!-- 頂部經典大標題圖 (新北環保局 + 固定逸散源管理平台) -->
             <div class="title-img-box">
-                <img src="images/First_picture.png" alt="新北市政府環境保護局 固定溢散源管理平台" />
+                <img src="images/First_picture.png" alt="新北市政府環境保護局 固定逸散源管理平台" />
             </div>
 
             <!-- 中間現代化登入卡片 (完美置中在兩位工人插畫中間) -->
@@ -626,7 +626,7 @@
                     <!-- 隱私權保護政策內容 -->
                     <div v-if="activeModal === 'privacy'">
                         <div class="intro-alert">
-                            非常歡迎您光臨「新北市固定溢散源管理平台」（以下簡稱本網站），為了讓您能夠安心的使用本網站的各項服務與資訊，特此向您說明本網站的隱私權保護政策，以保障您的權益，請您詳閱下列內容：
+                            非常歡迎您光臨「新北市固定逸散源管理平台」（以下簡稱本網站），為了讓您能夠安心的使用本網站的各項服務與資訊，特此向您說明本網站的隱私權保護政策，以保障您的權益，請您詳閱下列內容：
                         </div>
 
                         <h6>一、隱私權保護政策的適用範圍</h6>

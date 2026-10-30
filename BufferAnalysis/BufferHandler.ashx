@@ -8,6 +8,8 @@ using System.IO;
 using System.Text;
 using System.Web;
 using System.Web.Script.Serialization;
+using NPOI.HSSF.UserModel;
+using NPOI.SS.UserModel;
 using NTPC_FEC.Helpers;
 
 namespace NTPC_FEC.BufferAnalysis
@@ -27,8 +29,14 @@ namespace NTPC_FEC.BufferAnalysis
 
         public void ProcessRequest(HttpContext context)
         {
-            context.Response.ContentType = "application/json; charset=utf-8";
             string action = context.Request["action"];
+            if (!string.IsNullOrEmpty(action) && action.ToLower() == "exportschooldist")
+            {
+                ExportSchoolDistExcel(context);
+                return;
+            }
+
+            context.Response.ContentType = "application/json; charset=utf-8";
             if (string.IsNullOrEmpty(action))
             {
                 context.Response.Write(json.Serialize(new { Success = false, Message = "未提供操作指令 (action)" }));
@@ -53,6 +61,18 @@ namespace NTPC_FEC.BufferAnalysis
                 else if (act == "getpanolist")
                 {
                     GetPanoList(context);
+                }
+                else if (act == "getschoollist")
+                {
+                    GetSchoolList(context);
+                }
+                else if (act == "nearestschools")
+                {
+                    GetNearestSchools(context);
+                }
+                else if (act == "syncschoolsdb")
+                {
+                    SyncSchoolsToDb(context);
                 }
                 else if (act == "debug")
                 {
@@ -237,13 +257,16 @@ namespace NTPC_FEC.BufferAnalysis
         private void GetInitData(HttpContext context)
         {
             List<Dictionary<string, object>> towns = GetTownList();
+            List<SchoolItem> schools = GetSchoolListCache(context);
             context.Response.Write(json.Serialize(new
             {
                 Success = true,
                 Center = new { Lat = 25.0116, Lng = 121.4658, Zoom = 13 },
                 Towns = towns,
-                Layers = new string[] { "fac", "bare", "pano" },
-                DefaultRadius = 500
+                Layers = new string[] { "fac", "bare", "pano", "school" },
+                DefaultRadius = 500,
+                MonthList = GetCachedMonthList(context),
+                SchoolTotalCount = schools != null ? schools.Count : 0
             }));
         }
 
@@ -429,6 +452,36 @@ namespace NTPC_FEC.BufferAnalysis
                 catch { }
             }
 
+            // 3. 搜尋各級學校 (含幼兒園、國小、國中、高中職、大專校院)
+            try
+            {
+                List<SchoolItem> schools = GetSchoolListCache(context);
+                if (schools != null)
+                {
+                    int matchedSchoolCount = 0;
+                    foreach (SchoolItem s in schools)
+                    {
+                        if ((s.Name != null && s.Name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                            (s.Alias != null && s.Alias.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                            (s.Addr != null && s.Addr.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0))
+                        {
+                            var d = new Dictionary<string, object>();
+                            d["id"] = s.Id;
+                            d["name"] = s.Name;
+                            d["cno"] = s.Level;
+                            d["type"] = "學校 (" + s.Level + ")";
+                            d["addr"] = s.Addr;
+                            d["lat"] = s.Lat;
+                            d["lng"] = s.Lng;
+                            results.Add(d);
+                            matchedSchoolCount++;
+                            if (matchedSchoolCount >= 15) break;
+                        }
+                    }
+                }
+            }
+            catch { }
+
             context.Response.Write(json.Serialize(new
             {
                 Success = true,
@@ -448,7 +501,16 @@ namespace NTPC_FEC.BufferAnalysis
             double.TryParse(context.Request["lng"], out lng);
             double.TryParse(context.Request["radius"], out radius);
             string layerFilter = context.Request["layers"];
-            if (string.IsNullOrEmpty(layerFilter)) layerFilter = "fac,bare,pano";
+            if (string.IsNullOrEmpty(layerFilter)) layerFilter = "fac,bare,pano,school";
+
+            double priorityDist = 300;
+            if (!string.IsNullOrEmpty(context.Request["priorityDist"]))
+            {
+                double.TryParse(context.Request["priorityDist"], out priorityDist);
+            }
+            if (priorityDist <= 0) priorityDist = 300;
+
+            string schoolLevelsFilter = context.Request["schoolLevels"];
 
             if (lat <= 0 || lng <= 0)
             {
@@ -462,13 +524,16 @@ namespace NTPC_FEC.BufferAnalysis
             double userX = 0, userY = 0;
             GeoCoordHelper.Wgs84ToTwd97(lat, lng, out userX, out userY);
 
-            // 取得目前 360 環景快取清單
+            // 取得目前 360 環景與各級學校快取清單
             Dictionary<string, PanoItem> panoCache = GetPanoIndexCache(context);
+            List<SchoolItem> schoolCache = GetSchoolListCache(context);
 
             var items = new List<Dictionary<string, object>>();
             int facCount = 0;
             int bareCount = 0;
             int panoCount = 0;
+            int schoolCount = 0;
+            int priorityFacCount = 0;
             string facErrMsg = "";
             string bareErrMsg = "";
 
@@ -610,12 +675,40 @@ namespace NTPC_FEC.BufferAnalysis
                             // 匹配 360 環景
                             bool hasPano = false;
                             string panoUrl = "";
+                            string panoMonth = "";
+                            string panoMonthText = "";
+                            List<PanoHistoryVersion> panoHistory = null;
                             PanoItem matchedPano = MatchPano(facName, facId, cNo, panoCache);
                             if (matchedPano != null)
                             {
                                 hasPano = true;
                                 panoUrl = matchedPano.Url;
+                                panoMonth = matchedPano.Month;
+                                panoMonthText = matchedPano.MonthText;
+                                panoHistory = matchedPano.History;
                                 panoCount++;
+                            }
+
+                            // 計算距離最近的新北市各級學校 (點到點 TWD97 直線距離)
+                            double facTwdX = fx, facTwdY = fy;
+                            if (fx <= 10000 || fy <= 10000)
+                            {
+                                GeoCoordHelper.Wgs84ToTwd97(flat, flng, out facTwdX, out facTwdY);
+                            }
+
+                            double nearestSchoolDist = -1;
+                            SchoolItem nearestSchool = FindNearestSchool(facTwdX, facTwdY, schoolCache, schoolLevelsFilter, out nearestSchoolDist);
+                            bool isPriorityFac = (nearestSchool != null && nearestSchoolDist >= 0 && nearestSchoolDist <= priorityDist);
+                            if (isPriorityFac)
+                            {
+                                priorityFacCount++;
+                            }
+                            string schoolRiskLevel = "normal";
+                            if (nearestSchool != null && nearestSchoolDist >= 0)
+                            {
+                                if (nearestSchoolDist <= 100) schoolRiskLevel = "danger";
+                                else if (nearestSchoolDist <= priorityDist) schoolRiskLevel = "warning";
+                                else if (nearestSchoolDist <= 500) schoolRiskLevel = "info";
                             }
 
                             var d = new Dictionary<string, object>();
@@ -633,6 +726,17 @@ namespace NTPC_FEC.BufferAnalysis
                             d["lng"] = Math.Round(flng, 6);
                             d["hasPano"] = hasPano;
                             d["panoUrl"] = panoUrl;
+                            d["panoMonth"] = panoMonth;
+                            d["panoMonthText"] = panoMonthText;
+                            d["panoHistory"] = panoHistory;
+                            d["isPriorityFac"] = isPriorityFac;
+                            d["schoolRiskLevel"] = schoolRiskLevel;
+                            d["nearestSchoolId"] = nearestSchool != null ? nearestSchool.Id : "";
+                            d["nearestSchoolName"] = nearestSchool != null ? nearestSchool.Name : "";
+                            d["nearestSchoolLevel"] = nearestSchool != null ? (nearestSchool.Level + (nearestSchool.HasKindergarten && nearestSchool.Level != "幼兒園" ? "(含附幼)" : "")) : "";
+                            d["nearestSchoolDist"] = nearestSchool != null ? nearestSchoolDist : -1;
+                            d["nearestSchoolLat"] = nearestSchool != null ? nearestSchool.Lat : 0;
+                            d["nearestSchoolLng"] = nearestSchool != null ? nearestSchool.Lng : 0;
                             items.Add(d);
                         }
                     }
@@ -693,13 +797,22 @@ namespace NTPC_FEC.BufferAnalysis
 
                                 bool hasPano = false;
                                 string panoUrl = "";
+                                string panoMonth = "";
+                                string panoMonthText = "";
+                                List<PanoHistoryVersion> panoHistory = null;
                                 PanoItem matchedPano = MatchPano(bName, bId, "", panoCache);
                                 if (matchedPano != null)
                                 {
                                     hasPano = true;
                                     panoUrl = matchedPano.Url;
+                                    panoMonth = matchedPano.Month;
+                                    panoMonthText = matchedPano.MonthText;
+                                    panoHistory = matchedPano.History;
                                     panoCount++;
                                 }
+
+                                double nearestSchoolDist = -1;
+                                SchoolItem nearestSchool = FindNearestSchool(bx, by, schoolCache, schoolLevelsFilter, out nearestSchoolDist);
 
                                 var d = new Dictionary<string, object>();
                                 d["id"] = bId;
@@ -716,6 +829,16 @@ namespace NTPC_FEC.BufferAnalysis
                                 d["lng"] = Math.Round(blng, 6);
                                 d["hasPano"] = hasPano;
                                 d["panoUrl"] = panoUrl;
+                                d["panoMonth"] = panoMonth;
+                                d["panoMonthText"] = panoMonthText;
+                                d["panoHistory"] = panoHistory;
+                                d["isPriorityFac"] = false;
+                                d["schoolRiskLevel"] = nearestSchool != null && nearestSchoolDist <= priorityDist ? "warning" : "normal";
+                                d["nearestSchoolName"] = nearestSchool != null ? nearestSchool.Name : "";
+                                d["nearestSchoolLevel"] = nearestSchool != null ? nearestSchool.Level : "";
+                                d["nearestSchoolDist"] = nearestSchool != null ? nearestSchoolDist : -1;
+                                d["nearestSchoolLat"] = nearestSchool != null ? nearestSchool.Lat : 0;
+                                d["nearestSchoolLng"] = nearestSchool != null ? nearestSchool.Lng : 0;
                                 items.Add(d);
                             }
                         }
@@ -771,8 +894,50 @@ namespace NTPC_FEC.BufferAnalysis
                             d["lng"] = p.Lng;
                             d["hasPano"] = true;
                             d["panoUrl"] = p.Url;
+                            d["panoMonth"] = p.Month;
+                            d["panoMonthText"] = p.MonthText;
+                            d["panoHistory"] = p.History;
                             items.Add(d);
                         }
+                    }
+                }
+            }
+
+            // D. 查詢各級學校 (含幼兒園、國小、國中、高中職、大專校院)
+            if (layerFilter.Contains("school") && schoolCache != null)
+            {
+                foreach (SchoolItem s in schoolCache)
+                {
+                    if (!MatchSchoolLevelFilter(s, schoolLevelsFilter)) continue;
+
+                    double sdist = Math.Round(Math.Sqrt(Math.Pow(s.X - userX, 2) + Math.Pow(s.Y - userY, 2)), 1);
+                    if (sdist <= radius)
+                    {
+                        schoolCount++;
+                        string levelLabel = s.Level + (s.HasKindergarten && s.Level != "幼兒園" ? " (含附幼)" : "");
+                        var d = new Dictionary<string, object>();
+                        d["id"] = "SCH_" + s.Id;
+                        d["schoolId"] = s.Id;
+                        d["name"] = s.Name;
+                        d["alias"] = s.Alias;
+                        d["cno"] = s.PublicPrivate + " · " + levelLabel;
+                        d["type"] = s.Level;
+                        d["typeKey"] = "school";
+                        d["facType"] = levelLabel;
+                        d["schoolLevel"] = s.Level;
+                        d["hasKindergarten"] = s.HasKindergarten;
+                        d["publicPrivate"] = s.PublicPrivate;
+                        d["phone"] = s.Phone;
+                        d["url"] = s.Url;
+                        d["industry"] = "各級學校 — " + s.Level;
+                        d["industryCode"] = "SCHOOL_" + s.Level;
+                        d["addr"] = s.Addr;
+                        d["dist"] = sdist;
+                        d["lat"] = s.Lat;
+                        d["lng"] = s.Lng;
+                        d["hasPano"] = false;
+                        d["panoUrl"] = "";
+                        items.Add(d);
                     }
                 }
             }
@@ -819,7 +984,9 @@ namespace NTPC_FEC.BufferAnalysis
                     Total = items.Count,
                     FacCount = facCount,
                     BareCount = bareCount,
-                    PanoCount = panoCount
+                    PanoCount = panoCount,
+                    SchoolCount = schoolCount,
+                    PriorityFacCount = priorityFacCount
                 },
                 IndustrySummary = indSummary,
                 SchemaInfo = new
@@ -864,11 +1031,31 @@ namespace NTPC_FEC.BufferAnalysis
         private void GetPanoList(HttpContext context)
         {
             Dictionary<string, PanoItem> panoCache = GetPanoIndexCache(context);
+            string filterMonth = context.Request["month"];
             var list = new List<Dictionary<string, object>>();
 
             foreach (KeyValuePair<string, PanoItem> kv in panoCache)
             {
                 PanoItem p = kv.Value;
+
+                // 若前端傳遞特定月份篩選
+                if (!string.IsNullOrEmpty(filterMonth))
+                {
+                    if (p.Month != filterMonth)
+                    {
+                        // 檢查歷史期程中是否有符合的
+                        bool hasHistoryMonth = false;
+                        if (p.History != null)
+                        {
+                            foreach (var h in p.History)
+                            {
+                                if (h.Month == filterMonth) { hasHistoryMonth = true; break; }
+                            }
+                        }
+                        if (!hasHistoryMonth) continue;
+                    }
+                }
+
                 var d = new Dictionary<string, object>();
                 d["id"] = p.Id;
                 d["title"] = p.Title;
@@ -879,6 +1066,9 @@ namespace NTPC_FEC.BufferAnalysis
                 d["addr"] = p.Addr ?? "";
                 d["lat"] = p.Lat;
                 d["lng"] = p.Lng;
+                d["month"] = p.Month;
+                d["monthText"] = p.MonthText;
+                d["history"] = p.History;
                 list.Add(d);
             }
 
@@ -892,6 +1082,7 @@ namespace NTPC_FEC.BufferAnalysis
             {
                 Success = true,
                 Count = list.Count,
+                MonthList = GetCachedMonthList(context),
                 Data = list
             }));
         }
@@ -970,9 +1161,11 @@ namespace NTPC_FEC.BufferAnalysis
                 BareLngCol = _bareLngCol
             };
 
-            // 3. 360 環景圖資
+            // 3. 360 環景圖資与各級學校圖資
             Dictionary<string, PanoItem> panoCache = GetPanoIndexCache(context);
             info["PanoCount"] = panoCache.Count;
+            List<SchoolItem> schoolCache = GetSchoolListCache(context);
+            info["SchoolCount"] = schoolCache != null ? schoolCache.Count : 0;
 
             context.Response.Write(json.Serialize(new
             {
@@ -984,6 +1177,15 @@ namespace NTPC_FEC.BufferAnalysis
         #endregion
 
         #region 6. 360 環景影像實體路徑索引與匹配服務
+        public class PanoHistoryVersion
+        {
+            public string Month { get; set; }
+            public string MonthText { get; set; }
+            public string Url { get; set; }
+            public string ThumbUrl { get; set; }
+            public string RelativePath { get; set; }
+        }
+
         public class PanoItem
         {
             public string Id { get; set; }
@@ -996,6 +1198,41 @@ namespace NTPC_FEC.BufferAnalysis
             public string Addr { get; set; }
             public double Lat { get; set; }
             public double Lng { get; set; }
+            public string Month { get; set; }
+            public string MonthText { get; set; }
+            public List<PanoHistoryVersion> History { get; set; }
+
+            public PanoItem()
+            {
+                History = new List<PanoHistoryVersion>();
+            }
+        }
+
+        private static string FormatMinguoMonth(string m)
+        {
+            if (string.IsNullOrEmpty(m)) return "預設期程";
+            m = m.Trim();
+            int val = 0;
+            if (m.Length >= 4 && int.TryParse(m, out val))
+            {
+                string year = m.Substring(0, m.Length - 2);
+                string month = m.Substring(m.Length - 2);
+                return year + "年" + month + "月";
+            }
+            return m;
+        }
+
+        private static int CompareMonth(string m1, string m2)
+        {
+            if (string.IsNullOrEmpty(m1) && string.IsNullOrEmpty(m2)) return 0;
+            if (string.IsNullOrEmpty(m1)) return -1;
+            if (string.IsNullOrEmpty(m2)) return 1;
+            int v1 = 0, v2 = 0;
+            if (int.TryParse(m1, out v1) && int.TryParse(m2, out v2))
+            {
+                return v1.CompareTo(v2);
+            }
+            return string.Compare(m1, m2, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string ExtractTownFromName(string name)
@@ -1010,8 +1247,18 @@ namespace NTPC_FEC.BufferAnalysis
         }
 
         private static Dictionary<string, PanoItem> _cachedPanoIndex = null;
+        private static List<Dictionary<string, object>> _cachedMonthList = null;
         private static DateTime _lastPanoScan = DateTime.MinValue;
         private static readonly object _panoLock = new object();
+
+        private List<Dictionary<string, object>> GetCachedMonthList(HttpContext context)
+        {
+            if (_cachedPanoIndex == null || (DateTime.Now - _lastPanoScan).TotalMinutes >= 10)
+            {
+                GetPanoIndexCache(context);
+            }
+            return _cachedMonthList != null ? _cachedMonthList : new List<Dictionary<string, object>>();
+        }
 
         private Dictionary<string, PanoItem> GetPanoIndexCache(HttpContext context)
         {
@@ -1024,6 +1271,7 @@ namespace NTPC_FEC.BufferAnalysis
                 }
 
                 _cachedPanoIndex = new Dictionary<string, PanoItem>(StringComparer.OrdinalIgnoreCase);
+                _cachedMonthList = new List<Dictionary<string, object>>();
                 _lastPanoScan = DateTime.Now;
 
                 // 搜尋優先級：1. D:\WebData\Surroundview 2. ~/Surroundview
@@ -1043,28 +1291,138 @@ namespace NTPC_FEC.BufferAnalysis
 
                 try
                 {
+                    // 統計各月份出現頻率
+                    Dictionary<string, int> monthCountMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
                     // 搜尋所有含有 index.htm 的目錄
                     string[] htmlFiles = Directory.GetFiles(baseDir, "index.htm", SearchOption.AllDirectories);
                     foreach (string htm in htmlFiles)
                     {
                         string dirName = Path.GetDirectoryName(htm);
-                        string folder = Path.GetFileName(dirName);
                         string rel = htm.Substring(baseDir.Length).TrimStart('\\', '/').Replace('\\', '/');
+                        string[] parts = rel.Split('/');
 
-                        PanoItem item = new PanoItem();
-                        item.Id = folder;
-                        item.Title = folder;
-                        item.FolderName = folder;
-                        item.RelativePath = rel;
-                        // 統一指向 IIS 虛擬目錄 /Surroundview/
-                        item.Url = "../Surroundview/" + rel;
+                        string month = "";
+                        string folder = "";
+
+                        if (parts.Length >= 2)
+                        {
+                            // 判斷第 1 層是否為民國月份代碼 (4~6 碼純數字，如 11402, 11504)
+                            string firstPart = parts[0].Trim();
+                            int parsedVal = 0;
+                            if (firstPart.Length >= 4 && firstPart.Length <= 6 && int.TryParse(firstPart, out parsedVal))
+                            {
+                                month = firstPart;
+                                folder = parts[1].Trim();
+                            }
+                            else
+                            {
+                                folder = firstPart;
+                            }
+                        }
+                        else
+                        {
+                            folder = Path.GetFileName(dirName);
+                        }
+
+                        if (string.IsNullOrEmpty(folder))
+                        {
+                            folder = Path.GetFileName(dirName);
+                        }
+
+                        string monthText = FormatMinguoMonth(month);
+                        string url = "../Surroundview/" + rel;
                         string thumbPath = Path.Combine(dirName, "thumbnail.png");
-                        item.ThumbUrl = File.Exists(thumbPath) ? ("../Surroundview/" + rel.Replace("index.htm", "thumbnail.png")) : "";
+                        string thumbUrl = File.Exists(thumbPath) ? ("../Surroundview/" + rel.Replace("index.htm", "thumbnail.png")) : "";
 
-                        // 嘗試反查座標
-                        AttachCoordToPano(item);
+                        // 統計月份
+                        if (!string.IsNullOrEmpty(month))
+                        {
+                            if (!monthCountMap.ContainsKey(month)) monthCountMap[month] = 0;
+                            monthCountMap[month]++;
+                        }
 
-                        _cachedPanoIndex[folder] = item;
+                        // 合併至同一場所
+                        if (!_cachedPanoIndex.ContainsKey(folder))
+                        {
+                            PanoItem item = new PanoItem();
+                            item.Id = folder;
+                            item.Title = folder;
+                            item.FolderName = folder;
+                            item.RelativePath = rel;
+                            item.Url = url;
+                            item.ThumbUrl = thumbUrl;
+                            item.Month = month;
+                            item.MonthText = monthText;
+                            AttachCoordToPano(item);
+                            _cachedPanoIndex[folder] = item;
+                        }
+                        else
+                        {
+                            PanoItem existing = _cachedPanoIndex[folder];
+                            // 比較月份大小：若新掃描的月份更新，原項目降入 History，由新月份擔任預設主版本
+                            if (CompareMonth(month, existing.Month) > 0)
+                            {
+                                if (!string.IsNullOrEmpty(existing.Month) || !string.IsNullOrEmpty(existing.Url))
+                                {
+                                    PanoHistoryVersion oldVer = new PanoHistoryVersion();
+                                    oldVer.Month = existing.Month;
+                                    oldVer.MonthText = existing.MonthText;
+                                    oldVer.Url = existing.Url;
+                                    oldVer.ThumbUrl = existing.ThumbUrl;
+                                    oldVer.RelativePath = existing.RelativePath;
+                                    existing.History.Add(oldVer);
+                                }
+
+                                existing.Month = month;
+                                existing.MonthText = monthText;
+                                existing.Url = url;
+                                existing.ThumbUrl = thumbUrl;
+                                existing.RelativePath = rel;
+                            }
+                            else
+                            {
+                                // 較舊的期程，直接作為歷史版本加入
+                                PanoHistoryVersion oldVer = new PanoHistoryVersion();
+                                oldVer.Month = month;
+                                oldVer.MonthText = monthText;
+                                oldVer.Url = url;
+                                oldVer.ThumbUrl = thumbUrl;
+                                oldVer.RelativePath = rel;
+                                existing.History.Add(oldVer);
+                            }
+                        }
+                    }
+
+                    // 對每個場所的 History 依月份降冪排序 (較新的在前面)
+                    foreach (KeyValuePair<string, PanoItem> kv in _cachedPanoIndex)
+                    {
+                        if (kv.Value.History != null && kv.Value.History.Count > 1)
+                        {
+                            kv.Value.History.Sort(delegate (PanoHistoryVersion a, PanoHistoryVersion b)
+                            {
+                                return CompareMonth(b.Month, a.Month);
+                            });
+                        }
+                    }
+
+                    // 彙整並降冪排序月份列表
+                    var sortedMonths = new List<string>(monthCountMap.Keys);
+                    sortedMonths.Sort(delegate (string a, string b)
+                    {
+                        return CompareMonth(b, a);
+                    });
+
+                    for (int i = 0; i < sortedMonths.Count; i++)
+                    {
+                        string m = sortedMonths[i];
+                        var mDict = new Dictionary<string, object>();
+                        mDict["value"] = m;
+                        string mText = FormatMinguoMonth(m);
+                        if (i == 0) mText += " (最新)";
+                        mDict["text"] = mText;
+                        mDict["count"] = monthCountMap[m];
+                        _cachedMonthList.Add(mDict);
                     }
                 }
                 catch
@@ -1331,6 +1689,729 @@ namespace NTPC_FEC.BufferAnalysis
                 }
                 return sb.ToString();
             }
+        }
+        #endregion
+
+        #region 8. 新北市各級學校空間圖資、最近學校距離運算與重點工廠 Excel 匯出
+        public class SchoolItem
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string Alias { get; set; }
+            public string Town { get; set; }
+            public string Level { get; set; }
+            public bool HasKindergarten { get; set; }
+            public string PublicPrivate { get; set; }
+            public string Types { get; set; }
+            public string Phone { get; set; }
+            public string Addr { get; set; }
+            public string Url { get; set; }
+            public double X { get; set; }
+            public double Y { get; set; }
+            public double Lat { get; set; }
+            public double Lng { get; set; }
+        }
+
+        private static List<SchoolItem> _cachedSchools = null;
+        private static DateTime _lastSchoolLoad = DateTime.MinValue;
+        private static readonly object _schoolLock = new object();
+
+        /// <summary>
+        /// 取得新北市各級學校空間圖資快取 (雙軌載入：優先讀取 DB School_Main，若無則讀取本地 ntpc_schools.json)
+        /// </summary>
+        private List<SchoolItem> GetSchoolListCache(HttpContext context)
+        {
+            lock (_schoolLock)
+            {
+                if (_cachedSchools != null && _cachedSchools.Count > 0 && (DateTime.Now - _lastSchoolLoad).TotalMinutes < 30)
+                {
+                    return _cachedSchools;
+                }
+
+                List<SchoolItem> list = new List<SchoolItem>();
+
+                // 1. 嘗試從資料庫 School_Main 讀取
+                try
+                {
+                    object tblObj = DbHelper.ExecuteScalar("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'School_Main'");
+                    if (tblObj != null && Convert.ToInt32(tblObj) > 0)
+                    {
+                        DataTable dt = DbHelper.ExecuteDataTable("SELECT School_ID, School_Name, School_Alias, Town_Name, School_Level, Has_Kindergarten, Public_Private, School_Types, Phone, Addr, Url, TWD97_X, TWD97_Y, WGS84_Lat, WGS84_Lng FROM School_Main WHERE TWD97_X > 0 AND TWD97_Y > 0");
+                        if (dt != null && dt.Rows.Count > 0)
+                        {
+                            foreach (DataRow r in dt.Rows)
+                            {
+                                SchoolItem s = new SchoolItem();
+                                s.Id = r["School_ID"] != DBNull.Value ? r["School_ID"].ToString().Trim() : "";
+                                s.Name = r["School_Name"] != DBNull.Value ? r["School_Name"].ToString().Trim() : "";
+                                s.Alias = r["School_Alias"] != DBNull.Value ? r["School_Alias"].ToString().Trim() : s.Name;
+                                s.Town = r["Town_Name"] != DBNull.Value ? r["Town_Name"].ToString().Trim() : "";
+                                s.Level = r["School_Level"] != DBNull.Value ? r["School_Level"].ToString().Trim() : "國小";
+                                s.HasKindergarten = r["Has_Kindergarten"] != DBNull.Value && Convert.ToBoolean(r["Has_Kindergarten"]);
+                                s.PublicPrivate = r["Public_Private"] != DBNull.Value ? r["Public_Private"].ToString().Trim() : "";
+                                s.Types = r["School_Types"] != DBNull.Value ? r["School_Types"].ToString().Trim() : "";
+                                s.Phone = r["Phone"] != DBNull.Value ? r["Phone"].ToString().Trim() : "";
+                                s.Addr = r["Addr"] != DBNull.Value ? r["Addr"].ToString().Trim() : "";
+                                s.Url = r["Url"] != DBNull.Value ? r["Url"].ToString().Trim() : "";
+                                s.X = r["TWD97_X"] != DBNull.Value ? Convert.ToDouble(r["TWD97_X"]) : 0;
+                                s.Y = r["TWD97_Y"] != DBNull.Value ? Convert.ToDouble(r["TWD97_Y"]) : 0;
+                                s.Lat = r["WGS84_Lat"] != DBNull.Value ? Convert.ToDouble(r["WGS84_Lat"]) : 0;
+                                s.Lng = r["WGS84_Lng"] != DBNull.Value ? Convert.ToDouble(r["WGS84_Lng"]) : 0;
+                                list.Add(s);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // DB 無此表或連線異常時，自動 Fallback 至本地 JSON 圖資檔
+                }
+
+                // 2. 若 DB 尚未建立或無資料，讀取本地靜態圖資 ~/BufferAnalysis/Data/ntpc_schools.json
+                if (list.Count == 0 && context != null)
+                {
+                    try
+                    {
+                        string jsonPath = context.Server.MapPath("~/BufferAnalysis/Data/ntpc_schools.json");
+                        if (File.Exists(jsonPath))
+                        {
+                            string rawJson = File.ReadAllText(jsonPath, Encoding.UTF8);
+                            List<SchoolItem> parsed = json.Deserialize<List<SchoolItem>>(rawJson);
+                            if (parsed != null)
+                            {
+                                list = parsed;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                _cachedSchools = list;
+                _lastSchoolLoad = DateTime.Now;
+                return _cachedSchools;
+            }
+        }
+
+        /// <summary>
+        /// 判斷學校是否符合前端勾選之學制篩選 (含國小/國中附設幼兒園智慧判定)
+        /// </summary>
+        private static bool MatchSchoolLevelFilter(SchoolItem s, string levelFilter)
+        {
+            if (s == null) return false;
+            if (string.IsNullOrEmpty(levelFilter)) return true;
+
+            // 若篩選包含該校主學制
+            if (levelFilter.IndexOf(s.Level, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+
+            // 若篩選包含「幼兒園」且該校設有附幼 (HasKindergarten = true)
+            if (s.HasKindergarten && levelFilter.IndexOf("幼兒園", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// 點到點 TWD97 二度分帶直線距離運算：尋找距離工廠/裸露地最近之學校
+        /// </summary>
+        private static SchoolItem FindNearestSchool(double x, double y, List<SchoolItem> schools, string levelFilter, out double minDist)
+        {
+            minDist = -1;
+            if (schools == null || schools.Count == 0 || x <= 0 || y <= 0) return null;
+
+            SchoolItem nearest = null;
+            double bestDistSq = double.MaxValue;
+
+            for (int i = 0; i < schools.Count; i++)
+            {
+                SchoolItem s = schools[i];
+                if (!MatchSchoolLevelFilter(s, levelFilter)) continue;
+
+                double dx = s.X - x;
+                double dy = s.Y - y;
+                double distSq = dx * dx + dy * dy;
+                if (distSq < bestDistSq)
+                {
+                    bestDistSq = distSq;
+                    nearest = s;
+                }
+            }
+
+            if (nearest != null)
+            {
+                minDist = Math.Round(Math.Sqrt(bestDistSq), 1);
+            }
+            return nearest;
+        }
+
+        /// <summary>
+        /// 尋找距離工廠最近的前 2 所學校 (供 Excel 報表完整呈現最近與次近學校)
+        /// </summary>
+        private static void FindTop2NearestSchools(double x, double y, List<SchoolItem> schools, string levelFilter, out SchoolItem firstSchool, out double firstDist, out SchoolItem secondSchool, out double secondDist)
+        {
+            firstSchool = null;
+            firstDist = -1;
+            secondSchool = null;
+            secondDist = -1;
+
+            if (schools == null || schools.Count == 0 || x <= 0 || y <= 0) return;
+
+            double best1Sq = double.MaxValue;
+            double best2Sq = double.MaxValue;
+
+            for (int i = 0; i < schools.Count; i++)
+            {
+                SchoolItem s = schools[i];
+                if (!MatchSchoolLevelFilter(s, levelFilter)) continue;
+
+                double dx = s.X - x;
+                double dy = s.Y - y;
+                double distSq = dx * dx + dy * dy;
+
+                if (distSq < best1Sq)
+                {
+                    best2Sq = best1Sq;
+                    secondSchool = firstSchool;
+                    best1Sq = distSq;
+                    firstSchool = s;
+                }
+                else if (distSq < best2Sq)
+                {
+                    best2Sq = distSq;
+                    secondSchool = s;
+                }
+            }
+
+            if (firstSchool != null) firstDist = Math.Round(Math.Sqrt(best1Sq), 1);
+            if (secondSchool != null) secondDist = Math.Round(Math.Sqrt(best2Sq), 1);
+        }
+
+        /// <summary>
+        /// 取得新北市各級學校清單與學制統計 (action=getschoollist)
+        /// </summary>
+        private void GetSchoolList(HttpContext context)
+        {
+            List<SchoolItem> schools = GetSchoolListCache(context);
+            string townFilter = context.Request["town"];
+            string levelFilter = context.Request["level"];
+
+            var filtered = new List<SchoolItem>();
+            var levelCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            levelCounts["幼兒園"] = 0;
+            levelCounts["國小"] = 0;
+            levelCounts["國中"] = 0;
+            levelCounts["高中職"] = 0;
+            levelCounts["大專校院"] = 0;
+
+            foreach (SchoolItem s in schools)
+            {
+                if (!string.IsNullOrEmpty(townFilter) && !string.Equals(s.Town, townFilter.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (levelCounts.ContainsKey(s.Level))
+                {
+                    levelCounts[s.Level]++;
+                }
+                if (s.HasKindergarten && s.Level != "幼兒園")
+                {
+                    levelCounts["幼兒園"]++;
+                }
+
+                if (!MatchSchoolLevelFilter(s, levelFilter)) continue;
+                filtered.Add(s);
+            }
+
+            context.Response.Write(json.Serialize(new
+            {
+                Success = true,
+                Count = filtered.Count,
+                LevelCounts = levelCounts,
+                Data = filtered
+            }));
+        }
+
+        /// <summary>
+        /// 查詢指定座標點周邊最近的前 N 所學校 (action=nearestschools)
+        /// </summary>
+        private void GetNearestSchools(HttpContext context)
+        {
+            double lat = 25.0123;
+            double lng = 121.4657;
+            int top = 5;
+            double.TryParse(context.Request["lat"], out lat);
+            double.TryParse(context.Request["lng"], out lng);
+            int.TryParse(context.Request["top"], out top);
+            if (top <= 0 || top > 50) top = 5;
+
+            string levelFilter = context.Request["schoolLevels"];
+
+            double targetX, targetY;
+            GeoCoordHelper.Wgs84ToTwd97(lat, lng, out targetX, out targetY);
+
+            List<SchoolItem> schools = GetSchoolListCache(context);
+            var candidates = new List<Dictionary<string, object>>();
+
+            foreach (SchoolItem s in schools)
+            {
+                if (!MatchSchoolLevelFilter(s, levelFilter)) continue;
+                double dist = Math.Round(Math.Sqrt(Math.Pow(s.X - targetX, 2) + Math.Pow(s.Y - targetY, 2)), 1);
+                var d = new Dictionary<string, object>();
+                d["id"] = s.Id;
+                d["name"] = s.Name;
+                d["alias"] = s.Alias;
+                d["town"] = s.Town;
+                d["level"] = s.Level + (s.HasKindergarten && s.Level != "幼兒園" ? " (含附幼)" : "");
+                d["publicPrivate"] = s.PublicPrivate;
+                d["addr"] = s.Addr;
+                d["phone"] = s.Phone;
+                d["lat"] = s.Lat;
+                d["lng"] = s.Lng;
+                d["dist"] = dist;
+                candidates.Add(d);
+            }
+
+            candidates.Sort(delegate (Dictionary<string, object> a, Dictionary<string, object> b)
+            {
+                return Convert.ToDouble(a["dist"]).CompareTo(Convert.ToDouble(b["dist"]));
+            });
+
+            if (candidates.Count > top)
+            {
+                candidates = candidates.GetRange(0, top);
+            }
+
+            context.Response.Write(json.Serialize(new
+            {
+                Success = true,
+                Data = candidates
+            }));
+        }
+
+        /// <summary>
+        /// 一鍵將本地 ntpc_schools.json 504 所學校同步建表寫入 SQL Server School_Main 資料表 (action=syncschoolsdb)
+        /// </summary>
+        private void SyncSchoolsToDb(HttpContext context)
+        {
+            string jsonPath = context.Server.MapPath("~/BufferAnalysis/Data/ntpc_schools.json");
+            if (!File.Exists(jsonPath))
+            {
+                context.Response.Write(json.Serialize(new { Success = false, Message = "找不到本地學校圖資檔案 (ntpc_schools.json)" }));
+                return;
+            }
+
+            string rawJson = File.ReadAllText(jsonPath, Encoding.UTF8);
+            List<SchoolItem> schools = json.Deserialize<List<SchoolItem>>(rawJson);
+            if (schools == null || schools.Count == 0)
+            {
+                context.Response.Write(json.Serialize(new { Success = false, Message = "解析學校圖資 JSON 失敗或筆數為 0" }));
+                return;
+            }
+
+            string sqlCreateTable = @"
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'School_Main')
+                BEGIN
+                    CREATE TABLE School_Main (
+                        School_ID NVARCHAR(32) NOT NULL PRIMARY KEY,
+                        School_Name NVARCHAR(150) NOT NULL,
+                        School_Alias NVARCHAR(100) NULL,
+                        Town_Name NVARCHAR(30) NULL,
+                        School_Level NVARCHAR(30) NULL,
+                        Has_Kindergarten BIT NOT NULL DEFAULT 0,
+                        Public_Private NVARCHAR(20) NULL,
+                        School_Types NVARCHAR(200) NULL,
+                        Phone NVARCHAR(60) NULL,
+                        Addr NVARCHAR(250) NULL,
+                        Url NVARCHAR(300) NULL,
+                        TWD97_X FLOAT NOT NULL DEFAULT 0,
+                        TWD97_Y FLOAT NOT NULL DEFAULT 0,
+                        WGS84_Lat FLOAT NOT NULL DEFAULT 0,
+                        WGS84_Lng FLOAT NOT NULL DEFAULT 0,
+                        Updated_At DATETIME NOT NULL DEFAULT GETDATE()
+                    );
+                END";
+
+            DbHelper.ExecuteNonQuery(sqlCreateTable);
+            DbHelper.ExecuteNonQuery("TRUNCATE TABLE School_Main");
+
+            int inserted = 0;
+            string sqlInsert = @"
+                INSERT INTO School_Main (
+                    School_ID, School_Name, School_Alias, Town_Name, School_Level,
+                    Has_Kindergarten, Public_Private, School_Types, Phone, Addr, Url,
+                    TWD97_X, TWD97_Y, WGS84_Lat, WGS84_Lng, Updated_At
+                ) VALUES (
+                    @Id, @Name, @Alias, @Town, @Level,
+                    @HasK, @PubPriv, @Types, @Phone, @Addr, @Url,
+                    @X, @Y, @Lat, @Lng, GETDATE()
+                )";
+
+            foreach (SchoolItem s in schools)
+            {
+                DbHelper.ExecuteNonQuery(sqlInsert,
+                    new SqlParameter("@Id", s.Id ?? ""),
+                    new SqlParameter("@Name", s.Name ?? ""),
+                    new SqlParameter("@Alias", s.Alias ?? ""),
+                    new SqlParameter("@Town", s.Town ?? ""),
+                    new SqlParameter("@Level", s.Level ?? ""),
+                    new SqlParameter("@HasK", s.HasKindergarten),
+                    new SqlParameter("@PubPriv", s.PublicPrivate ?? ""),
+                    new SqlParameter("@Types", s.Types ?? ""),
+                    new SqlParameter("@Phone", s.Phone ?? ""),
+                    new SqlParameter("@Addr", s.Addr ?? ""),
+                    new SqlParameter("@Url", s.Url ?? ""),
+                    new SqlParameter("@X", s.X),
+                    new SqlParameter("@Y", s.Y),
+                    new SqlParameter("@Lat", s.Lat),
+                    new SqlParameter("@Lng", s.Lng)
+                );
+                inserted++;
+            }
+
+            // 重新整理快取
+            lock (_schoolLock)
+            {
+                _cachedSchools = null;
+            }
+
+            context.Response.Write(json.Serialize(new
+            {
+                Success = true,
+                Message = string.Format("已成功建立 School_Main 資料表並同步寫入 {0} 所新北市各級學校座標！", inserted),
+                Count = inserted
+            }));
+        }
+
+        /// <summary>
+        /// 匯出「固定逸散源距離各級學校分析清冊」Excel 報表 (action=exportschooldist)
+        /// 支援：
+        ///   mode=buffer : 匯出目前環域範圍內之固定逸散源與最近學校距離清冊
+        ///   mode=priority_all : 匯出全新北市(或指定行政區/行業別)距離學校 <= 警戒距離之重點工廠敏感度清冊
+        /// </summary>
+        private void ExportSchoolDistExcel(HttpContext context)
+        {
+            DetectSchema();
+
+            string mode = context.Request["mode"];
+            if (string.IsNullOrEmpty(mode)) mode = "buffer";
+            mode = mode.ToLower();
+
+            double lat = 25.0123;
+            double lng = 121.4657;
+            double radius = 1000;
+            double.TryParse(context.Request["lat"], out lat);
+            double.TryParse(context.Request["lng"], out lng);
+            double.TryParse(context.Request["radius"], out radius);
+            if (radius <= 0) radius = 1000;
+            if (radius > 50000) radius = 50000;
+
+            string townFilter = context.Request["town"];
+            string indFilter = context.Request["industry"];
+            string schoolLevelsFilter = context.Request["schoolLevels"];
+            bool onlyPriority = context.Request["onlyPriority"] == "1" || context.Request["onlyPriority"] == "true";
+
+            double priorityThreshold = 300;
+            if (!string.IsNullOrEmpty(context.Request["priorityThreshold"]))
+            {
+                double.TryParse(context.Request["priorityThreshold"], out priorityThreshold);
+            }
+            if (priorityThreshold <= 0) priorityThreshold = 300;
+
+            double userX, userY;
+            GeoCoordHelper.Wgs84ToTwd97(lat, lng, out userX, out userY);
+
+            List<SchoolItem> schoolCache = GetSchoolListCache(context);
+            Dictionary<string, string> indMap = GetIndustryMap();
+
+            var rows = new List<Dictionary<string, object>>();
+
+            if (_facTableExists && !string.IsNullOrEmpty(_facXCol) && !string.IsNullOrEmpty(_facYCol))
+            {
+                var sqlParams = new List<SqlParameter>();
+                string whereClause = string.Format("WHERE {0} > 0 AND {1} > 0", _facXCol, _facYCol);
+
+                if (mode == "buffer")
+                {
+                    whereClause += string.Format(" AND {0} BETWEEN @MinX AND @MaxX AND {1} BETWEEN @MinY AND @MaxY", _facXCol, _facYCol);
+                    sqlParams.Add(new SqlParameter("@MinX", userX - radius));
+                    sqlParams.Add(new SqlParameter("@MaxX", userX + radius));
+                    sqlParams.Add(new SqlParameter("@MinY", userY - radius));
+                    sqlParams.Add(new SqlParameter("@MaxY", userY + radius));
+                }
+
+                if (!string.IsNullOrEmpty(townFilter))
+                {
+                    string cleanTown = townFilter.Trim();
+                    string shortTown = cleanTown.Replace("區", "");
+                    if (_facHasTownCode)
+                    {
+                        whereClause += string.Format(@" AND (
+                            {0} LIKE @Town OR {1} LIKE @Town 
+                            OR TOWN_CODE IN (SELECT TOWN_CODE FROM Town_Code WHERE TOWN_NAME = @ExactTown OR TOWN_NAME = @ShortTown)
+                        )", _facTownCol, _facAddrCol);
+                        sqlParams.Add(new SqlParameter("@ExactTown", cleanTown));
+                        sqlParams.Add(new SqlParameter("@ShortTown", shortTown));
+                    }
+                    else
+                    {
+                        whereClause += string.Format(" AND ({0} LIKE @Town OR {1} LIKE @Town)", _facTownCol, _facAddrCol);
+                    }
+                    sqlParams.Add(new SqlParameter("@Town", "%" + shortTown + "%"));
+                }
+
+                if (!string.IsNullOrEmpty(indFilter) && !string.IsNullOrEmpty(_facIndCol))
+                {
+                    whereClause += string.Format(" AND {0} = @IndCode", _facIndCol);
+                    sqlParams.Add(new SqlParameter("@IndCode", indFilter.Trim()));
+                }
+
+                string indSelect = !string.IsNullOrEmpty(_facIndCol) ? _facIndCol : "''";
+                string sqlFac = string.Format(@"
+                    SELECT 
+                        FAC_ID, FAC_NAME, C_NO,
+                        {0} AS ADDR,
+                        {1} AS TOWN,
+                        {2} AS FAC_Type,
+                        {3} AS IND_CODE,
+                        {4} AS X,
+                        {5} AS Y
+                    FROM FAC_Main
+                    {6}",
+                    _facAddrCol, _facTownCol, _facTypeCol, indSelect, _facXCol, _facYCol, whereClause);
+
+                DataTable dtFac = DbHelper.ExecuteDataTable(sqlFac, sqlParams.ToArray());
+                if (dtFac != null)
+                {
+                    foreach (DataRow r in dtFac.Rows)
+                    {
+                        double x = 0, y = 0;
+                        double.TryParse(r["X"].ToString(), out x);
+                        double.TryParse(r["Y"].ToString(), out y);
+                        if (x <= 0 || y <= 0) continue;
+
+                        double fLat, fLng;
+                        double fX = x, fY = y;
+                        ConvertToWgs84(x, y, out fLat, out fLng);
+                        if (x <= 180 && y <= 180)
+                        {
+                            GeoCoordHelper.Wgs84ToTwd97(fLat, fLng, out fX, out fY);
+                        }
+
+                        double centerDist = Math.Round(Math.Sqrt(Math.Pow(fX - userX, 2) + Math.Pow(fY - userY, 2)), 1);
+                        if (mode == "buffer" && centerDist > radius) continue;
+
+                        SchoolItem s1, s2;
+                        double d1, d2;
+                        FindTop2NearestSchools(fX, fY, schoolCache, schoolLevelsFilter, out s1, out d1, out s2, out d2);
+
+                        bool isPriority = (d1 >= 0 && d1 <= priorityThreshold);
+                        if ((mode == "priority_all" || onlyPriority) && !isPriority) continue;
+
+                        string riskLabel = "一般列管 (> " + priorityThreshold.ToString("0") + "m)";
+                        if (d1 >= 0 && d1 <= 100) riskLabel = "極高敏紅燈 (<= 100m)";
+                        else if (isPriority) riskLabel = "重點列管橘燈 (<= " + priorityThreshold.ToString("0") + "m)";
+
+                        string indCode = r["IND_CODE"] != DBNull.Value ? r["IND_CODE"].ToString().Trim() : "";
+                        string facType = r["FAC_Type"] != DBNull.Value ? r["FAC_Type"].ToString().Trim() : "列管工廠";
+                        string indName = (!string.IsNullOrEmpty(indCode) && indMap.ContainsKey(indCode)) ? indMap[indCode] : (!string.IsNullOrEmpty(facType) ? facType : "固定污染源");
+                        string addr = r["ADDR"] != DBNull.Value ? r["ADDR"].ToString().Trim() : "";
+                        string town = r["TOWN"] != DBNull.Value ? r["TOWN"].ToString().Trim() : "";
+                        if (string.IsNullOrEmpty(town)) town = ExtractTownFromName(addr);
+
+                        var row = new Dictionary<string, object>();
+                        row["FacId"] = r["FAC_ID"].ToString().Trim();
+                        row["CNo"] = r.Table.Columns.Contains("C_NO") && r["C_NO"] != DBNull.Value ? r["C_NO"].ToString().Trim() : "";
+                        row["FacName"] = r["FAC_NAME"] != DBNull.Value ? r["FAC_NAME"].ToString().Trim() : "未命名場所";
+                        row["Town"] = town;
+                        row["Industry"] = indName;
+                        row["Addr"] = addr;
+                        row["CenterDist"] = centerDist;
+                        row["RiskLabel"] = riskLabel;
+                        row["School1Name"] = s1 != null ? s1.Name : "-";
+                        row["School1Level"] = s1 != null ? (s1.Level + (s1.HasKindergarten && s1.Level != "幼兒園" ? "(含附幼)" : "")) : "-";
+                        row["School1PubPriv"] = s1 != null ? s1.PublicPrivate : "-";
+                        row["School1Dist"] = d1 >= 0 ? d1 : 999999;
+                        row["School1Addr"] = s1 != null ? s1.Addr : "-";
+                        row["School2Name"] = s2 != null ? s2.Name : "-";
+                        row["School2Dist"] = d2 >= 0 ? d2 : -1;
+                        row["Twd97X"] = Math.Round(fX, 1);
+                        row["Twd97Y"] = Math.Round(fY, 1);
+                        rows.Add(row);
+                    }
+                }
+            }
+
+            // 依距離最近學校升冪排序 (離學校越近排越前面)
+            rows.Sort(delegate (Dictionary<string, object> a, Dictionary<string, object> b)
+            {
+                double da = Convert.ToDouble(a["School1Dist"]);
+                double db = Convert.ToDouble(b["School1Dist"]);
+                return da.CompareTo(db);
+            });
+
+            // 建立 NPOI HSSFWorkbook (.xls)
+            HSSFWorkbook wb = new HSSFWorkbook();
+            ISheet sheet = wb.CreateSheet("固定源距各級學校距離清冊");
+
+            // 樣式設計
+            IFont titleFont = wb.CreateFont();
+            titleFont.FontName = "微軟正黑體";
+            titleFont.FontHeightInPoints = 13;
+            titleFont.IsBold = true;
+
+            ICellStyle titleStyle = wb.CreateCellStyle();
+            titleStyle.SetFont(titleFont);
+
+            IFont headerFont = wb.CreateFont();
+            headerFont.FontName = "微軟正黑體";
+            headerFont.FontHeightInPoints = 10;
+            headerFont.IsBold = true;
+            headerFont.Color = IndexedColors.White.Index;
+
+            ICellStyle headerStyle = wb.CreateCellStyle();
+            headerStyle.SetFont(headerFont);
+            headerStyle.FillForegroundColor = IndexedColors.DarkTeal.Index;
+            headerStyle.FillPattern = FillPattern.SolidForeground;
+            headerStyle.Alignment = HorizontalAlignment.Center;
+            headerStyle.VerticalAlignment = VerticalAlignment.Center;
+            headerStyle.BorderBottom = BorderStyle.Thin;
+            headerStyle.BorderTop = BorderStyle.Thin;
+            headerStyle.BorderLeft = BorderStyle.Thin;
+            headerStyle.BorderRight = BorderStyle.Thin;
+
+            IFont bodyFont = wb.CreateFont();
+            bodyFont.FontName = "微軟正黑體";
+            bodyFont.FontHeightInPoints = 10;
+
+            ICellStyle normalStyle = wb.CreateCellStyle();
+            normalStyle.SetFont(bodyFont);
+            normalStyle.VerticalAlignment = VerticalAlignment.Center;
+            normalStyle.BorderBottom = BorderStyle.Thin;
+            normalStyle.BorderTop = BorderStyle.Thin;
+            normalStyle.BorderLeft = BorderStyle.Thin;
+            normalStyle.BorderRight = BorderStyle.Thin;
+
+            // 高敏紅燈樣式 (<= 100m)
+            ICellStyle highRiskStyle = wb.CreateCellStyle();
+            highRiskStyle.CloneStyleFrom(normalStyle);
+            highRiskStyle.FillForegroundColor = IndexedColors.Rose.Index;
+            highRiskStyle.FillPattern = FillPattern.SolidForeground;
+
+            // 重點列管橘黃燈樣式 (<= priorityThreshold)
+            ICellStyle medRiskStyle = wb.CreateCellStyle();
+            medRiskStyle.CloneStyleFrom(normalStyle);
+            medRiskStyle.FillForegroundColor = IndexedColors.LightYellow.Index;
+            medRiskStyle.FillPattern = FillPattern.SolidForeground;
+
+            // 第 0 列：報表標題與篩選摘要
+            IRow titleRow = sheet.CreateRow(0);
+            titleRow.HeightInPoints = 26;
+            ICell titleCell = titleRow.CreateCell(0);
+            string scopeDesc = mode == "priority_all"
+                ? string.Format("全區重點列管工廠篩選 (距學校 <= {0:0}m)", priorityThreshold)
+                : string.Format("環域查詢範圍 (半徑 {0:0}m)", radius);
+            if (!string.IsNullOrEmpty(townFilter)) scopeDesc += " | 行政區：" + townFilter;
+            titleCell.SetCellValue(string.Format("新北市固定逸散源距離各級學校空間敏感度分析清冊 — {0} (共 {1} 筆，匯出時間：{2:yyyy/MM/dd HH:mm})", scopeDesc, rows.Count, DateTime.Now));
+            titleCell.CellStyle = titleStyle;
+
+            // 第 1 列：欄位表頭
+            string[] headers = new string[] {
+                "序號",
+                "敏感度分級標記",
+                "管制編號 (C_NO)",
+                "場所代碼",
+                "固定逸散源名稱",
+                "行政區",
+                "行業別分類",
+                "工廠地址",
+                "最近學校名稱",
+                "最近學校學制",
+                "公私立",
+                "距最近學校直線距離 (m)",
+                "最近學校地址",
+                "次近學校名稱",
+                "距次近學校距離 (m)",
+                "距查詢中心距離 (m)",
+                "TWD97_X",
+                "TWD97_Y"
+            };
+
+            IRow headerRow = sheet.CreateRow(1);
+            headerRow.HeightInPoints = 22;
+            for (int c = 0; c < headers.Length; c++)
+            {
+                ICell cell = headerRow.CreateCell(c);
+                cell.SetCellValue(headers[c]);
+                cell.CellStyle = headerStyle;
+            }
+
+            // 填入資料列
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var item = rows[i];
+                IRow row = sheet.CreateRow(i + 2);
+                row.HeightInPoints = 20;
+
+                double s1Dist = Convert.ToDouble(item["School1Dist"]);
+                double s2Dist = Convert.ToDouble(item["School2Dist"]);
+
+                ICellStyle rowStyle = normalStyle;
+                if (s1Dist >= 0 && s1Dist <= 100) rowStyle = highRiskStyle;
+                else if (s1Dist >= 0 && s1Dist <= priorityThreshold) rowStyle = medRiskStyle;
+
+                SetCell(row, 0, (i + 1).ToString(), rowStyle);
+                SetCell(row, 1, item["RiskLabel"].ToString(), rowStyle);
+                SetCell(row, 2, item["CNo"].ToString(), rowStyle);
+                SetCell(row, 3, item["FacId"].ToString(), rowStyle);
+                SetCell(row, 4, item["FacName"].ToString(), rowStyle);
+                SetCell(row, 5, item["Town"].ToString(), rowStyle);
+                SetCell(row, 6, item["Industry"].ToString(), rowStyle);
+                SetCell(row, 7, item["Addr"].ToString(), rowStyle);
+                SetCell(row, 8, item["School1Name"].ToString(), rowStyle);
+                SetCell(row, 9, item["School1Level"].ToString(), rowStyle);
+                SetCell(row, 10, item["School1PubPriv"].ToString(), rowStyle);
+
+                ICell dist1Cell = row.CreateCell(11);
+                if (s1Dist < 999999) dist1Cell.SetCellValue(s1Dist);
+                else dist1Cell.SetCellValue("-");
+                dist1Cell.CellStyle = rowStyle;
+
+                SetCell(row, 12, item["School1Addr"].ToString(), rowStyle);
+                SetCell(row, 13, item["School2Name"].ToString(), rowStyle);
+
+                ICell dist2Cell = row.CreateCell(14);
+                if (s2Dist >= 0) dist2Cell.SetCellValue(s2Dist);
+                else dist2Cell.SetCellValue("-");
+                dist2Cell.CellStyle = rowStyle;
+
+                ICell cDistCell = row.CreateCell(15);
+                cDistCell.SetCellValue(Convert.ToDouble(item["CenterDist"]));
+                cDistCell.CellStyle = rowStyle;
+
+                ICell xCell = row.CreateCell(16);
+                xCell.SetCellValue(Convert.ToDouble(item["Twd97X"]));
+                xCell.CellStyle = rowStyle;
+
+                ICell yCell = row.CreateCell(17);
+                yCell.SetCellValue(Convert.ToDouble(item["Twd97Y"]));
+                yCell.CellStyle = rowStyle;
+            }
+
+            // 設定理想欄寬
+            int[] colWidths = new int[] { 8, 24, 16, 14, 32, 10, 22, 38, 28, 16, 10, 22, 36, 26, 18, 18, 14, 14 };
+            for (int c = 0; c < colWidths.Length; c++)
+            {
+                sheet.SetColumnWidth(c, colWidths[c] * 256);
+            }
+
+            string exportFileName = string.Format("新北市固定逸散源距學校敏感度清冊_{0:yyyyMMdd_HHmm}.xls", DateTime.Now);
+            ExcelExportHelper.ExportToResponse(wb, exportFileName, context.Response);
+        }
+
+        private static void SetCell(IRow row, int colIndex, string value, ICellStyle style)
+        {
+            ICell cell = row.CreateCell(colIndex);
+            cell.SetCellValue(value ?? "");
+            cell.CellStyle = style;
         }
         #endregion
     }

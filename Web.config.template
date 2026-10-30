@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
-  新北市固定溢散源管理平台 (NTPC_FEC / NTPC_FECM) 標準設定範本
+  新北市固定逸散源管理平台 (NTPC_FEC / NTPC_FECM) 標準設定範本
   適用情境：部署至正式機或測試機 IIS 站台（特別是 IIS 虛擬子應用程式環境）
   
   【部署注意事項】：
@@ -22,6 +22,8 @@
     <add name="MainConnectionString" connectionString="Data Source=YOUR_DB_SERVER;Initial Catalog=NTPC_FEC;User ID=YOUR_DB_USER;Password=YOUR_DB_PASSWORD" providerName="System.Data.SqlClient" />
     <!-- 空品資料庫連線 (包含施工機具相關連線) -->
     <add name="AirQualityConnectionString" connectionString="Data Source=YOUR_DB_SERVER;Initial Catalog=NTPC_AirQuality;User ID=YOUR_DB_USER;Password=YOUR_DB_PASSWORD" providerName="System.Data.SqlClient" />
+    <!-- 環境部施工機具分析資料庫連線 (NTPCEPD_New) -->
+    <add name="EPDConnectionString" connectionString="Data Source=EPB-AIR-WEB2\SQLEXPRESS;Initial Catalog=NTPCEPD_New;User ID=epd;Password=epd123" providerName="System.Data.SqlClient" />
   </connectionStrings>
   <system.web>
     <globalization fileEncoding="utf-8" requestEncoding="utf-8" responseEncoding="utf-8" culture="zh-TW" uiCulture="zh-TW" />

@@ -281,7 +281,7 @@ namespace NTPC_FEC.RoadClean
             DateTime now = DateTime.Now;
             if (string.IsNullOrEmpty(filter.DateS))
             {
-                filter.DateS = string.Format("{0}-01-01", now.Year);
+                filter.DateS = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
             }
             if (string.IsNullOrEmpty(filter.DateE))
             {

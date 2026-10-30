@@ -236,44 +236,57 @@ namespace NTPC_FEC.Case
                 }
             }
 
-            // 6. 讀取現有上傳照片與三方簽名圖片
+            // 6. 讀取現有上傳照片與三方簽名圖片 (多候選路徑與中文檔名相容探測)
             string appPath = HttpContext.Current.Request.ApplicationPath;
             if (appPath == "/") appPath = "";
 
-            Dictionary<string, string> existingPhotos = new Dictionary<string, string>();
-            Dictionary<string, string> signatures = new Dictionary<string, string>();
+            Dictionary<string, string> existingPhotos = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, string> signatures = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             signatures["sig1"] = "";
             signatures["sig2"] = "";
             signatures["sig3"] = "";
 
-            string picDirRel = "~/Upload/PIC/" + facId + "/" + invNo.ToString();
-            string picDirPhy = HttpContext.Current.Server.MapPath(picDirRel);
-            if (Directory.Exists(picDirPhy))
+            string cNo = facInfo.ContainsKey("C_NO") && facInfo["C_NO"] != null ? facInfo["C_NO"].ToString().Trim() : "";
+
+            // 照片定位：INV_NO 為「各場所各自累加」，僅取該筆巡查專屬目錄，絕不跨目錄合併
+            // (舊邏輯會把 facId 根目錄 / 其他子資料夾 / 他場所同編號資料夾的照片補進空欄位 → 讀到 2024 舊照片)
+            DateTime invDateVal = DateTime.MinValue;
+            if (invRow.Table.Columns.Contains("INV_DATE") && invRow["INV_DATE"] != DBNull.Value)
             {
-                string[] files = Directory.GetFiles(picDirPhy);
-                foreach (string f in files)
+                DateTime.TryParse(invRow["INV_DATE"].ToString(), out invDateVal);
+            }
+
+            string photoUrlPrefix;
+            string[] photoFiles = InvPhotoHelper.GetPhotoFiles(facId, invNo, cNo, invDateVal, out photoUrlPrefix);
+
+            foreach (string f in photoFiles)
+            {
+                string fname = Path.GetFileName(f);
+                string fbase = Path.GetFileNameWithoutExtension(f);
+                string fUrl = appPath + photoUrlPrefix + HttpUtility.UrlPathEncode(fname);
+
+                // 儲存原始檔名
+                if (!existingPhotos.ContainsKey(fbase))
                 {
-                    string fname = Path.GetFileName(f);
-                    string fbase = Path.GetFileNameWithoutExtension(f);
-                    string fUrl = appPath + "/Upload/PIC/" + facId + "/" + invNo.ToString() + "/" + HttpUtility.UrlPathEncode(fname);
-                    
-                    if (fbase.Equals("Sig1", StringComparison.OrdinalIgnoreCase))
-                    {
-                        signatures["sig1"] = fUrl;
-                    }
-                    else if (fbase.Equals("Sig2", StringComparison.OrdinalIgnoreCase))
-                    {
-                        signatures["sig2"] = fUrl;
-                    }
-                    else if (fbase.Equals("Sig3", StringComparison.OrdinalIgnoreCase))
-                    {
-                        signatures["sig3"] = fUrl;
-                    }
-                    else
-                    {
-                        existingPhotos[fbase] = fUrl;
-                    }
+                    existingPhotos[fbase] = fUrl;
                 }
+
+                // 簽名圖片識別
+                if (fbase.IndexOf("sig1", StringComparison.OrdinalIgnoreCase) >= 0 || fbase.Contains("簽名1") || fbase.Contains("稽查人員"))
+                {
+                    if (string.IsNullOrEmpty(signatures["sig1"])) signatures["sig1"] = fUrl;
+                }
+                else if (fbase.IndexOf("sig2", StringComparison.OrdinalIgnoreCase) >= 0 || fbase.Contains("簽名2") || fbase.Contains("會同人員"))
+                {
+                    if (string.IsNullOrEmpty(signatures["sig2"])) signatures["sig2"] = fUrl;
+                }
+                else if (fbase.IndexOf("sig3", StringComparison.OrdinalIgnoreCase) >= 0 || fbase.Contains("簽名3") || fbase.Contains("廠方代表"))
+                {
+                    if (string.IsNullOrEmpty(signatures["sig3"])) signatures["sig3"] = fUrl;
+                }
+
+                // 中文檔名映射為標準代號 (相容舊系統上傳的中文名稱)
+                MapLegacyPhotoKey(fbase, fUrl, existingPhotos);
             }
 
             // 7. 組合結果
@@ -453,69 +466,148 @@ namespace NTPC_FEC.Case
             return sec;
         }
 
+                private static readonly Dictionary<string, string> CheckItemNames = InitCheckItemNames();
+
+        private static Dictionary<string, string> InitCheckItemNames()
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            dict["INV_01_01"] = "無本製程";
+            dict["INV_01_02"] = "全項符合防制規範";
+            dict["INV_01_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_01_04"] = "未設置或採行第四條規定防制設施之一 (記10點)";
+            dict["INV_01_05"] = "未依直轄市、主管機關同意後之替代方法執行 (記10點)";
+            dict["INV_01_07"] = "堆置高度超過阻隔設施高度 (記4點)";
+            dict["INV_01_08"] = "採堆置於封閉式建築物內者，未符合第二條第二款規定 (記4點)";
+            dict["INV_01_09"] = "堆置區周界阻隔設施未符規定 (記4點)";
+            dict["INV_01_09a"] = "阻隔設施高度未達堆置高度 1.25 倍";
+            dict["INV_01_09b"] = "未完全圍封堆置區";
+            dict["INV_01_09c"] = "阻隔設施破損面積達百分之十以上";
+            dict["INV_01_09d"] = "堆置體積3000立方公尺以上未符規定";
+            dict["INV_01_10"] = "覆蓋防塵布或防塵網未符規定 (記4點)";
+            dict["INV_01_10a"] = "覆蓋面積未達 80%";
+            dict["INV_01_10b"] = "三級防制區覆蓋未達 90%";
+            dict["INV_01_11"] = "噴灑化學穩定劑未符規定 (記4點)";
+            dict["INV_01_11a"] = "噴灑面積未達 80%";
+            dict["INV_01_11b"] = "未依第十條記錄施作與保存憑證";
+            dict["INV_01_11c"] = "三級防制區噴灑未達 90%";
+            dict["INV_01_12"] = "設置自動灑水設備未符規定 (記4點)";
+            dict["INV_01_12a"] = "灑水水量及頻率不足保持濕潤";
+            dict["INV_01_12b"] = "需人工操作無法自動灑水";
+            dict["INV_01_12c"] = "未設水表每日記錄用水量";
+            dict["INV_01_13"] = "四周未設置阻隔防溢座或物料掉落溢流至區外 (記4點)";
+            dict["INV_01_14"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_02_01"] = "無本製程";
+            dict["INV_02_02"] = "採濕式作業免設置";
+            dict["INV_02_03"] = "全項符合防制規範";
+            dict["INV_02_04"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_02_05"] = "未設置防制設施之一 (記10點)";
+            dict["INV_02_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_02_07"] = "於封閉式建築物內操作未符規定 (記4點)";
+            dict["INV_02_08"] = "密閉式輸送系統未完全密閉或破損 (記4點)";
+            dict["INV_02_09"] = "採集氣系統未符規定 (記4點)";
+            dict["INV_02_09a"] = "集氣系統捕捉速度不足";
+            dict["INV_02_09b"] = "未設電表、流量計、壓差計等監測儀表並記錄";
+            dict["INV_02_10"] = "採自動灑水設施未符規定 (記4點)";
+            dict["INV_02_10a"] = "灑水水量及頻率不足保持濕潤";
+            dict["INV_02_10b"] = "需人工操作無法自動灑水";
+            dict["INV_02_10c"] = "未設水表每日記錄用水量";
+            dict["INV_02_11"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_03_01"] = "無本作業";
+            dict["INV_03_02"] = "全項符合防制規範";
+            dict["INV_03_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_03_04"] = "運輸車輛未使用密閉式貨箱或未緊密覆蓋 (記10點)";
+            dict["INV_03_05"] = "貨箱未具防滴落污水污泥之功能或設施 (記10點)";
+            dict["INV_03_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_03_07"] = "封蓋未緊密覆蓋 (邊緣未延伸覆蓋至貨箱上緣15公分以下) (記4點)";
+            dict["INV_03_08"] = "具有設施但運輸過程仍滴落污水、污泥或掉落物料於地面 (記4點)";
+            dict["INV_03_09"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_04_01"] = "無本作業";
+            dict["INV_04_02"] = "全項符合防制規範";
+            dict["INV_04_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_04_04"] = "車輛通行路徑及區域未依規定設置防制設施 (記10點)";
+            dict["INV_04_05"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_04_06"] = "設置或採行防制設施面積不足 (記4點)";
+            dict["INV_04_07"] = "舖設混凝土、瀝青混凝土或鋼板惟有路面色差 (記4點)";
+            dict["INV_04_08"] = "舖設粗級配粒料厚度不足或未灑水保持濕潤 (記4點)";
+            dict["INV_04_09"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_05_01"] = "無本作業";
+            dict["INV_05_02"] = "全項符合防制規範";
+            dict["INV_05_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_05_04"] = "未依規定以加壓沖洗設備清洗車體及輪胎 (記10點)";
+            dict["INV_05_05"] = "須洗掃鄰接道路並設自動洗車設備而未依規定洗掃或設置 (記10點)";
+            dict["INV_05_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_05_07"] = "運輸車輛未清洗乾淨致門口路面有帶出污泥物料 (記4點)";
+            dict["INV_05_08"] = "洗車設備無加壓沖洗功能 (記4點)";
+            dict["INV_05_09"] = "自動洗車設備規格未符附表二規定 (記4點)";
+            dict["INV_05_10"] = "未設水表電表並記錄用水或用電度數 (記4點)";
+            dict["INV_05_11"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_06_01"] = "無本製程";
+            dict["INV_06_02"] = "採濕式作業免設置";
+            dict["INV_06_03"] = "全項符合防制規範";
+            dict["INV_06_04"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_06_05"] = "未設置或採行第七條防制設施之一 (記10點)";
+            dict["INV_06_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_06_07"] = "採負壓操作之密閉式作業未符規定 (記4點)";
+            dict["INV_06_07a"] = "未維持負壓操作狀態";
+            dict["INV_06_07b"] = "未設電表、流量計、壓差計等監測儀表並記錄";
+            dict["INV_06_08"] = "採集氣系統未符規定 (記4點)";
+            dict["INV_06_08a"] = "捕捉速度不足";
+            dict["INV_06_08b"] = "未設電表等監測儀表並記錄";
+            dict["INV_06_09"] = "密閉式作業未妥善密閉或破損 (記4點)";
+            dict["INV_06_10"] = "封閉式建築未符合規定 (記4點)";
+            dict["INV_06_11"] = "灑水設施噴灑範圍、水量及頻率不足 (記4點)";
+            dict["INV_06_12"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_07_01"] = "無本區域";
+            dict["INV_07_02"] = "全項符合防制規範";
+            dict["INV_07_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_07_04"] = "未設置或採行第八條防制設施之一 (記10點)";
+            dict["INV_07_05"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_07_06"] = "防制設施實施面積未完整涵蓋裸露區域 (記4點)";
+            dict["INV_07_07"] = "植生綠化覆蓋稻草蓆碎木厚度不足 (記4點)";
+            dict["INV_07_08"] = "舖設粗級配粒料粒徑厚度不足或未灑水保持濕潤 (記4點)";
+            dict["INV_07_09"] = "噴灑化學穩定劑或灑水量及頻率不足 (記4點)";
+            dict["INV_07_10"] = "噴灑穩定劑未記錄保存購買證明 (記4點)";
+            dict["INV_07_11"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_08_01"] = "無本道路";
+            dict["INV_08_02"] = "全項符合防制規範";
+            dict["INV_08_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_08_04"] = "交通島及人行道裸露區域未設置防制設施之一 (記10點)";
+            dict["INV_08_05"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_08_06"] = "路面有破損、髒污致路面色差 (記4點)";
+            dict["INV_08_07"] = "交通島及人行道裸露區域防制面積不足 (記4點)";
+            dict["INV_08_08"] = "植生綠化覆蓋稻草蓆碎木厚度不足 (記4點)";
+            dict["INV_08_09"] = "舖設粗級配粒料粒徑厚度不足或未灑水 (記4點)";
+            dict["INV_08_10"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            dict["INV_09_01"] = "無須設置";
+            dict["INV_09_02"] = "全項符合防制規範";
+            dict["INV_09_03"] = "依核准替代方法設置或採行防制設施";
+            dict["INV_09_04"] = "須設置攝錄影監視系統而未設置 (記10點)";
+            dict["INV_09_05"] = "監視系統故障未於次日起算七日內修復完成 (記10點)";
+            dict["INV_09_06"] = "未依主管機關同意替代方法執行 (記10點)";
+            dict["INV_09_07"] = "未符合附表四規定或記錄影像資料未保存一個月 (記4點)";
+            dict["INV_09_08"] = "監視系統故障未即時通報主管機關 (記4點)";
+            dict["INV_09_09"] = "效果優於設施但未依同意方式完整執行 (記4點)";
+            return dict;
+        }
+
         private string GetCheckItemTitle(string colName)
         {
-            // 常見檢查欄位代號之中文名稱映射
-            Dictionary<string, string> dict = new Dictionary<string, string>();
-            dict["INV_01_01"] = "全阻隔設施符合規定";
-            dict["INV_01_02"] = "採非阻隔設施(防塵網覆蓋/灑水)符合規定";
-            dict["INV_01_03"] = "經主管機關同意之其他防制設施";
-            dict["INV_01_04"] = "未採行防制設施";
-            dict["INV_01_05"] = "阻隔設施面積不足/未符合規定";
-            dict["INV_01_07"] = "堆置高度超過阻隔設施高度";
-            dict["INV_01_08"] = "防塵布或防塵網未完全覆蓋(未達80%)";
-            dict["INV_01_09"] = "未設置自動灑水設備或灑水頻率不足";
-            dict["INV_01_10"] = "灑水水量不足以維持堆置表面濕潤";
-
-            dict["INV_02_01"] = "全密閉式輸送作業";
-            dict["INV_02_02"] = "局部密閉並設集氣系統";
-            dict["INV_02_03"] = "採灑水或化學穩定劑防制符合規定";
-            dict["INV_02_05"] = "輸送設施未採行任何防制措施";
-            dict["INV_02_06"] = "集氣設施或排氣處理設備故障無效";
-            dict["INV_02_07"] = "輸送管線破損逸散";
-            dict["INV_02_08"] = "落料點未設置集氣或灑水設施";
-
-            dict["INV_03_01"] = "進出車輛均採用密閉式貨箱";
-            dict["INV_03_02"] = "採防塵布緊密覆蓋符合規定";
-            dict["INV_03_04"] = "車輛載運逸散性物質未設覆蓋";
-            dict["INV_03_05"] = "車斗未清洗即行駛出廠";
-            dict["INV_03_07"] = "覆蓋防塵布邊緣未牢固捆紮";
-
-            dict["INV_04_01"] = "路面全鋪設鋼板或混凝土/瀝青";
-            dict["INV_04_02"] = "洗掃保持潔淨無路面塵土飛揚";
-            dict["INV_04_04"] = "行車路徑未鋪設路面導致大量揚塵";
-            dict["INV_04_06"] = "路面破損或積泥未及時清除";
-
-            dict["INV_05_01"] = "設置自動加壓沖洗設備且運作正常";
-            dict["INV_05_02"] = "設置符合規格洗車台且有效清洗";
-            dict["INV_05_04"] = "未設置洗車台或沖洗設備";
-            dict["INV_05_05"] = "洗車設備故障未使用";
-            dict["INV_05_07"] = "洗車台沉砂池積泥未清";
-            dict["INV_05_08"] = "沖洗水壓不足或噴頭堵塞";
-
-            dict["INV_06_01"] = "製程於密閉建築物內操作";
-            dict["INV_06_02"] = "裝卸作業設置防溢散設施符合規範";
-            dict["INV_06_05"] = "製程或裝卸作業無任何防制措施致逸散";
-            dict["INV_06_07"] = "密閉室出入口未保持關閉";
-
-            dict["INV_07_01"] = "裸露地全採植生綠化或硬質鋪面覆蓋";
-            dict["INV_07_04"] = "裸露空地未採任何覆蓋或防塵措施";
-            dict["INV_07_06"] = "綠化或覆蓋不完全有明顯塵土";
-
-            dict["INV_08_01"] = "管理道路全鋪設鋼筋混凝土或瀝青並洗掃";
-            dict["INV_08_04"] = "管理道路未鋪設致車輛通行揚塵";
-            dict["INV_08_06"] = "道路路面有明顯泥沙堆積";
-
-            dict["INV_09_01"] = "全廠監視系統運作正常且連線存檔";
-            dict["INV_09_04"] = "未設置攝錄影監視系統";
-            dict["INV_09_05"] = "監視系統故障停擺無錄影紀錄";
-            dict["INV_09_07"] = "鏡頭角度未涵蓋關鍵出入口或洗車台";
-
-            if (dict.ContainsKey(colName))
+            if (string.IsNullOrEmpty(colName)) return "";
+            if (CheckItemNames.ContainsKey(colName))
             {
-                return dict[colName];
+                return CheckItemNames[colName];
             }
-            return "檢查項目代號: " + colName;
+            // 後備大項辨識，避免顯示孤立英文代號
+            if (colName.StartsWith("INV_01_")) return "一、堆置逸散防制缺失項目";
+            if (colName.StartsWith("INV_02_")) return "二、輸送逸散防制缺失項目";
+            if (colName.StartsWith("INV_03_")) return "三、運輸車輛防制缺失項目";
+            if (colName.StartsWith("INV_04_")) return "四、車輛通行路徑防制缺失項目";
+            if (colName.StartsWith("INV_05_")) return "五、洗車設施防制缺失項目";
+            if (colName.StartsWith("INV_06_")) return "六、製程防制缺失項目";
+            if (colName.StartsWith("INV_07_")) return "七、裸露區域防制缺失項目";
+            if (colName.StartsWith("INV_08_")) return "八、管轄道路防制缺失項目";
+            if (colName.StartsWith("INV_09_")) return "九、監視系統防制缺失項目";
+            return colName;
         }
         #endregion
 
@@ -614,8 +706,13 @@ namespace NTPC_FEC.Case
                 return;
             }
 
-            // 1. 確保圖檔儲存目錄存在
+            // 1. 確保圖檔儲存目錄存在 (優先使用現存資料夾，若無則建立標準 ~/Upload/PIC/{facId}/{invNo})
             string targetDir = Server.MapPath("~/Upload/PIC/" + facId + "/" + invNo.ToString());
+            string altDir = Server.MapPath("~/Upload/PIC/" + invNo.ToString());
+            if (!Directory.Exists(targetDir) && Directory.Exists(altDir))
+            {
+                targetDir = altDir;
+            }
             if (!Directory.Exists(targetDir))
             {
                 Directory.CreateDirectory(targetDir);
@@ -665,6 +762,150 @@ namespace NTPC_FEC.Case
             {
                 // 記錄錯誤但不阻斷全部存檔
                 System.Diagnostics.Trace.WriteLine("儲存簽名圖片失敗: " + ex.Message);
+            }
+        }
+
+        private void MapLegacyPhotoKey(string fbase, string fUrl, Dictionary<string, string> photos)
+        {
+            // 1. 堆置逸散 (堆罝 / 堆置)
+            if (fbase.Contains("堆罝") || fbase.Contains("堆置"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_1a", fUrl);
+                else if (fbase.Contains("水表") || fbase.Contains("自動灑水")) AssignIfEmpty(photos, "File_1b", fUrl);
+                else if (fbase.Contains("上月")) AssignIfEmpty(photos, "File_1c", fUrl);
+                else if (fbase.Contains("本月")) AssignIfEmpty(photos, "File_1d", fUrl);
+                else AssignIfEmpty(photos, "File_1", fUrl);
+            }
+            // 2. 輸送逸散
+            else if (fbase.Contains("輸送"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_2a", fUrl);
+                else AssignIfEmpty(photos, "File_2", fUrl);
+            }
+            // 3. 運輸車輛
+            else if (fbase.Contains("運輸車輛"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_3a", fUrl);
+                else AssignIfEmpty(photos, "File_3", fUrl);
+            }
+            // 4. 車輛通行路徑
+            else if (fbase.Contains("通行路徑") || fbase.Contains("車輛通行"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_4a", fUrl);
+                else AssignIfEmpty(photos, "File_4", fUrl);
+            }
+            // 5. 車輛清洗
+            else if (fbase.Contains("車輛清洗") || fbase.Contains("洗車"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_5a", fUrl);
+                else if (fbase.Contains("水槽") || fbase.Contains("水深")) AssignIfEmpty(photos, "File_5b", fUrl);
+                else if (fbase.Contains("有效水深") || fbase.Contains("換水")) AssignIfEmpty(photos, "File_5c", fUrl);
+                else if (fbase.Contains("噴水") || fbase.Contains("沖洗長度")) AssignIfEmpty(photos, "File_5d", fUrl);
+                else if (fbase.Contains("告示牌") || fbase.Contains("閘門")) AssignIfEmpty(photos, "File_5e", fUrl);
+                else if (fbase.Contains("馬達")) AssignIfEmpty(photos, "File_5f", fUrl);
+                else if (fbase.Contains("廢水") || fbase.Contains("加壓")) AssignIfEmpty(photos, "File_5g", fUrl);
+                else if (fbase.Contains("上月")) AssignIfEmpty(photos, "File_5h", fUrl);
+                else if (fbase.Contains("本月")) AssignIfEmpty(photos, "File_5i", fUrl);
+                else AssignIfEmpty(photos, "File_5", fUrl);
+            }
+            // 6. 製程、操作或裝卸作業
+            else if (fbase.Contains("製程") || fbase.Contains("操作") || fbase.Contains("裝卸"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_6a", fUrl);
+                else if (fbase.Contains("儀表") || fbase.Contains("監測")) AssignIfEmpty(photos, "File_6b", fUrl);
+                else if (fbase.Contains("上月")) AssignIfEmpty(photos, "File_6c", fUrl);
+                else if (fbase.Contains("本月")) AssignIfEmpty(photos, "File_6d", fUrl);
+                else AssignIfEmpty(photos, "File_6", fUrl);
+            }
+            // 7. 裸露區域
+            else if (fbase.Contains("裸露"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_7a", fUrl);
+                else AssignIfEmpty(photos, "File_7", fUrl);
+            }
+            // 8. 管理之道路
+            else if (fbase.Contains("管理之道路") || fbase.Contains("管理道路"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_8a", fUrl);
+                else AssignIfEmpty(photos, "File_8", fUrl);
+            }
+            // 9. 監視系統
+            else if (fbase.Contains("監視系統") || fbase.Contains("攝錄影") || fbase.Contains("監視"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_9a", fUrl);
+                else AssignIfEmpty(photos, "File_9", fUrl);
+            }
+            // 10. 許可不符
+            else if (fbase.Contains("許可不符") || fbase.Contains("10a"))
+            {
+                AssignIfEmpty(photos, "File_10a", fUrl);
+            }
+            else if (fbase.Contains("10b"))
+            {
+                AssignIfEmpty(photos, "File_10b", fUrl);
+            }
+            // 11. 道路抽查
+            else if (fbase.Contains("道路抽查") || fbase.Contains("認養道路") || fbase.Contains("11a"))
+            {
+                AssignIfEmpty(photos, "File_11a", fUrl);
+            }
+            else if (fbase.Contains("11b"))
+            {
+                AssignIfEmpty(photos, "File_11b", fUrl);
+            }
+            // 全景照片與工廠正門口
+            else if (fbase.Contains("全景"))
+            {
+                AssignIfEmpty(photos, "File_AllView", fUrl);
+                AssignIfEmpty(photos, "全景照片", fUrl);
+            }
+            else if (fbase.Contains("正門口") || fbase.Contains("門口"))
+            {
+                AssignIfEmpty(photos, "File_Entrance", fUrl);
+                AssignIfEmpty(photos, "工廠正門口", fUrl);
+            }
+            else if (fbase.Contains("輔導簽認"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_Counseling2", fUrl);
+                else AssignIfEmpty(photos, "File_Counseling1", fUrl);
+            }
+            else if (fbase.Contains("集氣效率") || fbase.Contains("集氣評估"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_CollGasEfficiency2", fUrl);
+                else if (fbase.Contains("3") || fbase.Contains("_3")) AssignIfEmpty(photos, "File_CollGasEfficiency3", fUrl);
+                else if (fbase.Contains("4") || fbase.Contains("_4")) AssignIfEmpty(photos, "File_CollGasEfficiency4", fUrl);
+                else AssignIfEmpty(photos, "File_CollGasEfficiency1", fUrl);
+            }
+            else if (fbase.Contains("空品感測") || fbase.Contains("空品數據"))
+            {
+                if (fbase.Contains("2") || fbase.Contains("_2")) AssignIfEmpty(photos, "File_AirQualityValue2", fUrl);
+                else AssignIfEmpty(photos, "File_AirQualityValue1", fUrl);
+            }
+
+            // 雙向映射：若為英文 File_* 檔名，亦補足中文 Key
+            if (fbase.Equals("File_1", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "堆罝逸散性粒狀污染物質", fUrl);
+            else if (fbase.Equals("File_1a", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "堆罝逸散性粒狀污染物質_2", fUrl);
+            else if (fbase.Equals("File_2", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "輸送逸散性粒狀污染物質", fUrl);
+            else if (fbase.Equals("File_3", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "運輸車輛", fUrl);
+            else if (fbase.Equals("File_4", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "車輛通行路徑", fUrl);
+            else if (fbase.Equals("File_5", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "車輛清洗", fUrl);
+            else if (fbase.Equals("File_6", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "易致粒狀污染物逸散之製程、操作或裝卸作業_1", fUrl);
+            else if (fbase.Equals("File_7", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "公私場所管理之裸露區域", fUrl);
+            else if (fbase.Equals("File_8", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "公私場所管理之道路_1", fUrl);
+            else if (fbase.Equals("File_9", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "攝錄影監視系統_1", fUrl);
+            else if (fbase.Equals("File_10a", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "其他潛勢調查照片1", fUrl);
+            else if (fbase.Equals("File_10b", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "其他潛勢調查照片2", fUrl);
+            else if (fbase.Equals("File_11a", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "執行道路髒污抽查照片1", fUrl);
+            else if (fbase.Equals("File_11b", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "執行道路髒污抽查照片2", fUrl);
+            else if (fbase.Equals("File_AllView", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "全景照片", fUrl);
+            else if (fbase.Equals("File_Entrance", StringComparison.OrdinalIgnoreCase)) AssignIfEmpty(photos, "工廠正門口", fUrl);
+        }
+
+        private void AssignIfEmpty(Dictionary<string, string> dict, string key, string value)
+        {
+            if (!dict.ContainsKey(key) || string.IsNullOrEmpty(dict[key]))
+            {
+                dict[key] = value;
             }
         }
         #endregion

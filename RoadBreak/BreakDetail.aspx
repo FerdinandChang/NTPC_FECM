@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 道路污染通報案件檢視</title>
+    <title>新北市固定逸散源管理平台 - 道路污染通報案件檢視</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -701,7 +701,7 @@
 
             <!-- 列印專用抬頭 (僅在列印時顯示) -->
             <div class="print-header">
-                <h2>新北市固定溢散源管理平台 - 道路髒污破損通報案件紀錄單</h2>
+                <h2>新北市固定逸散源管理平台 - 道路髒污破損通報案件紀錄單</h2>
                 <div class="d-flex justify-content-between mt-2">
                     <span>通報案號：<strong>{{ caseData.Show_ID }}</strong></span>
                     <span>列印時間：<strong>{{ currentPrintTime }}</strong></span>

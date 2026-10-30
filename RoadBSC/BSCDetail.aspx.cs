@@ -417,7 +417,7 @@ namespace NTPC_FEC.RoadBSC
             if (c == "1") return "植生良好無覆土";
             if (c == "2") return "局部覆土裸露 (< 5m²)";
             if (c == "3") return "大面積覆土裸露 (>= 5m²)";
-            if (c == "4") return "土石堆置或溢散至車道";
+            if (c == "4") return "土石堆置或逸散至車道";
             if (c == "5") return "其他";
             return c;
         }

@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Web;
@@ -54,6 +56,12 @@ namespace NTPC_FEC.RoadClean
                     break;
                 case "save":
                     SaveCheckRecord();
+                    break;
+                case "upload_photo":
+                    UploadPhoto();
+                    break;
+                case "delete_photo":
+                    DeletePhoto();
                     break;
                 default:
                     Response.Write(json.Serialize(new { Success = false, Message = "未知的操作指令" }));
@@ -283,21 +291,36 @@ namespace NTPC_FEC.RoadClean
                 }
             }
 
-            // 檢核點現況
+            // 檢核點現況與照片讀取
+            string picDirRel = "~/Upload/RoadCleanPIC/" + chkId;
+            string picDir = Server.MapPath(picDirRel);
+            bool dirExists = Directory.Exists(picDir);
+
             string sqlPtMain = "SELECT * FROM RoadClean_ChkRecord_PointMain WHERE ChkID = @chkId ORDER BY pIndex ASC";
             DataTable dtPtMain = DbHelper.ExecuteDataTable(sqlPtMain, new SqlParameter("@chkId", chkId));
             var ptList = new List<object>();
             foreach (DataRow r in dtPtMain.Rows)
             {
+                string pId = r["Point_ID"] != DBNull.Value ? r["Point_ID"].ToString().Trim() : "";
+                string s0 = "", s1 = "", f0 = "", f1 = "";
+                if (dirExists && !string.IsNullOrEmpty(pId))
+                {
+                    s0 = GetPhotoUrlIfExist(picDir, picDirRel, pId + "_現場照片");
+                    s1 = GetPhotoUrlIfExist(picDir, picDirRel, pId + "_現場照片1");
+                    f0 = GetPhotoUrlIfExist(picDir, picDirRel, pId + "_淹水潛勢照片");
+                    f1 = GetPhotoUrlIfExist(picDir, picDirRel, pId + "_淹水潛勢照片1");
+                }
+
                 ptList.Add(new
                 {
-                    PointId = r["Point_ID"] != DBNull.Value ? r["Point_ID"].ToString().Trim() : "",
+                    PointId = pId,
                     PIndex = r["pIndex"] != DBNull.Value ? Convert.ToInt32(r["pIndex"]) : 0,
                     STree = r["S_Tree"] != DBNull.Value ? r["S_Tree"].ToString().Trim() : "Y",
                     SIsland = r["S_island"] != DBNull.Value ? r["S_island"].ToString().Trim() : "Y",
                     CivilSide = r["Civil_Side"] != DBNull.Value ? r["Civil_Side"].ToString().Trim() : "N",
                     PLV = r["P_LV"] != DBNull.Value ? r["P_LV"].ToString().Trim() : "",
-                    FloodLV = r["Flood_LV"] != DBNull.Value ? r["Flood_LV"].ToString().Trim() : ""
+                    FloodLV = r["Flood_LV"] != DBNull.Value ? r["Flood_LV"].ToString().Trim() : "",
+                    Photos = new { site0 = s0, site1 = s1, flood0 = f0, flood1 = f1 }
                 });
             }
 
@@ -426,6 +449,7 @@ namespace NTPC_FEC.RoadClean
                     // 計算評級
                     int rccTotal = 0;
                     int rccCount = 0;
+                    int fldTotal = 0;
                     if (pt.Scores != null)
                     {
                         foreach (var sc in pt.Scores)
@@ -444,6 +468,10 @@ namespace NTPC_FEC.RoadClean
                                     {
                                         rccTotal += sc.Score.Value;
                                         rccCount++;
+                                    }
+                                    else if (sc.ChkCode.StartsWith("FLD", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        fldTotal += sc.Score.Value;
                                     }
                                 }
                             }
@@ -469,8 +497,16 @@ namespace NTPC_FEC.RoadClean
                         else if (avg >= 60f) pLv = "B級";
                     }
 
-                    // 淹水評級
-                    string floodLv = "A級";
+                    // 淹水評級 (FLD 滿分 100 分，85 分以上 A 級，60 分以上 B 級，其餘 C 級)
+                    string floodLv = "C級";
+                    if (fldTotal >= 85)
+                    {
+                        floodLv = "A級";
+                    }
+                    else if (fldTotal >= 60)
+                    {
+                        floodLv = "B級";
+                    }
 
                     string sqlInsertPt = @"INSERT INTO RoadClean_ChkRecord_PointMain 
                                            (ChkID, Point_ID, pIndex, S_Tree, S_island, Civil_Side, P_LV, Flood_LV) 
@@ -503,10 +539,26 @@ namespace NTPC_FEC.RoadClean
                 }
                 byte[] sigBytes = Convert.FromBase64String(sigData);
                 File.WriteAllBytes(Path.Combine(targetDir, "Sig_1.png"), sigBytes);
+
+                // 搬移暫存照片至正式查核目錄
+                if (mode == "new" && !string.IsNullOrEmpty(input.TempDir))
+                {
+                    string tempFolder = Server.MapPath("~/Upload/tempUpload/" + input.TempDir);
+                    if (Directory.Exists(tempFolder))
+                    {
+                        FileInfo[] tempFiles = new DirectoryInfo(tempFolder).GetFiles();
+                        for (int i = 0; i < tempFiles.Length; i++)
+                        {
+                            string destFile = Path.Combine(targetDir, tempFiles[i].Name);
+                            tempFiles[i].CopyTo(destFile, true);
+                        }
+                        try { Directory.Delete(tempFolder, true); } catch { }
+                    }
+                }
             }
             catch
             {
-                // 簽名寫入容錯
+                // 檔案寫入容錯
             }
 
             Response.Write(json.Serialize(new
@@ -515,6 +567,177 @@ namespace NTPC_FEC.RoadClean
                 ChkId = thisChkId,
                 Message = "巡檢紀錄儲存成功！"
             }));
+        }
+
+        // 照片上傳處理 (支援現場照片與淹水潛勢照片共4卡槽)
+        private void UploadPhoto()
+        {
+            Response.ContentType = "application/json";
+            if (Request.Files.Count == 0)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "未接收到上傳檔案" }));
+                return;
+            }
+
+            HttpPostedFile file = Request.Files[0];
+            if (file == null || file.ContentLength == 0)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "上傳檔案為空" }));
+                return;
+            }
+
+            string mode = Request["mode"] ?? "new";
+            string tempDir = Request["tempDir"] ?? "";
+            string chkId = Request["chkId"] ?? "";
+            string pointId = Request["pointId"] ?? "";
+            string photoType = Request["photoType"] ?? "";
+
+            if (string.IsNullOrEmpty(pointId) || string.IsNullOrEmpty(photoType))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "缺少檢核點或照片類型參數" }));
+                return;
+            }
+
+            string fileSuffix = "";
+            switch (photoType.ToLower())
+            {
+                case "site0": fileSuffix = "_現場照片"; break;
+                case "site1": fileSuffix = "_現場照片1"; break;
+                case "flood0": fileSuffix = "_淹水潛勢照片"; break;
+                case "flood1": fileSuffix = "_淹水潛勢照片1"; break;
+                default:
+                    Response.Write(json.Serialize(new { Success = false, Message = "未知的照片類型" }));
+                    return;
+            }
+
+            string targetFolderRel = "";
+            if (mode == "new")
+            {
+                if (string.IsNullOrEmpty(tempDir))
+                {
+                    tempDir = "temp_" + DateTime.Now.ToString("yyyyMMddHHmmss");
+                }
+                targetFolderRel = "~/Upload/tempUpload/" + tempDir;
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(chkId))
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "缺少查核單號" }));
+                    return;
+                }
+                targetFolderRel = "~/Upload/RoadCleanPIC/" + chkId;
+            }
+
+            string targetFolder = Server.MapPath(targetFolderRel);
+            if (!Directory.Exists(targetFolder))
+            {
+                Directory.CreateDirectory(targetFolder);
+            }
+
+            string baseFileName = pointId + fileSuffix;
+            string[] existingFiles = Directory.GetFiles(targetFolder, baseFileName + ".*");
+            for (int i = 0; i < existingFiles.Length; i++)
+            {
+                try { File.Delete(existingFiles[i]); } catch { }
+            }
+
+            string savePath = Path.Combine(targetFolder, baseFileName + ".jpg");
+            SavePhotoWithWatermark(file.InputStream, savePath);
+
+            string clientUrl = ResolveUrl(targetFolderRel + "/" + baseFileName + ".jpg") + "?t=" + DateTime.Now.Ticks;
+
+            Response.Write(json.Serialize(new
+            {
+                Success = true,
+                PointId = pointId,
+                PhotoType = photoType,
+                Url = clientUrl,
+                TempDir = tempDir
+            }));
+        }
+
+        // 照片刪除處理
+        private void DeletePhoto()
+        {
+            Response.ContentType = "application/json";
+            string mode = Request["mode"] ?? "new";
+            string tempDir = Request["tempDir"] ?? "";
+            string chkId = Request["chkId"] ?? "";
+            string pointId = Request["pointId"] ?? "";
+            string photoType = Request["photoType"] ?? "";
+
+            string fileSuffix = "";
+            switch (photoType.ToLower())
+            {
+                case "site0": fileSuffix = "_現場照片"; break;
+                case "site1": fileSuffix = "_現場照片1"; break;
+                case "flood0": fileSuffix = "_淹水潛勢照片"; break;
+                case "flood1": fileSuffix = "_淹水潛勢照片1"; break;
+                default:
+                    Response.Write(json.Serialize(new { Success = false, Message = "未知的照片類型" }));
+                    return;
+            }
+
+            string targetFolderRel = (mode == "new")
+                ? "~/Upload/tempUpload/" + tempDir
+                : "~/Upload/RoadCleanPIC/" + chkId;
+
+            string targetFolder = Server.MapPath(targetFolderRel);
+            if (Directory.Exists(targetFolder))
+            {
+                string baseFileName = pointId + fileSuffix;
+                string[] files = Directory.GetFiles(targetFolder, baseFileName + ".*");
+                for (int i = 0; i < files.Length; i++)
+                {
+                    try { File.Delete(files[i]); } catch { }
+                }
+            }
+
+            Response.Write(json.Serialize(new { Success = true, PointId = pointId, PhotoType = photoType }));
+        }
+
+        // 照片浮水印與轉存 (壓印稽查日期時間)
+        private void SavePhotoWithWatermark(Stream inStream, string savePath)
+        {
+            try
+            {
+                using (Image img = Image.FromStream(inStream))
+                {
+                    using (Graphics g = Graphics.FromImage(img))
+                    {
+                        int fontSize = (int)((double)img.Height * 0.035);
+                        if (fontSize < 16) fontSize = 16;
+                        if (fontSize > 48) fontSize = 48;
+                        using (Font font = new Font("微軟正黑體", fontSize, FontStyle.Bold, GraphicsUnit.Pixel))
+                        {
+                            string text = "上傳日期: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                            g.DrawString(text, font, Brushes.Black, new PointF(12f, 12f));
+                            g.DrawString(text, font, Brushes.Yellow, new PointF(10f, 10f));
+                        }
+                    }
+                    img.Save(savePath, ImageFormat.Jpeg);
+                }
+            }
+            catch
+            {
+                if (inStream.CanSeek) inStream.Seek(0, SeekOrigin.Begin);
+                using (FileStream fs = new FileStream(savePath, FileMode.Create, FileAccess.Write))
+                {
+                    inStream.CopyTo(fs);
+                }
+            }
+        }
+
+        // 輔助檢查檔案是否存在並回傳 URL
+        private string GetPhotoUrlIfExist(string dir, string dirRel, string prefix)
+        {
+            string[] files = Directory.GetFiles(dir, prefix + ".*");
+            if (files.Length > 0 && File.Exists(files[0]))
+            {
+                return ResolveUrl(dirRel + "/" + Path.GetFileName(files[0])) + "?t=" + DateTime.Now.Ticks;
+            }
+            return "";
         }
 
         // TWD97 二度分帶座標轉 WGS84 經緯度演算法 (相容 C# 5.0)
@@ -576,6 +799,7 @@ namespace NTPC_FEC.RoadClean
             public string Mode { get; set; }
             public string ChkId { get; set; }
             public string Rdid { get; set; }
+            public string TempDir { get; set; }
             public string Signature { get; set; }
             public List<PointModel> Points { get; set; }
         }

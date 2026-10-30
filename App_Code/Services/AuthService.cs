@@ -566,7 +566,7 @@ namespace NTPC_FEC.Services
 
             result.Success = true;
             result.RequirePwdChange = mustChangePwd;
-            result.Message = string.Format("{0} 您好，歡迎登入新北市固定溢散源管理平台！", userName);
+            result.Message = string.Format("{0} 您好，歡迎登入新北市固定逸散源管理平台！", userName);
             result.RedirectUrl = "MainPage.aspx";
             result.User = user;
 

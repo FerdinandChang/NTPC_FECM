@@ -65,6 +65,11 @@ namespace NTPC_FEC.FAC
             public string Tel { get; set; }
             public string ScId { get; set; }
             public string ContentName { get; set; }
+            public string IndustrialCode { get; set; }
+            public double Lat { get; set; }
+            public double Lng { get; set; }
+            public double Twd97X { get; set; }
+            public double Twd97Y { get; set; }
 
             public SaveEditModel()
             {
@@ -75,6 +80,11 @@ namespace NTPC_FEC.FAC
                 Tel = "";
                 ScId = "";
                 ContentName = "";
+                IndustrialCode = "";
+                Lat = 0;
+                Lng = 0;
+                Twd97X = 0;
+                Twd97Y = 0;
             }
         }
 
@@ -199,6 +209,9 @@ namespace NTPC_FEC.FAC
                     break;
                 case "dispatchmission":
                     DispatchMission();
+                    break;
+                case "getindustrials":
+                    GetIndustrials();
                     break;
                 default:
                     Response.Write(json.Serialize(new { Success = false, Message = "未知的操作指令：" + action }));
@@ -461,6 +474,7 @@ namespace NTPC_FEC.FAC
                     item["FAC_Group"] = r.Table.Columns.Contains("FAC_Group") ? r["FAC_Group"].ToString() : "";
                     item["FAC_Type"] = r.Table.Columns.Contains("FAC_Type") ? r["FAC_Type"].ToString() : "";
                     item["Industrial"] = r.Table.Columns.Contains("Industrial") ? r["Industrial"].ToString() : "-";
+                    item["INDUSTRIAL_Code1"] = r.Table.Columns.Contains("INDUSTRIAL_Code1") ? r["INDUSTRIAL_Code1"].ToString().Trim() : "";
                     item["Mission"] = r.Table.Columns.Contains("Mission") ? r["Mission"].ToString() : "";
                     item["MissionDeadline"] = r.Table.Columns.Contains("MissionDeadline_Str") ? r["MissionDeadline_Str"].ToString() : "";
                     item["ProcessCount"] = r.Table.Columns.Contains("ProcessCount") ? r["ProcessCount"] : 0;
@@ -483,6 +497,8 @@ namespace NTPC_FEC.FAC
 
                     item["X"] = x;
                     item["Y"] = y;
+                    item["TWD97_X"] = x;
+                    item["TWD97_Y"] = y;
                     item["Lat"] = lat;
                     item["Lng"] = lng;
 
@@ -923,8 +939,8 @@ namespace NTPC_FEC.FAC
 
                     // 整理變更內容明細
                     var changes = new List<Dictionary<string, string>>();
-                    string[] colNames = new string[] { "FAC_NAME", "C_NO", "ADDR", "TEL", "S_C_ID", "Content_Name" };
-                    string[] colLabels = new string[] { "場所名稱", "管制編號", "地址", "電話", "統一編號", "聯絡人" };
+                    string[] colNames = new string[] { "FAC_NAME", "C_NO", "ADDR", "TEL", "S_C_ID", "Content_Name", "INDUSTRIAL_Code1" };
+                    string[] colLabels = new string[] { "場所名稱", "管制編號", "地址", "電話", "統一編號", "聯絡人", "行業別代碼" };
 
                     for (int c = 0; c < colNames.Length; c++)
                     {
@@ -982,7 +998,15 @@ namespace NTPC_FEC.FAC
                 return;
             }
 
-            // 更新 FAC_Main
+            // 計算最終 TWD97 座標
+            double finalTwdX = model.Twd97X;
+            double finalTwdY = model.Twd97Y;
+            if ((finalTwdX <= 0 || finalTwdY <= 0) && model.Lat > 0 && model.Lng > 0)
+            {
+                Wgs84ToTwd97(model.Lat, model.Lng, out finalTwdX, out finalTwdY);
+            }
+
+            // 更新 FAC_Main (含行業別 INDUSTRIAL_Code1 與空間座標 TWD97_X / TWD97_Y)
             string sqlUpdate = @"
                 UPDATE FAC_Main
                 SET 
@@ -991,7 +1015,12 @@ namespace NTPC_FEC.FAC
                     ADDR = @ADDR,
                     TEL = @TEL,
                     S_C_ID = @S_C_ID,
-                    Content_Name = @Content_Name
+                    Content_Name = @Content_Name,
+                    INDUSTRIAL_Code1 = CASE WHEN @INDUSTRIAL_Code1 <> '' THEN @INDUSTRIAL_Code1 ELSE INDUSTRIAL_Code1 END,
+                    TWD97_X = CASE WHEN @TWD97_X > 0 THEN @TWD97_X ELSE TWD97_X END,
+                    TWD97_Y = CASE WHEN @TWD97_Y > 0 THEN @TWD97_Y ELSE TWD97_Y END,
+                    X = CASE WHEN @TWD97_X > 0 THEN @TWD97_X ELSE X END,
+                    Y = CASE WHEN @TWD97_Y > 0 THEN @TWD97_Y ELSE Y END
                 WHERE FAC_ID = @FAC_ID";
 
             DbHelper.ExecuteNonQuery(sqlUpdate,
@@ -1001,22 +1030,46 @@ namespace NTPC_FEC.FAC
                 new SqlParameter("@TEL", model.Tel ?? ""),
                 new SqlParameter("@S_C_ID", model.ScId ?? ""),
                 new SqlParameter("@Content_Name", model.ContentName ?? ""),
+                new SqlParameter("@INDUSTRIAL_Code1", model.IndustrialCode ?? ""),
+                new SqlParameter("@TWD97_X", finalTwdX),
+                new SqlParameter("@TWD97_Y", finalTwdY),
                 new SqlParameter("@FAC_ID", model.FacId));
 
-            // 寫入 FAC_EditHis
-            string sqlInsertHis = @"
-                INSERT INTO FAC_EditHis(FAC_ID, FAC_NAME, C_NO, ADDR, TEL, S_C_ID, Content_Name, Edit_User, Edit_Date)
-                VALUES(@FAC_ID, @FAC_NAME, @C_NO, @ADDR, @TEL, @S_C_ID, @Content_Name, @Edit_User, GETDATE())";
+            // 安全寫入 FAC_EditHis 異動歷程 (具備欄位容錯防禦)
+            try
+            {
+                string sqlInsertHis = @"
+                    INSERT INTO FAC_EditHis(FAC_ID, FAC_NAME, C_NO, ADDR, TEL, S_C_ID, Content_Name, INDUSTRIAL_Code1, Edit_User, Edit_Date)
+                    VALUES(@FAC_ID, @FAC_NAME, @C_NO, @ADDR, @TEL, @S_C_ID, @Content_Name, @INDUSTRIAL_Code1, @Edit_User, GETDATE())";
 
-            DbHelper.ExecuteNonQuery(sqlInsertHis,
-                new SqlParameter("@FAC_ID", model.FacId),
-                new SqlParameter("@FAC_NAME", model.FacName ?? ""),
-                new SqlParameter("@C_NO", model.CNo ?? ""),
-                new SqlParameter("@ADDR", model.Addr ?? ""),
-                new SqlParameter("@TEL", model.Tel ?? ""),
-                new SqlParameter("@S_C_ID", model.ScId ?? ""),
-                new SqlParameter("@Content_Name", model.ContentName ?? ""),
-                new SqlParameter("@Edit_User", GetCurrentUser()));
+                DbHelper.ExecuteNonQuery(sqlInsertHis,
+                    new SqlParameter("@FAC_ID", model.FacId),
+                    new SqlParameter("@FAC_NAME", model.FacName ?? ""),
+                    new SqlParameter("@C_NO", model.CNo ?? ""),
+                    new SqlParameter("@ADDR", model.Addr ?? ""),
+                    new SqlParameter("@TEL", model.Tel ?? ""),
+                    new SqlParameter("@S_C_ID", model.ScId ?? ""),
+                    new SqlParameter("@Content_Name", model.ContentName ?? ""),
+                    new SqlParameter("@INDUSTRIAL_Code1", model.IndustrialCode ?? ""),
+                    new SqlParameter("@Edit_User", GetCurrentUser()));
+            }
+            catch
+            {
+                // 回退相容基本欄位寫入
+                string sqlInsertHisFallback = @"
+                    INSERT INTO FAC_EditHis(FAC_ID, FAC_NAME, C_NO, ADDR, TEL, S_C_ID, Content_Name, Edit_User, Edit_Date)
+                    VALUES(@FAC_ID, @FAC_NAME, @C_NO, @ADDR, @TEL, @S_C_ID, @Content_Name, @Edit_User, GETDATE())";
+
+                DbHelper.ExecuteNonQuery(sqlInsertHisFallback,
+                    new SqlParameter("@FAC_ID", model.FacId),
+                    new SqlParameter("@FAC_NAME", model.FacName ?? ""),
+                    new SqlParameter("@C_NO", model.CNo ?? ""),
+                    new SqlParameter("@ADDR", model.Addr ?? ""),
+                    new SqlParameter("@TEL", model.Tel ?? ""),
+                    new SqlParameter("@S_C_ID", model.ScId ?? ""),
+                    new SqlParameter("@Content_Name", model.ContentName ?? ""),
+                    new SqlParameter("@Edit_User", GetCurrentUser()));
+            }
 
             Response.Write(json.Serialize(new
             {
@@ -1297,6 +1350,33 @@ namespace NTPC_FEC.FAC
             }
             catch
             {
+            }
+        }
+        #endregion
+
+        #region 12. 取得全行業別清單字典
+        private void GetIndustrials()
+        {
+            var list = new List<Dictionary<string, string>>();
+            try
+            {
+                string sql = "SELECT INDUSTRIAL_Code, INDUSTRIAL_Name FROM INDUSTRIAL_Data ORDER BY INDUSTRIAL_Code";
+                DataTable dt = DbHelper.ExecuteDataTable(sql);
+                if (dt != null)
+                {
+                    foreach (DataRow r in dt.Rows)
+                    {
+                        var item = new Dictionary<string, string>();
+                        item["Code"] = r["INDUSTRIAL_Code"].ToString().Trim();
+                        item["Name"] = r["INDUSTRIAL_Name"].ToString().Trim();
+                        list.Add(item);
+                    }
+                }
+                Response.Write(json.Serialize(new { Success = true, List = list }));
+            }
+            catch (Exception ex)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = ex.Message, List = list }));
             }
         }
         #endregion

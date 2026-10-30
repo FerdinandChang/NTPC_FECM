@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 固定污染源公私場所管理清單</title>
+    <title>新北市固定逸散源管理平台 - 固定污染源公私場所管理清單</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -1238,6 +1238,18 @@
                         <label class="small font-weight-bold text-muted mb-1">場所地址</label>
                         <input type="text" class="form-control form-control-sm" v-model="editForm.addr" />
                     </div>
+                    <!-- 行業別選擇下拉選單 -->
+                    <div class="form-group mb-2">
+                        <label class="small font-weight-bold text-muted mb-1">
+                            <i class="fas fa-industry text-primary mr-1"></i>主要行業別
+                        </label>
+                        <select class="form-control form-control-sm" v-model="editForm.industrialCode">
+                            <option value="">-- 未指定 / 請選擇行業別 --</option>
+                            <option v-for="ind in industrialOptions" :key="ind.Code" :value="ind.Code">
+                                ({{ ind.Code }}) {{ ind.Name }}
+                            </option>
+                        </select>
+                    </div>
                     <div class="form-row">
                         <div class="col-6 mb-2">
                             <label class="small font-weight-bold text-muted mb-1">連絡電話</label>
@@ -1246,6 +1258,43 @@
                         <div class="col-6 mb-2">
                             <label class="small font-weight-bold text-muted mb-1">聯絡人姓名</label>
                             <input type="text" class="form-control form-control-sm" v-model="editForm.contentName" />
+                        </div>
+                    </div>
+                    <!-- 空間地理座標編輯區塊 (含 WGS84 經緯度、TWD97 座標與 GPS 當前定位) -->
+                    <div class="bg-light p-2 rounded mb-2 border">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="small font-weight-bold text-dark mb-0">
+                                <i class="fas fa-map-marker-alt text-danger mr-1"></i>場所空間地理座標
+                            </label>
+                            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 11px;" v-on:click="getCurrentGpsToEditForm" :disabled="locatingGps">
+                                <i class="fas fa-crosshairs mr-1" :class="{ 'fa-spin': locatingGps }"></i>
+                                <span>{{ locatingGps ? '抓取定位中...' : '帶入當前手機 GPS' }}</span>
+                            </button>
+                        </div>
+                        <div class="form-row">
+                            <div class="col-6 mb-1">
+                                <label class="small text-muted mb-0" style="font-size: 11px;">WGS84 經度 (Lng)</label>
+                                <input type="number" step="0.000001" class="form-control form-control-sm" placeholder="例如：121.465..." v-model.number="editForm.lng" v-on:input="syncTwd97FromLngLat" />
+                            </div>
+                            <div class="col-6 mb-1">
+                                <label class="small text-muted mb-0" style="font-size: 11px;">WGS84 緯度 (Lat)</label>
+                                <input type="number" step="0.000001" class="form-control form-control-sm" placeholder="例如：25.011..." v-model.number="editForm.lat" v-on:input="syncTwd97FromLngLat" />
+                            </div>
+                        </div>
+                        <div class="form-row" v-show="showTwd97Inputs">
+                            <div class="col-6">
+                                <label class="small text-muted mb-0" style="font-size: 10px;">TWD97 X (二度分帶)</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="X 座標..." v-model.number="editForm.twd97X" />
+                            </div>
+                            <div class="col-6">
+                                <label class="small text-muted mb-0" style="font-size: 10px;">TWD97 Y (二度分帶)</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="Y 座標..." v-model.number="editForm.twd97Y" />
+                            </div>
+                        </div>
+                        <div class="text-right mt-1">
+                            <a href="javascript:;" class="small text-primary" style="font-size: 11px; text-decoration: underline;" v-on:click="showTwd97Inputs = !showTwd97Inputs">
+                                {{ showTwd97Inputs ? '收合 TWD97 座標' : '展開/手動設定 TWD97 二度分帶座標' }}
+                            </a>
                         </div>
                     </div>
                     <div class="alert alert-info py-2 px-3 small mt-2 mb-0">
@@ -1434,6 +1483,9 @@
                         processNo: '全廠',
                         fileType: '廠區配置圖'
                     },
+                    industrialOptions: [],
+                    showTwd97Inputs: false,
+                    locatingGps: false,
                     editForm: {
                         facId: '',
                         facName: '',
@@ -1441,7 +1493,12 @@
                         scId: '',
                         addr: '',
                         tel: '',
-                        contentName: ''
+                        contentName: '',
+                        industrialCode: '',
+                        lat: 0,
+                        lng: 0,
+                        twd97X: 0,
+                        twd97Y: 0
                     },
                     dispatchReason: '一般派遣',
 
@@ -1472,6 +1529,7 @@
             mounted() {
                 this.initLeafletMap();
                 this.loadCounts();
+                this.loadIndustrials();
                 this.doSearch();
             },
             methods: {
@@ -1888,18 +1946,88 @@
                     }
                 },
 
+                // 載入全行業別清單
+                async loadIndustrials() {
+                    try {
+                        const res = await axios.get('FAC_List.aspx?action=getindustrials');
+                        if (res.data && res.data.Success) {
+                            this.industrialOptions = res.data.List || [];
+                        }
+                    } catch (e) {
+                        console.error('載入行業別選項失敗:', e);
+                    }
+                },
+
+                // 經緯度換算為 TWD97 二度分帶座標
+                calcWgs84ToTwd97(lat, lon) {
+                    const a = 6378137.0;
+                    const b = 6356752.314245;
+                    const lon0 = 121.0 * Math.PI / 180.0;
+                    const k0 = 0.9999;
+                    const dx = 250000.0;
+                    const latRad = lat * Math.PI / 180.0;
+                    const lonRad = lon * Math.PI / 180.0;
+                    const e = Math.sqrt(1.0 - (b * b) / (a * a));
+                    const e2 = (e * e) / (1.0 - e * e);
+                    const T = Math.pow(Math.tan(latRad), 2);
+                    const C = e2 * Math.pow(Math.cos(latRad), 2);
+                    const A = (lonRad - lon0) * Math.cos(latRad);
+                    const M = a * ((1.0 - Math.pow(e, 2) / 4.0 - 3.0 * Math.pow(e, 4) / 64.0 - 5.0 * Math.pow(e, 6) / 256.0) * latRad
+                        - (3.0 * Math.pow(e, 2) / 8.0 + 3.0 * Math.pow(e, 4) / 32.0 + 45.0 * Math.pow(e, 6) / 1024.0) * Math.sin(2.0 * latRad)
+                        + (15.0 * Math.pow(e, 4) / 256.0 + 45.0 * Math.pow(e, 6) / 1024.0) * Math.sin(4.0 * latRad)
+                        - (35.0 * Math.pow(e, 6) / 3072.0) * Math.sin(6.0 * latRad));
+                    const N = a / Math.sqrt(1.0 - Math.pow(e, 2) * Math.pow(Math.sin(latRad), 2));
+                    const x = dx + k0 * N * (A + (1.0 - T + C) * Math.pow(A, 3) / 6.0 + (5.0 - 18.0 * T + Math.pow(T, 2) + 72.0 * C - 58.0 * e2) * Math.pow(A, 5) / 120.0);
+                    const y = k0 * (M + N * Math.tan(latRad) * (Math.pow(A, 2) / 2.0 + (5.0 - T + 9.0 * C + 4.0 * Math.pow(C, 2)) * Math.pow(A, 4) / 24.0 + (61.0 - 58.0 * T + Math.pow(T, 2) + 600.0 * C - 330.0 * e2) * Math.pow(A, 6) / 720.0));
+                    return { x: x, y: y };
+                },
+
+                syncTwd97FromLngLat() {
+                    if (!this.editForm.lat || !this.editForm.lng) return;
+                    const res = this.calcWgs84ToTwd97(Number(this.editForm.lat), Number(this.editForm.lng));
+                    this.editForm.twd97X = Number(res.x.toFixed(2));
+                    this.editForm.twd97Y = Number(res.y.toFixed(2));
+                },
+
+                getCurrentGpsToEditForm() {
+                    if (!("geolocation" in navigator)) {
+                        alert("您的裝置不支援 GPS 定位功能");
+                        return;
+                    }
+                    this.locatingGps = true;
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            this.editForm.lat = Number(pos.coords.latitude.toFixed(6));
+                            this.editForm.lng = Number(pos.coords.longitude.toFixed(6));
+                            this.syncTwd97FromLngLat();
+                            this.locatingGps = false;
+                        },
+                        (err) => {
+                            this.locatingGps = false;
+                            alert("無法取得 GPS 座標，請確認已授權瀏覽器存取定位權限。");
+                        },
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                },
+
                 // 16. 開啟資料異動編輯彈窗
                 openEditModal(item) {
                     this.activeItem = item;
                     this.editForm = {
                         facId: item.FAC_ID,
-                        facName: item.FAC_NAME,
-                        cNo: item.C_NO,
-                        scId: item.S_C_ID,
-                        addr: item.ADDR,
-                        tel: item.TEL,
-                        contentName: item.Content_Name
+                        facName: item.FAC_NAME || '',
+                        cNo: item.C_NO || '',
+                        scId: item.S_C_ID || '',
+                        addr: item.ADDR || '',
+                        tel: item.TEL || '',
+                        contentName: item.Content_Name || '',
+                        industrialCode: item.INDUSTRIAL_Code1 || '',
+                        lat: item.Lat ? Number(item.Lat.toFixed(6)) : 0,
+                        lng: item.Lng ? Number(item.Lng.toFixed(6)) : 0,
+                        twd97X: item.TWD97_X ? Number(item.TWD97_X.toFixed(2)) : 0,
+                        twd97Y: item.TWD97_Y ? Number(item.TWD97_Y.toFixed(2)) : 0
                     };
+                    this.showTwd97Inputs = false;
                     this.showEditModal = true;
                 },
 

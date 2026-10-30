@@ -898,7 +898,7 @@ namespace NTPC_FEC.Wash
             IRow r0 = sheet.CreateRow(rowIndex++);
             r0.HeightInPoints = 32;
             ICell c0 = r0.CreateCell(0);
-            c0.SetCellValue("新北市固定溢散源管制平台 - 道路認養洗/掃街里程日誌");
+            c0.SetCellValue("新北市固定逸散源管制平台 - 道路認養洗/掃街里程日誌");
             c0.CellStyle = titleStyle;
             sheet.AddMergedRegion(new CellRangeAddress(0, 0, 0, 9));
 

@@ -42,5 +42,25 @@
       <HintPath>bin\NPOI.dll</HintPath>
       <Private>true</Private>
     </Reference>
+    <Reference Include="NPOI.OOXML">
+      <HintPath>bin\NPOI.OOXML.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="NPOI.OpenXml4Net">
+      <HintPath>bin\NPOI.OpenXml4Net.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="NPOI.OpenXmlFormats">
+      <HintPath>bin\NPOI.OpenXmlFormats.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>bin\ICSharpCode.SharpZipLib.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="BouncyCastle.Crypto">
+      <HintPath>bin\BouncyCastle.Crypto.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 </Project>

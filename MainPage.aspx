@@ -51,7 +51,7 @@
 
         .search-input {
             width: 100%;
-            padding: 9px 14px 9px 38px;
+            padding: 9px 38px 9px 38px;
             border: 1.5px solid #cbd5e1;
             border-radius: 24px;
             font-size: 0.95rem;
@@ -65,6 +65,28 @@
             background-color: #ffffff;
             border-color: #0284c7;
             box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        }
+
+        .search-clear-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s ease;
+        }
+
+        .search-clear-btn:hover {
+            color: #ef4444;
         }
 
         .toolbar-btn-group {
@@ -471,9 +493,33 @@
         <div class="dashboard-toolbar">
             <div class="search-box-wrapper">
                 <i class="fas fa-search"></i>
-                <input type="text" class="search-input" 
+                <!-- 偽裝輸入框：吸收攔截特定外部密碼套件的第一順位自動帶入 -->
+                <input type="text" style="display:none;" aria-hidden="true" tabindex="-1" />
+                <input type="search" 
+                       id="fecDashboardSearch"
+                       name="fec_quick_search_no_autofill"
+                       class="search-input" 
                        v-model="searchKeyword" 
-                       placeholder="快速搜尋子功能... (例如: 道路、審核、工廠、通報)" />
+                       placeholder="快速搜尋子功能... (例如: 道路、審核、工廠、通報)" 
+                       autocomplete="off"
+                       autocorrect="off"
+                       autocapitalize="off"
+                       spellcheck="false"
+                       data-lpignore="true"
+                       data-1p-ignore="true"
+                       data-bwignore="true"
+                       data-form-type="other"
+                       readonly
+                       v-on:focus="unlockSearchInput"
+                       v-on:click="unlockSearchInput" />
+                <!-- 快速清除搜尋內容按鈕 (有文字時顯示，點擊一鍵清空) -->
+                <button type="button" 
+                        class="search-clear-btn" 
+                        v-show="searchKeyword && searchKeyword.length > 0" 
+                        v-on:click="clearSearch" 
+                        title="清除搜尋條件">
+                    <i class="fas fa-times-circle"></i>
+                </button>
             </div>
             <div class="toolbar-btn-group">
                 <button type="button" class="btn-toolbar-tool" v-on:click="toggleAll(true)" title="展開全部模組子功能">
@@ -594,6 +640,22 @@
                     searchKeyword: ''
                 };
             },
+            mounted() {
+                // 確保初始載入時清空被瀏覽器或外部插件非預期注入的自動填入內容
+                this.searchKeyword = '';
+                const searchEl = document.getElementById('fecDashboardSearch');
+                if (searchEl) {
+                    searchEl.value = '';
+                }
+                // 延遲二次防禦 (攔截部分在 DOM 載入後 100~300ms 異步注入的密碼管理工具)
+                setTimeout(() => {
+                    if (document.activeElement !== searchEl && this.searchKeyword) {
+                        this.searchKeyword = '';
+                        if (searchEl) searchEl.value = '';
+                    }
+                }, 300);
+
+            },
             computed: {
                 // 支援關鍵字搜尋過濾
                 filteredModules() {
@@ -626,6 +688,20 @@
                 }
             },
             methods: {
+                // 點擊/聚焦時解除 readonly 防填入鎖定
+                unlockSearchInput(e) {
+                    if (e && e.target) {
+                        e.target.removeAttribute('readonly');
+                    }
+                },
+                // 清除搜尋關鍵字
+                clearSearch() {
+                    this.searchKeyword = '';
+                    const searchEl = document.getElementById('fecDashboardSearch');
+                    if (searchEl) {
+                        searchEl.focus();
+                    }
+                },
                 // 子項目點擊事件處理 (攔截尚未開放之功能並彈出提示方塊)
                 handleSubItemClick(e, sub) {
                     if (!sub.Url || sub.Url === '#' || sub.Url.indexOf('javascript:') === 0) {
@@ -673,3 +749,5 @@
         }).mount('#mainDashboardApp');
     </script>
 </asp:Content>
+
+

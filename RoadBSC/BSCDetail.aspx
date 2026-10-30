@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 人行道與交通島裸露覆土通報單詳情</title>
+    <title>新北市固定逸散源管理平台 - 人行道與交通島裸露覆土通報單詳情</title>
     
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
 
@@ -480,7 +480,7 @@
 
             <!-- 列印專用報表頁首 -->
             <div class="print-only-header">
-                <h2>新北市固定溢散源管理平台</h2>
+                <h2>新北市固定逸散源管理平台</h2>
                 <h3>人行道與交通島裸露覆土現場通報紀錄單</h3>
                 <p>通報案號：{{ detail.Show_ID }} ｜ 列印時間：{{ printTime }}</p>
             </div>

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 r"""
-新北市固定溢散源管理平台 (NTPC_FEC) - 正式機安全發布與自動化防呆打包工具
+新北市固定逸散源管理平台 (NTPC_FEC) - 正式機安全發布與自動化防呆打包工具
 功能：
 1. 讀取專案根目錄 deploy_manifest.json 作為單一打包規範來源。
 2. 自動掃描並確保所有 .aspx / .Master / .ashx 具備 UTF-8 with BOM 標頭（防止中文亂碼）且無 @click 語法。

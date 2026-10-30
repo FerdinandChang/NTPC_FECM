@@ -621,7 +621,7 @@
                         <h4 class="mb-1 font-weight-bold text-dark">
                             <i class="fas fa-users-cog text-primary mr-2"></i>系統使用者帳號與權限清單
                         </h4>
-                        <span class="text-muted small">配置固定溢散源管理平台各業務模組權限、所屬單位分類、稽查初複三審與行政區授權</span>
+                        <span class="text-muted small">配置固定逸散源管理平台各業務模組權限、所屬單位分類、稽查初複三審與行政區授權</span>
                     </div>
                     <div class="mt-2 mt-sm-0">
                         <asp:Button ID="btnOpenNewAcc" runat="server" CssClass="btn btn-primary shadow-sm font-weight-bold px-3" Text="+ 新增帳號" OnClick="btnOpenNewAcc_Click" />

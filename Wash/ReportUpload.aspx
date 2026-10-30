@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 洗掃作業月報上傳回傳</title>
+    <title>新北市固定逸散源管理平台 - 洗掃作業月報上傳回傳</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -374,6 +374,50 @@
             color: var(--text-muted);
         }
 
+        /* 空白範本下載區 */
+        .template-download-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #ef4444;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        }
+
+        .template-download-box:hover {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
+        }
+
+        .template-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #fee2e2;
+            color: #dc2626;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .template-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--brand-navy);
+            line-height: 1.2;
+        }
+
+        .template-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
         /* 覆蓋警告橫幅 */
         .overwrite-banner {
             background-color: #fffbeb;
@@ -633,32 +677,25 @@
 <body>
     <form id="form1" runat="server">
         <div id="app" v-cloak>
-            <!-- 頂部品牌導覽列 -->
-            <header class="top-navbar">
+            <!-- 頂部品牌導覽列 (依據專案 SKILL UI/UX 標準規範) -->
+            <header class="top-navbar no-print">
                 <div class="navbar-brand-title">
-                    <a href="../MainPage.aspx" class="nav-btn mr-1" title="返回主選單">
-                        <i class="fas fa-chevron-left"></i>
-                        <span class="d-none d-sm-inline">返回</span>
+                    <a href="../MainPage.aspx" class="nav-btn mr-2" title="回首頁">
+                        <i class="fas fa-home"></i>
+                        <span class="d-none d-sm-inline">回首頁</span>
                     </a>
                     <i class="fas fa-truck-moving text-white"></i>
                     <span>洗掃報表回傳</span>
-                    <span v-if="currentFacId" class="badge badge-light text-dark font-weight-bold ml-2 d-none d-md-inline" style="font-size: 0.85rem;">
+                    <span v-if="currentFacId" class="badge badge-light text-dark font-weight-bold ml-2" style="font-size: 0.85rem;">
                         {{ currentFacId }}
                     </span>
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
-                    <a href="ReportUpload_List.aspx" class="nav-btn nav-btn-light" title="前往洗掃紀錄清單">
+                    <a href="ReportUpload_List.aspx" class="nav-btn nav-btn-light shadow-sm" title="前往洗掃紀錄清單">
                         <i class="fas fa-list-ul mr-1"></i>
                         <span class="d-none d-sm-inline">洗掃紀錄清單</span>
                     </a>
-                    <button type="button" class="nav-btn ml-2" v-on:click="refreshAll" title="重新整理資料">
-                        <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
-                    </button>
-                    <div class="d-none d-lg-flex align-items-center text-white ml-2" style="font-size: 0.88rem; opacity: 0.95;">
-                        <i class="fas fa-user-circle mr-1"></i>
-                        <span>{{ userName }}</span>
-                    </div>
                 </div>
             </header>
 
@@ -771,6 +808,29 @@
                                             <button type="button" class="btn btn-sm btn-outline-warning text-dark bg-white font-weight-bold" v-on:click="downloadCurrentMonthFile">
                                                 <i class="fas fa-download mr-1"></i> 下載舊有報表檢視
                                             </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 空白範本下載專區 (洗掃街里程日誌(空白範本).pdf) -->
+                                    <div class="template-download-box">
+                                        <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap: 10px;">
+                                            <div class="d-flex align-items-center">
+                                                <div class="template-icon mr-2">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="template-title">洗掃街里程日誌 (空白範本)</div>
+                                                    <div class="template-desc">提供業者下載列印或依格式填寫回報</div>
+                                                </div>
+                                            </div>
+                                            <a href="ReportUpload.aspx?action=download_template" 
+                                               class="btn btn-sm btn-outline-danger font-weight-bold shadow-sm d-inline-flex align-items-center" 
+                                               style="border-radius: 6px; padding: 5px 12px; gap: 5px;" 
+                                               title="點擊下載空白範本 PDF" 
+                                               download="洗掃街里程日誌(空白範本).pdf">
+                                                <i class="fas fa-download"></i>
+                                                <span>下載空白範本</span>
+                                            </a>
                                         </div>
                                     </div>
 

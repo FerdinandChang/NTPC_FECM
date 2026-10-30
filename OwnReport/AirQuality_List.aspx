@@ -1,10 +1,10 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="AirQuality_List.aspx.cs" Inherits="NTPC_FEC.OwnReport.AirQuality_List" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="AirQuality_List.aspx.cs" Inherits="NTPC_FEC.OwnReport.AirQuality_List" EnableSessionState="ReadOnly" %>
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 空品不良應變回報清單</title>
+    <title>新北市固定逸散源管理平台 - 空品不良應變回報清單</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -107,6 +107,36 @@
         .nav-btn-success:hover {
             background: #059669;
             color: #ffffff;
+        }
+
+                /* 頂部非侵入式資料傳輸進度條 */
+        .top-loading-bar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(0, 153, 229, 0.2);
+            z-index: 1030;
+            overflow: hidden;
+        }
+        .top-loading-bar-inner {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #0099e5, #0284c7, #38bdf8);
+            animation: barProgress 1.4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: 0% 50%;
+        }
+        @keyframes barProgress {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0%) scaleX(0.7); }
+            100% { transform: translateX(100%); }
+        }
+
+        .table-loading {
+            opacity: 0.55;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
         }
 
         /* 主容器佈局 */
@@ -542,6 +572,174 @@
             white-space: nowrap !important;
         }
 
+        /* 浮動回到頂端按鈕 (Back to Top) */
+        .btn-back-to-top {
+            position: fixed;
+            bottom: 24px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0099e5, #0284c7);
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            cursor: pointer;
+            z-index: 1015;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(15px);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+        .btn-back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .btn-back-to-top:hover {
+            background: #026ba1;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(2, 132, 199, 0.55);
+            color: #ffffff;
+        }
+        .btn-back-to-top:active {
+            transform: translateY(1px);
+        }
+
+        /* 統計指標區塊平滑折疊 */
+        .stat-section-wrapper {
+            transition: all 0.3s ease;
+        }
+
+        /* ========================================================
+           極致小尺寸全載具 RWD 強化 (iPhone, Android, 小平板)
+           ======================================================== */
+        @media (max-width: 767.98px) {
+            .container-fluid-custom {
+                padding: 10px 8px;
+            }
+
+            /* 頂部導覽列高度與字級自適應 */
+            .top-navbar {
+                height: 54px;
+                padding: 0 10px;
+            }
+            .brand-title {
+                font-size: 0.98rem;
+                gap: 6px;
+            }
+
+            /* 統計卡片改為緊湊 2 欄網格，高度銳減 60% */
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+                margin-bottom: 12px !important;
+            }
+            .stat-card {
+                padding: 10px 8px !important;
+                gap: 8px !important;
+                border-radius: 8px !important;
+            }
+            .stat-icon {
+                width: 34px !important;
+                height: 34px !important;
+                font-size: 1rem !important;
+                border-radius: 7px !important;
+            }
+            .stat-val {
+                font-size: 1.15rem !important;
+            }
+            .stat-label {
+                font-size: 11px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            .stat-subtext {
+                display: none !important; /* 手機端隱藏冗餘副標，節省垂直空間 */
+            }
+
+            /* 快速時間晶片群支援水平滑動不折行 */
+            .date-chip-group {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 4px;
+                margin-top: 6px;
+            }
+            .date-chip {
+                flex-shrink: 0;
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+
+            /* 篩選卡片 Header 觸控優化 */
+            .card-modern-header {
+                padding: 10px 14px !important;
+            }
+            .card-modern-title {
+                font-size: 0.95rem !important;
+            }
+            .card-modern-body {
+                padding: 12px 10px !important;
+            }
+
+            /* 查詢與重設按鈕自適應 */
+            .filter-btn-group {
+                display: flex;
+                width: 100%;
+                gap: 8px;
+                margin-top: 6px;
+            }
+            .filter-btn-group .btn {
+                flex: 1;
+                padding: 8px;
+                font-weight: 600;
+            }
+
+            /* 清單卡片 Header 在手機端換行緊湊配置 */
+            .list-card-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 10px;
+            }
+            .list-card-actions {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+            }
+            .list-card-actions .btn {
+                flex: 1;
+                padding: 6px 8px;
+                font-size: 12.5px;
+            }
+        }
+
+        /* 超小螢幕 (如 iPhone SE, 375px 以下) */
+        @media (max-width: 420px) {
+            .brand-title span {
+                max-width: 150px;
+                display: inline-block;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .top-navbar .nav-btn {
+                padding: 0 8px;
+                font-size: 0.85rem;
+            }
+            .stat-val {
+                font-size: 1.05rem !important;
+            }
+        }
+
         /* 手機端大按鈕排版 (Mobile Touch Optimized) */
         @media (max-width: 767.98px) {
             .btn-page-ctrl.btn-step {
@@ -565,44 +763,55 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <!-- 頂部品牌導覽列 -->
+        <!-- 頂部品牌導覽列 (嚴格遵循專案 SKILL 之置頂標頭標準) -->
         <header class="top-navbar">
-            <div class="d-flex align-items-center">
-                <a href="../MainPage.aspx" class="nav-btn mr-3">
-                    <i class="fas fa-arrow-left"></i>
-                    <span class="d-none d-sm-inline">回主系統</span>
+            <div class="d-flex align-items-center" style="min-width: 0;">
+                <!-- 左上角：回首頁按鈕 (SKILL 標準樣板) -->
+                <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回系統主選單">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline">回首頁</span>
                 </a>
                 <h1 class="brand-title mb-0" style="white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;">
-                    <i class="fas fa-smog text-white mr-1"></i>
+                    <i class="fas fa-smog text-white"></i>
                     <span class="d-none d-md-inline">空品不良應變回報管理清單</span>
                     <span class="d-inline d-md-none">空品應變清單</span>
                 </h1>
-                <span class="badge badge-light text-dark font-weight-bold ml-2 d-none d-md-inline" style="font-size: 0.85rem;">
-                    <i class="fas fa-user-shield text-primary mr-1" v-if="isManager"></i>
-                    <i class="fas fa-building text-info mr-1" v-else></i>
-                    {{ isManager ? '環保局管理端' : (userFacName || '公私場所') }}
+                <!-- 母體筆數白底徽章 (SKILL 標準) -->
+                <span class="badge badge-light text-dark font-weight-bold ml-2 d-none d-sm-inline" style="font-size: 0.82rem; white-space: nowrap;">
+                    {{ totalCount }} 筆
                 </span>
             </div>
 
-            <div class="d-flex align-items-center gap-2">
-                <a :href="'Report_AirQuality.aspx?mode=new' + (!isManager && userFacId ? '&fac=' + userFacId : '')" class="nav-btn nav-btn-success mr-2">
-                    <i class="fas fa-plus"></i>
-                    <span class="d-none d-md-inline">新增回報單</span>
+            <!-- 右側主要動作：新增回報單 (符合 SKILL：頂部只保留核心動作，徹底杜絕小螢幕擠壓截斷) -->
+            <div class="d-flex align-items-center flex-shrink-0">
+                <a :href="'Report_AirQuality.aspx?mode=new' + (!isManager && userFacId ? '&fac=' + userFacId : '')" class="btn btn-success btn-sm font-weight-bold shadow-sm d-inline-flex align-items-center" style="white-space: nowrap; height: 36px; padding: 0 12px; border-radius: 8px;">
+                    <i class="fas fa-plus-circle mr-1"></i>
+                    <span class="d-none d-sm-inline">新增回報單</span>
+                    <span class="d-inline d-sm-none">新增</span>
                 </a>
-                <button type="button" class="nav-btn mr-2" v-on:click="exportExcel" :disabled="loading">
-                    <i class="fas fa-file-excel text-success"></i>
-                    <span class="d-none d-md-inline">匯出 Excel</span>
-                </button>
-                <button type="button" class="nav-btn" v-on:click="fetchList(true)" :disabled="loading" title="重新整理">
-                    <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
-                </button>
             </div>
         </header>
 
+        <!-- 頂部非侵入式資料讀取進度條 (載入時優雅提示，不卡死畫面) -->
+        <div class="top-loading-bar" v-if="loading">
+            <div class="top-loading-bar-inner"></div>
+        </div>
+
         <!-- 主作業容器 -->
         <main class="container-fluid-custom">
-            <!-- 頂部統計指標卡片網格 -->
-            <div class="stat-grid">
+            <!-- 頂部統計指標卡片區域 (支援快速收合/展開，小螢幕自適應 2 欄) -->
+            <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                <div class="small font-weight-bold text-muted d-flex align-items-center">
+                    <i class="fas fa-chart-pie mr-1 text-primary"></i>
+                    <span>應變通報綜整指標</span>
+                    <span class="badge badge-light text-secondary ml-2 d-none d-md-inline" v-if="isManager">全轄區彙整</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-muted p-0 text-decoration-none" v-on:click="kpiCollapsed = !kpiCollapsed" style="font-size: 12px;">
+                    <span>{{ kpiCollapsed ? '展開統計面板' : '收合統計面板' }}</span>
+                    <i class="fas ml-1" :class="kpiCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+                </button>
+            </div>
+            <div class="stat-grid" v-show="!kpiCollapsed">
                 <!-- 卡片 1: 總申報案件 -->
                 <div class="stat-card">
                     <div class="stat-icon primary">
@@ -678,23 +887,24 @@
                 </div>
             </div>
 
-            <!-- 條件篩選卡片 -->
+            <!-- 條件篩選卡片 (依據 SKILL 規範支援點擊折疊) -->
             <div class="card-modern">
-                <div class="card-modern-header">
+                <div class="card-modern-header" v-on:click="filterCollapsed = !filterCollapsed" style="cursor: pointer; user-select: none;">
                     <h2 class="card-modern-title">
                         <i class="fas fa-filter text-primary"></i>
                         <span>條件篩選與查詢</span>
+                        <i class="fas ml-2 text-muted" :class="filterCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'" style="font-size: 0.85rem;"></i>
                     </h2>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-primary px-3" v-on:click="handleSearch">
-                            <i class="fas fa-search mr-1"></i> 查詢
-                        </button>
+                    <div class="d-none d-md-flex align-items-center gap-2" v-on:click.stop>
                         <button type="button" class="btn btn-sm btn-outline-secondary px-3" v-on:click="resetFilters">
-                            <i class="fas fa-undo mr-1"></i> 重設
+                            <i class="fas fa-undo mr-1"></i> 重設條件
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary px-3" v-on:click="handleSearch">
+                            <i class="fas fa-search mr-1"></i> 立即查詢
                         </button>
                     </div>
                 </div>
-                <div class="card-modern-body">
+                <div class="card-modern-body" v-show="!filterCollapsed">
                     <div class="row">
                         <!-- 公私場所選單 (管理員可選，業者鎖定) -->
                         <div class="col-12 col-md-4 col-lg-3 mb-3">
@@ -787,38 +997,66 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 手機端滿寬雙按鈕操作列 -->
+                        <div class="col-12 d-block d-md-none mt-2">
+                            <div class="filter-btn-group">
+                                <button type="button" class="btn btn-outline-secondary" v-on:click="resetFilters">
+                                    <i class="fas fa-undo mr-1"></i> 重設
+                                </button>
+                                <button type="button" class="btn btn-primary" v-on:click="handleSearch">
+                                    <i class="fas fa-search mr-1"></i> 立即查詢
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 資料清單主卡片 -->
+            <!-- 資料清單主卡片 (清單標題列標準大四元工具組) -->
             <div class="card-modern">
-                <div class="card-modern-header">
+                <div class="card-modern-header list-card-header">
                     <div class="d-flex align-items-center">
                         <h2 class="card-modern-title">
                             <i class="fas fa-list text-primary"></i>
                             <span>應變回報單清單</span>
                         </h2>
                         <span class="badge badge-info font-weight-bold ml-2" style="font-size: 0.8rem;">
-                            共 {{ totalCount }} 筆資料
+                            共 {{ totalCount }} 筆
                         </span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="d-none d-sm-inline text-muted font-weight-bold mb-0" style="font-size: 13px;">每頁：</label>
-                        <select class="form-control form-control-sm" style="width: 80px;" v-model="filters.pageSize" v-on:change="handlePageSizeChange">
-                            <option :value="10">10 筆</option>
-                            <option :value="20">20 筆</option>
-                            <option :value="50">50 筆</option>
-                            <option :value="100">100 筆</option>
-                        </select>
+                    <div class="list-card-actions">
+                        <!-- 匯出 EXCEL (SKILL 大四元工具組) -->
+                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold mr-1" v-on:click="exportExcel" :disabled="loading || totalCount === 0" title="匯出 Excel 報表">
+                            <i class="fas fa-file-excel mr-1"></i>
+                            <span class="d-none d-md-inline">匯出 EXCEL</span>
+                            <span class="d-inline d-md-none">匯出</span>
+                        </button>
+
+                        <!-- 重新整理 (SKILL 大四元工具組) -->
+                        <button type="button" class="btn btn-sm btn-outline-secondary mr-2" v-on:click="fetchList(false)" :disabled="loading" title="重新整理清單">
+                            <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+                            <span class="d-none d-md-inline ml-1">重新整理</span>
+                        </button>
+
+                        <!-- 每頁筆數選擇器 (SKILL 大四元工具組) -->
+                        <div class="d-flex align-items-center">
+                            <label class="d-none d-md-inline text-muted font-weight-bold mb-0 mr-1" style="font-size: 12px; white-space: nowrap;">每頁：</label>
+                            <select class="form-control form-control-sm" style="width: 76px;" v-model="filters.pageSize" v-on:change="handlePageSizeChange">
+                                <option :value="10">10 筆</option>
+                                <option :value="20">20 筆</option>
+                                <option :value="50">50 筆</option>
+                                <option :value="100">100 筆</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card-modern-body p-0">
                     <!-- 桌面端表格檢視 (Desktop View) -->
                     <div class="desktop-table-container table-responsive">
-                        <table class="table table-modern">
+                        <table class="table table-modern" :class="{ 'table-loading': loading && list.length > 0 }">
                             <thead>
                                 <tr>
                                     <th style="width: 60px;" class="text-center">項次</th>
@@ -836,6 +1074,14 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr v-if="loading && list.length === 0">
+                                    <td colspan="12" class="text-center py-5">
+                                        <div class="spinner-border text-primary mb-2" role="status" style="width: 2.5rem; height: 2.5rem;">
+                                            <span class="sr-only">資料載入中...</span>
+                                        </div>
+                                        <div class="font-weight-bold text-dark mt-2">資料極速載入中，請稍候...</div>
+                                    </td>
+                                </tr>
                                 <tr v-for="(item, idx) in list" :key="item.pIndex">
                                     <td class="text-center text-muted font-weight-bold" style="font-size: 12px;">
                                         {{ (filters.pageIndex - 1) * filters.pageSize + idx + 1 }}
@@ -922,7 +1168,13 @@
                     </div>
 
                     <!-- 行動端卡片檢視 (Mobile View) -->
-                    <div class="mobile-card-list p-3">
+                    <div class="mobile-card-list p-3" :class="{ 'table-loading': loading && list.length > 0 }">
+                        <div v-if="loading && list.length === 0" class="text-center py-5">
+                            <div class="spinner-border text-primary mb-2" role="status" style="width: 2.5rem; height: 2.5rem;">
+                                <span class="sr-only">資料載入中...</span>
+                            </div>
+                            <div class="font-weight-bold text-dark mt-2">資料極速載入中，請稍候...</div>
+                        </div>
                         <div v-for="item in list" :key="item.pIndex" class="mobile-item-card">
                             <div class="mobile-item-header">
                                 <div>
@@ -1037,31 +1289,14 @@
                         </div>
                     </div>
 
-                        <nav aria-label="分頁導航">
-                            <ul class="pagination pagination-sm mb-0">
-                                <li class="page-item" :class="{ disabled: filters.pageIndex <= 1 }">
-                                    <a class="page-link" href="javascript:void(0)" v-on:click="changePage(1)" title="首頁">首頁</a>
-                                </li>
-                                <li class="page-item" :class="{ disabled: filters.pageIndex <= 1 }">
-                                    <a class="page-link" href="javascript:void(0)" v-on:click="changePage(filters.pageIndex - 1)">上一頁</a>
-                                </li>
 
-                                <li class="page-item" v-for="p in visiblePages" :key="p" :class="{ active: p === filters.pageIndex }">
-                                    <a class="page-link" href="javascript:void(0)" v-on:click="changePage(p)">{{ p }}</a>
-                                </li>
-
-                                <li class="page-item" :class="{ disabled: filters.pageIndex >= totalPages }">
-                                    <a class="page-link" href="javascript:void(0)" v-on:click="changePage(filters.pageIndex + 1)">下一頁</a>
-                                </li>
-                                <li class="page-item" :class="{ disabled: filters.pageIndex >= totalPages }">
-                                    <a class="page-link" href="javascript:void(0)" v-on:click="changePage(totalPages)" title="末頁">末頁</a>
-                                </li>
-                            </ul>
-                        </nav>
-                    </div>
                 </div>
             </div>
-        </main>
+                <!-- 浮動至頂端按鈕 (Back to Top) -->
+        <button type="button" class="btn-back-to-top" :class="{ 'show': showBackToTop }" v-on:click="scrollToTop" title="回到頁面頂端">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </main>
 
         <!-- 案件快速詳細資料彈窗 (Detail Modal) -->
         <div class="modal fade" id="detailModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -1210,13 +1445,7 @@
             </div>
         </div>
 
-        <!-- 全螢幕讀取指示器 -->
-        <div class="loading-overlay" v-if="loading">
-            <div class="spinner-border text-primary mb-2" role="status" style="width: 3rem; height: 3rem;">
-                <span class="sr-only">資料載入中...</span>
-            </div>
-            <div class="font-weight-bold text-dark">資料讀取中，請稍候...</div>
-        </div>
+
     </div>
 
     <!-- 本地化依賴 (符合資安與離線原則) -->
@@ -1265,6 +1494,9 @@
                         pageSize: 20
                     },
                     activeDateRange: 'month',
+                    kpiCollapsed: false,
+                    filterCollapsed: false,
+                    showBackToTop: false,
                     activeDetail: null,
                     deletingItem: null
                 };
@@ -1284,12 +1516,14 @@
             },
             mounted() {
                 this.initPage();
+                window.addEventListener('scroll', this.handleScroll, { passive: true });
+            },
+            beforeUnmount() {
+                window.removeEventListener('scroll', this.handleScroll);
             },
             methods: {
-                // 初始化載入 (極速並行載入，保證 loading 必定解除不卡死)
+                // 初始化載入：解耦平行載入，清單秒級呈現，永不卡死
                 initPage() {
-                    this.loading = true;
-
                     // 1. 前端預設近一個月日期區間
                     const today = new Date();
                     const fmt = d => d.toISOString().split('T')[0];
@@ -1301,64 +1535,52 @@
                     this.filters.dateStart = startStr;
                     this.filters.dateEnd = endStr;
 
-                    // 2. 請求基礎參數與清單
-                    const initReq = axios.get('AirQuality_List.aspx?action=getinitdata');
-                    const listReq = axios.get('AirQuality_List.aspx', {
-                        params: {
-                            action: 'getlist',
-                            facId: 'ALL',
-                            dateStart: startStr,
-                            dateEnd: endStr,
-                            contentType: 'ALL',
-                            status: 'ALL',
-                            less: 'ALL',
-                            keyword: '',
-                            pageIndex: 1,
-                            pageSize: this.filters.pageSize
-                        }
-                    });
+                    // 2. 立即發起清單查詢 (首要任務，秒級呈現清單)
+                    this.fetchList(true);
 
-                    Promise.all([initReq, listReq])
-                        .then(([resInit, resList]) => {
-                            if (resInit.data && resInit.data.Success) {
-                                const d = resInit.data.Data;
-                                this.isManager = d.IsManager;
-                                this.currentUser = d.CurrentUser;
-                                this.userFacId = d.UserFacId;
-                                this.userFacName = d.UserFacName;
-                                this.facList = d.FacList || [];
-
-                                if (d.DefaultDateStart) this.filters.dateStart = d.DefaultDateStart;
-                                if (d.DefaultDateEnd) this.filters.dateEnd = d.DefaultDateEnd;
-
-                                if (!this.isManager && this.userFacId) {
-                                    this.filters.facId = this.userFacId;
-                                }
-                            }
-
-                            if (resList.data && resList.data.Success) {
-                                const ld = resList.data.Data;
-                                this.list = ld.Items || [];
-                                this.totalCount = ld.TotalCount || 0;
-                                this.totalPages = ld.TotalPages || 1;
-                                this.stats = ld.Stats || this.stats;
-                            }
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            alert('網路請求異常，請重新整理頁面');
-                        })
-                        .finally(() => {
-                            this.loading = false;
-                        });
+                    // 3. 同步非同步載入選單與身分資訊 (彼此獨立，互不阻塞)
+                    this.fetchInitData();
                 },
 
-                // 查詢列表與統計 (支援 finally 防禦)
+                // 獨立載入場所下拉選單與權限資訊
+                fetchInitData() {
+                    axios.get('AirQuality_List.aspx', {
+                        params: { action: 'getinitdata' },
+                        timeout: 10000
+                    })
+                    .then(res => {
+                        if (res.data && res.data.Success) {
+                            const d = res.data.Data;
+                            this.isManager = d.IsManager;
+                            this.currentUser = d.CurrentUser;
+                            this.userFacId = d.UserFacId;
+                            this.userFacName = d.UserFacName;
+                            this.facList = d.FacList || [];
+
+                            if (!this.isManager && this.userFacId) {
+                                this.filters.facId = this.userFacId;
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.warn('選單資料載入提示:', err);
+                    });
+                },
+
+                // 查詢列表與統計 (內建 8 秒超時保險，確保 loading 必定解除)
                 fetchList(resetPage) {
                     if (resetPage) {
                         this.filters.pageIndex = 1;
                     }
                     this.loading = true;
+
+                    // 逾時安全計時器：防禦任何意外導致 UI 轉圈卡死
+                    const safetyTimer = setTimeout(() => {
+                        if (this.loading) {
+                            this.loading = false;
+                            console.warn('查詢逾時保險觸發，強制復原畫面');
+                        }
+                    }, 8000);
 
                     const params = {
                         action: 'getlist',
@@ -1373,8 +1595,9 @@
                         pageSize: this.filters.pageSize
                     };
 
-                    axios.get('AirQuality_List.aspx', { params: params })
+                    axios.get('AirQuality_List.aspx', { params: params, timeout: 10000 })
                         .then(res => {
+                            clearTimeout(safetyTimer);
                             if (res.data && res.data.Success) {
                                 const d = res.data.Data;
                                 this.list = d.Items || [];
@@ -1386,10 +1609,12 @@
                             }
                         })
                         .catch(err => {
+                            clearTimeout(safetyTimer);
                             console.error(err);
                             alert('網路請求異常，無法取得回報單清單');
                         })
                         .finally(() => {
+                            clearTimeout(safetyTimer);
                             this.loading = false;
                         });
                 },
@@ -1531,6 +1756,16 @@
                         keyword: this.filters.keyword
                     });
                     window.location.href = 'AirQuality_List.aspx?' + params.toString();
+                },
+
+                // 捲動監聽 (控制回到頂端按鈕顯隱)
+                handleScroll() {
+                    this.showBackToTop = window.scrollY > 260;
+                },
+
+                // 平滑捲動至頂端
+                scrollToTop() {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             }
         }).mount('#app');

@@ -19,7 +19,7 @@ old_sum_nav = """        <!-- 頂部品牌導覽列 -->
                 <div class="navbar-brand-title">
                     <i class="fas fa-building text-white"></i>
                     <span>公私場所巡查案件統計</span>
-                    <span class="badge badge-light text-primary d-none d-md-inline" style="font-size: 0.8rem;">固定溢散源</span>
+                    <span class="badge badge-light text-primary d-none d-md-inline" style="font-size: 0.8rem;">固定逸散源</span>
                 </div>
             </div>
 

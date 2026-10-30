@@ -169,24 +169,14 @@ namespace NTPC_FEC.OwnReport
                     {
                         ExportExcel();
                     }
-                    catch (System.Threading.ThreadAbortException)
-                    {
-                        return;
-                    }
                     catch (Exception ex)
                     {
                         Response.Clear();
                         Response.ContentType = "text/html; charset=utf-8";
                         Response.Write("<script>alert('匯出 Excel 失敗：" + HttpUtility.JavaScriptStringEncode(ex.Message) + "'); window.close();</script>");
                     }
-                    try
-                    {
-                        Response.End();
-                    }
-                    catch (System.Threading.ThreadAbortException)
-                    {
-                        return;
-                    }
+                    Response.Flush();
+                    HttpContext.Current.ApplicationInstance.CompleteRequest();
                     return;
                 }
 
@@ -195,10 +185,6 @@ namespace NTPC_FEC.OwnReport
                 try
                 {
                     HandleAjaxAction(action);
-                }
-                catch (System.Threading.ThreadAbortException)
-                {
-                    return;
                 }
                 catch (Exception ex)
                 {
@@ -209,14 +195,8 @@ namespace NTPC_FEC.OwnReport
                     }));
                 }
 
-                try
-                {
-                    Response.End();
-                }
-                catch (System.Threading.ThreadAbortException)
-                {
-                    return;
-                }
+                Response.Flush();
+                HttpContext.Current.ApplicationInstance.CompleteRequest();
                 return;
             }
         }
@@ -285,7 +265,7 @@ namespace NTPC_FEC.OwnReport
             {
                 try
                 {
-                    string sql = "SELECT TOP 1 LIC, FAC_ID FROM UserAcc WHERE UserID = @UserID";
+                    string sql = "SELECT TOP 1 LIC, FAC_ID FROM UserAcc WITH (NOLOCK) WHERE UserID = @UserID";
                     SqlParameter[] p = new SqlParameter[]
                     {
                         new SqlParameter("@UserID", SqlDbType.VarChar) { Value = currentUser }
@@ -322,7 +302,7 @@ namespace NTPC_FEC.OwnReport
             {
                 try
                 {
-                    string sql = "SELECT TOP 1 FAC_NAME FROM FAC_Main WHERE FAC_ID = @FAC_ID";
+                    string sql = "SELECT TOP 1 FAC_NAME FROM FAC_Main WITH (NOLOCK) WHERE FAC_ID = @FAC_ID";
                     SqlParameter[] p = new SqlParameter[]
                     {
                         new SqlParameter("@FAC_ID", SqlDbType.VarChar) { Value = userFacId }
@@ -371,12 +351,12 @@ namespace NTPC_FEC.OwnReport
                     pkg.FacList.Add(allOpt);
 
                     string sql = @"
-                        SELECT f.FAC_ID, f.C_NO, f.FAC_NAME, t.TOWN_NA 
-                        FROM FAC_Main f 
-                        LEFT JOIN C_TOWN t ON f.TOWN_CODE = t.TOWN_NO 
-                        WHERE f.FAC_ID IN (SELECT DISTINCT FAC_ID FROM OverReport_TypeA_1 WHERE FAC_ID IS NOT NULL)
-                          AND f.FAC_NAME IS NOT NULL
-                        ORDER BY f.FAC_NAME";
+                        SELECT DISTINCT r.FAC_ID, r.C_NO, ISNULL(f.FAC_NAME, r.CNAM) AS FAC_NAME, ISNULL(t.TOWN_NA, r.County) AS TOWN_NA 
+                        FROM OverReport_TypeA_1 r WITH (NOLOCK)
+                        LEFT JOIN FAC_Main f WITH (NOLOCK) ON r.FAC_ID = f.FAC_ID 
+                        LEFT JOIN C_TOWN t WITH (NOLOCK) ON f.TOWN_CODE = t.TOWN_NO 
+                        WHERE r.FAC_ID IS NOT NULL AND r.FAC_ID <> ''
+                        ORDER BY FAC_NAME";
                     DataTable dt = DbHelper.ExecuteDataTable(sql);
                     if (dt != null)
                     {
@@ -405,7 +385,7 @@ namespace NTPC_FEC.OwnReport
                         string sql = @"
                             SELECT TOP 1 f.FAC_ID, f.C_NO, f.FAC_NAME, t.TOWN_NA 
                             FROM FAC_Main f 
-                            LEFT JOIN C_TOWN t ON f.TOWN_CODE = t.TOWN_NO 
+                            LEFT JOIN C_TOWN t WITH (NOLOCK) ON f.TOWN_CODE = t.TOWN_NO 
                             WHERE f.FAC_ID = @FAC_ID";
                         SqlParameter[] p = new SqlParameter[]
                         {
@@ -589,7 +569,7 @@ namespace NTPC_FEC.OwnReport
                         SUM(CASE WHEN ISNUMERIC(r.SOx) = 1 THEN CAST(r.SOx AS float) ELSE 0 END) AS SumSOx,
                         SUM(CASE WHEN ISNUMERIC(r.NOx) = 1 THEN CAST(r.NOx AS float) ELSE 0 END) AS SumNOx,
                         SUM(CASE WHEN ISNUMERIC(r.VOCs) = 1 THEN CAST(r.VOCs AS float) ELSE 0 END) AS SumVOCs
-                    FROM OverReport_TypeA_1 r
+                    FROM OverReport_TypeA_1 r WITH (NOLOCK)
                     WHERE " + whereSql;
 
                 DataTable dtStats = DbHelper.ExecuteDataTable(statsSql, paramList.ToArray());
@@ -640,7 +620,7 @@ namespace NTPC_FEC.OwnReport
                         r.InputUser,
                         r.CreateDate,
                         r.EditDate
-                    FROM OverReport_TypeA_1 r
+                    FROM OverReport_TypeA_1 r WITH (NOLOCK)
                     WHERE " + whereSql + @"
                     ORDER BY r.OverDate DESC, r.pIndex DESC
                     OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
@@ -781,9 +761,9 @@ namespace NTPC_FEC.OwnReport
                         r.*,
                         f.ADDR,
                         t.TOWN_NA
-                    FROM OverReport_TypeA_1 r
-                    LEFT JOIN FAC_Main f ON r.FAC_ID = f.FAC_ID
-                    LEFT JOIN C_TOWN t ON f.TOWN_CODE = t.TOWN_NO
+                    FROM OverReport_TypeA_1 r WITH (NOLOCK)
+                    LEFT JOIN FAC_Main f WITH (NOLOCK) ON r.FAC_ID = f.FAC_ID
+                    LEFT JOIN C_TOWN t WITH (NOLOCK) ON f.TOWN_CODE = t.TOWN_NO
                     WHERE r.pIndex = @pIndex";
 
                 SqlParameter[] p = new SqlParameter[]
@@ -1004,7 +984,7 @@ namespace NTPC_FEC.OwnReport
                     r.InputUser,
                     r.CreateDate,
                     r.EditDate
-                FROM OverReport_TypeA_1 r
+                FROM OverReport_TypeA_1 r WITH (NOLOCK)
                 WHERE " + whereSql + @"
                 ORDER BY r.OverDate DESC, r.pIndex DESC";
 
@@ -1128,7 +1108,7 @@ namespace NTPC_FEC.OwnReport
             }
 
             Response.Flush();
-            Response.End();
+            HttpContext.Current.ApplicationInstance.CompleteRequest();
         }
 
         #endregion

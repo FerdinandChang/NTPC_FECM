@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理審查平台 - 案件審查作業</title>
+    <title>新北市固定逸散源管理審查平台 - 案件審查作業</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -544,7 +544,7 @@
                 </a>
                 <a href="managerList.aspx" class="navbar-brand-title">
                     <i class="fas fa-tasks text-white"></i>
-                    <span>固定溢散源管理審查平台</span>
+                    <span>固定逸散源管理審查平台</span>
                     <span class="badge badge-light text-dark font-weight-bold ml-1">
                         {{ stats.TotalCases }} 筆待審
                     </span>

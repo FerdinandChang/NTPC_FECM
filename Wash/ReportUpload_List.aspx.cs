@@ -1099,7 +1099,7 @@ namespace NTPC_FEC.Wash
             IRow r0 = sheet.CreateRow(0);
             r0.HeightInPoints = 35;
             ICell cTitle = r0.CreateCell(0);
-            cTitle.SetCellValue("新北市固定溢散源管理平台 - 洗掃自主管理月報上傳清單");
+            cTitle.SetCellValue("新北市固定逸散源管理平台 - 洗掃自主管理月報上傳清單");
             cTitle.CellStyle = titleStyle;
             sheet.AddMergedRegion(new CellRangeAddress(0, 0, 0, 7));
 

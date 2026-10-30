@@ -103,12 +103,16 @@ namespace NTPC_FEC.Services
 
             // 3. 作業機具調查 (紫色)
             var machineItems = new List<MenuSubItem>();
-            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 1), "作業機具調查", "Machine/NewMac.aspx");
-            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 1), "查核紀錄暫存", "Machine/macList.aspx?mode=reject", pending.MachineDraft);
-            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 6), "案件初審", "Manager/managerList.aspx?INV_State=MAC1", pending.MachineInv1, true);
-            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 6) || CheckLicense(lic, 43), "案件複審", "Manager/managerList.aspx?INV_State=MAC2", pending.MachineInv2, true);
-            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 6) || CheckLicense(lic, 43), "案件三審", "Manager/managerList.aspx?INV_State=MAC3", pending.MachineInv3, true);
-            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 43), "調查成果列表", "Machine/macList.aspx?mode=search");
+            // 分類一：作業機具調查
+            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 1), "查核紀錄暫存", "Machine/macList.aspx?mode=reject", pending.MachineDraft, false, "作業機具調查");
+            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 6), "案件初審", "Manager/managerList.aspx?INV_State=MAC1", pending.MachineInv1, true, "作業機具調查");
+            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 6) || CheckLicense(lic, 43), "案件複審", "Manager/managerList.aspx?INV_State=MAC2", pending.MachineInv2, true, "作業機具調查");
+            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 6) || CheckLicense(lic, 43), "案件三審", "Manager/managerList.aspx?INV_State=MAC3", pending.MachineInv3, true, "作業機具調查");
+
+            // 分類二：調查成果列表
+            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 43), "調查成果列表", "Machine/macList.aspx?mode=search", 0, false, "");
+            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 43), "固定污染源施工機具普查", "https://pollution.epd.ntpc.gov.tw/NTPCEPD_NEW/Questionnaire/EquipSurvey.aspx", 0, false, "");
+            AddSubItemIfAllowed(machineItems, isAdmin || CheckLicense(lic, 43) || CheckLicense(lic, 59), "環境部施工機具資料分析", "MoenvEquip/MoenvEquipment_List.aspx", 0, false, "");
 
             if (machineItems.Count > 0)
             {

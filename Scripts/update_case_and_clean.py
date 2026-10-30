@@ -387,7 +387,7 @@ old_clean_nav = """        <!-- 頂部品牌導覽列 -->
         <header class="top-navbar">
             <a href="Clean_List.aspx" class="navbar-brand-title">
                 <i class="fas fa-broom"></i>
-                <span>新北市固定溢散源 - 道路潔淨巡檢</span>
+                <span>新北市固定逸散源 - 道路潔淨巡檢</span>
             </a>
             <div class="d-flex align-items-center gap-2">
                 <a :href="'NewCleanChk.aspx?mode=new&listMode=' + currentMode" class="btn btn-warning font-weight-bold text-dark px-3 shadow-sm mr-2" style="border-radius: 8px;">

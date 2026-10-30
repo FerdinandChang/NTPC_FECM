@@ -180,7 +180,7 @@ namespace NTPC_FEC.RoadBSC
                     coverSoilOptions.Add(new { Code = "1", Val = "植生良好無覆土" });
                     coverSoilOptions.Add(new { Code = "2", Val = "局部覆土裸露 (< 5m²)" });
                     coverSoilOptions.Add(new { Code = "3", Val = "大面積覆土裸露 (>= 5m²)" });
-                    coverSoilOptions.Add(new { Code = "4", Val = "土石堆置或溢散至車道" });
+                    coverSoilOptions.Add(new { Code = "4", Val = "土石堆置或逸散至車道" });
                     coverSoilOptions.Add(new { Code = "5", Val = "其他" });
                 }
             }
@@ -189,7 +189,7 @@ namespace NTPC_FEC.RoadBSC
                 coverSoilOptions.Add(new { Code = "1", Val = "植生良好無覆土" });
                 coverSoilOptions.Add(new { Code = "2", Val = "局部覆土裸露 (< 5m²)" });
                 coverSoilOptions.Add(new { Code = "3", Val = "大面積覆土裸露 (>= 5m²)" });
-                coverSoilOptions.Add(new { Code = "4", Val = "土石堆置或溢散至車道" });
+                coverSoilOptions.Add(new { Code = "4", Val = "土石堆置或逸散至車道" });
                 coverSoilOptions.Add(new { Code = "5", Val = "其他" });
             }
 

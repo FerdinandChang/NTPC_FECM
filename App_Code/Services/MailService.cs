@@ -48,16 +48,16 @@ namespace NTPC_FEC.Services
                 }
 
                 var msg = new MailMessage();
-                msg.From = new MailAddress(fromAddr, "新北市固定溢散源管理平台", Encoding.UTF8);
+                msg.From = new MailAddress(fromAddr, "新北市固定逸散源管理平台", Encoding.UTF8);
                 msg.To.Add(new MailAddress(toEmail.Trim()));
-                msg.Subject = "【系統通知】新北市固定溢散源管理平台 - 帳號臨時密碼配發通知";
+                msg.Subject = "【系統通知】新北市固定逸散源管理平台 - 帳號臨時密碼配發通知";
                 msg.IsBodyHtml = true;
                 msg.BodyEncoding = Encoding.UTF8;
 
                 var sb = new StringBuilder();
                 sb.Append("<div style='font-family: Arial, \"Microsoft JhengHei\", sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06);'>");
                 sb.Append("<div style='background: linear-gradient(135deg, #184b72 0%, #1e6091 100%); color: #ffffff; padding: 20px 24px;'>");
-                sb.Append("<h3 style='margin:0; font-size: 1.25rem;'>新北市固定溢散源管理平台</h3>");
+                sb.Append("<h3 style='margin:0; font-size: 1.25rem;'>新北市固定逸散源管理平台</h3>");
                 sb.Append("<div style='font-size: 0.85rem; opacity: 0.85; margin-top: 4px;'>帳號密碼重設與安全性通知</div>");
                 sb.Append("</div>");
                 sb.Append("<div style='padding: 26px; color: #334155; line-height: 1.6; background-color: #ffffff;'>");
@@ -73,7 +73,7 @@ namespace NTPC_FEC.Services
                 sb.Append("2. 若您並未向系統管理人員提出重新配發密碼請求，請立即與系統管理員聯繫。");
                 sb.Append("</div>");
                 sb.Append("</div>");
-                sb.Append("<div style='background: #f1f5f9; border-top: 1px solid #e2e8f0; padding: 14px 24px; color: #64748b; font-size: 0.8rem; text-align: center;'>新北市政府環境保護局 固定溢散源管理系統 &copy; 2026</div>");
+                sb.Append("<div style='background: #f1f5f9; border-top: 1px solid #e2e8f0; padding: 14px 24px; color: #64748b; font-size: 0.8rem; text-align: center;'>新北市政府環境保護局 固定逸散源管理系統 &copy; 2026</div>");
                 sb.Append("</div>");
 
                 msg.Body = sb.ToString();

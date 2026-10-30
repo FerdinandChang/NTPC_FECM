@@ -71,6 +71,9 @@ namespace NTPC_FEC.Wash
                 case "download":
                     DownloadReportFile();
                     break;
+                case "download_template":
+                    DownloadTemplateFile();
+                    break;
                 default:
                     Response.Write(jsonSerializer.Serialize(new
                     {
@@ -711,6 +714,32 @@ namespace NTPC_FEC.Wash
             Response.Clear();
             Response.ContentType = "application/octet-stream";
             Response.AddHeader("Content-Disposition", "attachment; filename=" + HttpUtility.UrlEncode(downloadName));
+            Response.TransmitFile(filePath);
+            Response.End();
+        }
+
+        // 下載空白範本 (洗掃街里程日誌(空白範本).pdf)
+        private void DownloadTemplateFile()
+        {
+            string fileName = "洗掃街里程日誌(空白範本).pdf";
+            string filePath = Server.MapPath("~/" + fileName);
+            if (!File.Exists(filePath))
+            {
+                filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+            }
+
+            if (!File.Exists(filePath))
+            {
+                Response.Clear();
+                Response.StatusCode = 404;
+                Response.Write("查無空白範本檔案！");
+                Response.End();
+                return;
+            }
+
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("Content-Disposition", "attachment; filename=" + HttpUtility.UrlEncode(fileName));
             Response.TransmitFile(filePath);
             Response.End();
         }

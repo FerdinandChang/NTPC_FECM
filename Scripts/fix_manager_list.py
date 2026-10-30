@@ -18,7 +18,7 @@ old_nav = """        <!-- 頂部導覽列 -->
                 </a>
                 <div class="navbar-brand-title">
                     <i class="fas fa-tasks text-white"></i>
-                    <span>固定溢散源管理審查平台</span>
+                    <span>固定逸散源管理審查平台</span>
                     <span class="badge badge-light text-dark font-weight-bold ml-2 d-none d-md-inline" style="font-size: 0.82rem;">案件審查作業</span>
                 </div>
             </div>
@@ -43,7 +43,7 @@ new_nav = """        <!-- 頂部導覽列 (全站標準左側導航、右側使�
                 </a>
                 <a href="managerList.aspx" class="navbar-brand-title">
                     <i class="fas fa-tasks text-white"></i>
-                    <span>固定溢散源管理審查平台</span>
+                    <span>固定逸散源管理審查平台</span>
                     <span class="badge badge-light text-dark font-weight-bold ml-1">
                         {{ stats.TotalCases }} 筆待審
                     </span>

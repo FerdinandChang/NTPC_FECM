@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 道路認養洗/掃街里程日誌</title>
+    <title>新北市固定逸散源管理平台 - 道路認養洗/掃街里程日誌</title>
 
     <!-- 專屬 Favicon & 手機主畫面圖標 -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />

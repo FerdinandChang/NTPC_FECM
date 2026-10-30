@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 道路髒污通報單</title>
+    <title>新北市固定逸散源管理平台 - 道路髒污通報單</title>
     
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
 
@@ -494,6 +494,41 @@
                                     <small v-if="wgsCoords.pt1" class="text-muted d-block mt-1">
                                         經緯度：{{ wgsCoords.pt1.lat.toFixed(6) }}, {{ wgsCoords.pt1.lon.toFixed(6) }}
                                     </small>
+
+                                    <!-- 通報起點地址欄位 (點圖/GPS自動轉換，保留自行編輯權限) -->
+                                    <div class="mt-2 pt-2 border-top">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <span class="small font-weight-bold text-dark d-flex align-items-center">
+                                                <i class="fas fa-map-marked-alt text-danger mr-1"></i> 通報起點地址 (自動轉換 / 可自由編輯)
+                                                <span v-if="isResolvingAddr" class="badge badge-light text-primary ml-1 font-weight-bold">
+                                                    <i class="fas fa-spinner fa-spin"></i> 正在解析地址...
+                                                </span>
+                                            </span>
+                                            <button v-if="mode !== 'read' && wgsCoords.pt1" type="button" 
+                                                    class="btn btn-xs btn-outline-secondary py-0 px-2 font-weight-bold"
+                                                    v-on:click="manualRefreshAddress(1)" :disabled="isResolvingAddr" title="依據坐標 1 重新反查地址">
+                                                <i class="fas fa-sync-alt mr-1"></i>重新反查
+                                            </button>
+                                        </div>
+                                        <div class="input-group input-group-sm">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text bg-white text-danger font-weight-bold">
+                                                    <i class="fas fa-home"></i>
+                                                </span>
+                                            </div>
+                                            <input type="text" class="form-control font-weight-bold text-dark" 
+                                                   v-model="formData.Address" 
+                                                   :readonly="mode === 'read'" 
+                                                   placeholder="點圖或 GPS 定位後將自動帶入起點地址，亦可在此直接手動修改..." />
+                                            <div v-if="mode !== 'read'" class="input-group-append">
+                                                <button type="button" class="btn btn-outline-info font-weight-bold" 
+                                                        v-on:click="applyAddressToComm(1)" 
+                                                        :disabled="!formData.Address" title="將此地址附加至路況描述">
+                                                    <i class="fas fa-paste mr-1"></i>帶入路況
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- 坐標 2 (選填) -->
@@ -538,6 +573,41 @@
                                     <small v-if="wgsCoords.pt2" class="text-muted d-block mt-1">
                                         經緯度：{{ wgsCoords.pt2.lat.toFixed(6) }}, {{ wgsCoords.pt2.lon.toFixed(6) }}
                                     </small>
+
+                                    <!-- 通報終點地址欄位 (點圖/GPS自動轉換，保留自行編輯權限) -->
+                                    <div class="mt-2 pt-2 border-top">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <span class="small font-weight-bold text-dark d-flex align-items-center">
+                                                <i class="fas fa-flag-checkered text-warning mr-1"></i> 通報終點地址 (自動轉換 / 可自由編輯)
+                                                <span v-if="isResolvingAddr2" class="badge badge-light text-primary ml-1 font-weight-bold">
+                                                    <i class="fas fa-spinner fa-spin"></i> 正在解析地址...
+                                                </span>
+                                            </span>
+                                            <button v-if="mode !== 'read' && wgsCoords.pt2" type="button" 
+                                                    class="btn btn-xs btn-outline-secondary py-0 px-2 font-weight-bold"
+                                                    v-on:click="manualRefreshAddress(2)" :disabled="isResolvingAddr2" title="依據坐標 2 重新反查地址">
+                                                <i class="fas fa-sync-alt mr-1"></i>重新反查
+                                            </button>
+                                        </div>
+                                        <div class="input-group input-group-sm">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text bg-white text-warning font-weight-bold">
+                                                    <i class="fas fa-map-pin"></i>
+                                                </span>
+                                            </div>
+                                            <input type="text" class="form-control font-weight-bold text-dark" 
+                                                   v-model="formData.Address1" 
+                                                   :readonly="mode === 'read'" 
+                                                   placeholder="點圖或 GPS 定位後將自動帶入終點地址，亦可在此直接手動修改..." />
+                                            <div v-if="mode !== 'read'" class="input-group-append">
+                                                <button type="button" class="btn btn-outline-warning text-dark font-weight-bold" 
+                                                        v-on:click="applyAddressToComm(2)" 
+                                                        :disabled="!formData.Address1" title="將終點地址附加至路況描述">
+                                                    <i class="fas fa-paste mr-1"></i>帶入路況
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -716,6 +786,8 @@
                     activeCoordIndex: 1,   // 目前地圖點擊要更新的坐標點 (1 或 2)
                     activeLightboxUrl: null,
                     activeLightboxTitle: '',
+                    isResolvingAddr: false,
+                    isResolvingAddr2: false,
 
                     // 表單主體資料
                     formData: {
@@ -729,6 +801,8 @@
                         S_UTMN: 0,
                         S_UTME1: 0,
                         S_UTMN1: 0,
+                        Address: '',
+                        Address1: '',
                         Comm: ''
                     },
 
@@ -855,6 +929,10 @@
                             this.formData.S_UTMN = Math.round(twd.y);
                             this.wgsCoords.pt1 = { lat, lon };
                             this.updateMarker(1, lat, lon);
+                            
+                            // 自動轉換起點地址 (保留使用者隨時編輯權限)
+                            this.autoResolveAddress(1, lat, lon, twd.x, twd.y);
+
                             // 若坐標 2 還沒設定，自動提示切換至坐標 2
                             if (!this.formData.S_UTME1 || this.formData.S_UTME1 <= 0) {
                                 this.activeCoordIndex = 2;
@@ -864,6 +942,9 @@
                             this.formData.S_UTMN1 = Math.round(twd.y);
                             this.wgsCoords.pt2 = { lat, lon };
                             this.updateMarker(2, lat, lon);
+
+                            // 自動轉換終點地址 (保留使用者隨時編輯權限)
+                            this.autoResolveAddress(2, lat, lon, twd.x, twd.y);
                         }
                         this.updateMapPolyline();
                     });
@@ -938,10 +1019,12 @@
                                 this.formData.S_UTME = Math.round(twd.x);
                                 this.formData.S_UTMN = Math.round(twd.y);
                                 this.wgsCoords.pt1 = { lat: pos.lat, lon: pos.lng };
+                                this.autoResolveAddress(1, pos.lat, pos.lng, twd.x, twd.y);
                             } else {
                                 this.formData.S_UTME1 = Math.round(twd.x);
                                 this.formData.S_UTMN1 = Math.round(twd.y);
                                 this.wgsCoords.pt2 = { lat: pos.lat, lon: pos.lng };
+                                this.autoResolveAddress(2, pos.lat, pos.lng, twd.x, twd.y);
                             }
                             this.updateMapPolyline();
                         });
@@ -975,6 +1058,7 @@
                 clearCoord2() {
                     this.formData.S_UTME1 = 0;
                     this.formData.S_UTMN1 = 0;
+                    this.formData.Address1 = '';
                     this.wgsCoords.pt2 = null;
                     if (this.markers && this.markers[2]) {
                         this.leafletMap.removeLayer(this.markers[2]);
@@ -1002,6 +1086,7 @@
                         this.updateMarker(index, pt.lat, pt.lon);
                         this.updateMapPolyline();
                         this.leafletMap.panTo([pt.lat, pt.lon]);
+                        this.autoResolveAddress(index, pt.lat, pt.lon, e, n);
                     }
                 },
 
@@ -1024,11 +1109,17 @@
                             this.formData.S_UTMN = Math.round(twd.y);
                             this.wgsCoords.pt1 = { lat, lon };
                             this.updateMarker(1, lat, lon);
+
+                            // 自動轉換起點地址 (保留自由編輯權限)
+                            this.autoResolveAddress(1, lat, lon, twd.x, twd.y);
                         } else {
                             this.formData.S_UTME1 = Math.round(twd.x);
                             this.formData.S_UTMN1 = Math.round(twd.y);
                             this.wgsCoords.pt2 = { lat, lon };
                             this.updateMarker(2, lat, lon);
+
+                            // 自動轉換終點地址 (保留自由編輯權限)
+                            this.autoResolveAddress(2, lat, lon, twd.x, twd.y);
                         }
 
                         this.updateMapPolyline();
@@ -1177,6 +1268,8 @@
                         Lon: this.wgsCoords.pt1 ? this.wgsCoords.pt1.lon : null,
                         Lat1: this.wgsCoords.pt2 ? this.wgsCoords.pt2.lat : null,
                         Lon1: this.wgsCoords.pt2 ? this.wgsCoords.pt2.lon : null,
+                        Address: this.formData.Address,
+                        Address1: this.formData.Address1,
                         Comm: this.formData.Comm,
                         Photos1: this.photos1,
                         Photos2: this.photos2
@@ -1300,6 +1393,107 @@
                     const y = k0 * (M + N * Math.tan(latRad) * (Math.pow(A, 2) / 2.0 + (5.0 - T + 9.0 * C + 4.0 * Math.pow(C, 2)) * Math.pow(A, 4) / 24.0 + (61.0 - 58.0 * T + Math.pow(T, 2) + 600.0 * C - 330.0 * e2) * Math.pow(A, 6) / 720.0));
 
                     return { x, y };
+                },
+
+                // 18. 自動轉換坐標為門牌地址 (targetIndex: 1 或 2，雙軌支援 OSM 與後端比對)
+                async autoResolveAddress(targetIndex, lat, lon, x, y) {
+                    if (this.mode === 'read') return;
+                    const isPt2 = (targetIndex === 2);
+                    if (isPt2) {
+                        this.isResolvingAddr2 = true;
+                    } else {
+                        this.isResolvingAddr = true;
+                    }
+
+                    // 1. 優先嘗試前端 OSM Nominatim (外勤手機直連最精準)
+                    try {
+                        const osmUrl = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + 
+                            encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon) + 
+                            '&zoom=18&addressdetails=1&accept-language=zh-TW';
+
+                        const res = await axios.get(osmUrl, { timeout: 3500 });
+                        if (res.data && res.data.address) {
+                            const addr = res.data.address;
+                            const city = addr.city || addr.county || '新北市';
+                            const dist = addr.suburb || addr.district || addr.town || '';
+                            const road = addr.road || addr.pedestrian || '';
+                            const houseNum = addr.house_number ? (addr.house_number + '號') : '';
+
+                            const composed = (city + dist + road + houseNum).trim();
+                            if (composed.length > 3) {
+                                if (isPt2) {
+                                    this.formData.Address1 = composed;
+                                    this.isResolvingAddr2 = false;
+                                } else {
+                                    this.formData.Address = composed;
+                                    this.isResolvingAddr = false;
+                                }
+                                return;
+                            }
+                        }
+                    } catch (osmErr) {
+                        // 若 OSM 失敗或逾時，自動切換至後端
+                    }
+
+                    // 2. 後端 API 備援 (支援 NLSC 或本地道路圖資最近比對)
+                    try {
+                        const postData = new URLSearchParams();
+                        postData.append('action', 'reversegeocode');
+                        postData.append('lat', lat);
+                        postData.append('lon', lon);
+                        if (x && y) {
+                            postData.append('x', x);
+                            postData.append('y', y);
+                        }
+
+                        const backendRes = await axios.post('NewDirty.aspx?action=reversegeocode', postData);
+                        if (backendRes.data && backendRes.data.Success && backendRes.data.Address) {
+                            if (isPt2) {
+                                this.formData.Address1 = backendRes.data.Address;
+                            } else {
+                                this.formData.Address = backendRes.data.Address;
+                            }
+                        }
+                    } catch (beErr) {
+                        console.warn('後端地址反查未獲取結果：', beErr);
+                    } finally {
+                        if (isPt2) this.isResolvingAddr2 = false;
+                        else this.isResolvingAddr = false;
+                    }
+                },
+
+                // 手動重新反查坐標地址 (targetIndex: 1 或 2)
+                manualRefreshAddress(targetIndex) {
+                    if (targetIndex === 2) {
+                        if (!this.wgsCoords.pt2) return;
+                        this.autoResolveAddress(2, this.wgsCoords.pt2.lat, this.wgsCoords.pt2.lon, this.formData.S_UTME1, this.formData.S_UTMN1);
+                    } else {
+                        if (!this.wgsCoords.pt1) return;
+                        this.autoResolveAddress(1, this.wgsCoords.pt1.lat, this.wgsCoords.pt1.lon, this.formData.S_UTME, this.formData.S_UTMN);
+                    }
+                },
+
+                // 將通報地址快速附加至通報說明路況描述中 (targetIndex: 1 或 2)
+                applyAddressToComm(targetIndex) {
+                    if (targetIndex === 2) {
+                        if (!this.formData.Address1) return;
+                        const addr2 = this.formData.Address1.trim();
+                        if (!this.formData.Comm) {
+                            this.formData.Comm = '路段終點：' + addr2 + '。';
+                        } else if (this.formData.Comm.indexOf(addr2) === -1) {
+                            this.formData.Comm += ' (至終點：' + addr2 + ')';
+                        }
+                        this.showAlert('已將終點地址附加至通報補充說明與路況描述！', 'success');
+                    } else {
+                        if (!this.formData.Address) return;
+                        const addr = this.formData.Address.trim();
+                        if (!this.formData.Comm) {
+                            this.formData.Comm = '案件地點：' + addr + '。';
+                        } else if (this.formData.Comm.indexOf(addr) === -1) {
+                            this.formData.Comm = '案件地點：' + addr + '。' + this.formData.Comm;
+                        }
+                        this.showAlert('已將起點地址帶入通報補充說明與路況描述！', 'success');
+                    }
                 }
             }
         }).mount('#dirtyApp');

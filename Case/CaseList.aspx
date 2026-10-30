@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 固定污染源巡查與任務派遣管理</title>
+    <title>新北市固定逸散源管理平台 - 固定污染源巡查與任務派遣管理</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -467,6 +467,218 @@
             min-height: 32px;
             white-space: nowrap !important;
             text-decoration: none !important;
+        }
+
+        /* 歷程比對 Modal 樣式 (現代化雙欄防跑版設計) */
+        .modal-compare-dialog {
+            max-width: 96vw;
+            margin: 1rem auto;
+        }
+
+        .compare-header-box {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            padding: 12px 20px;
+            border-bottom: 2px solid #334155;
+        }
+
+        .compare-control-bar {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 14px 20px;
+        }
+
+        .compare-sec-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+        }
+
+        .compare-sec-header {
+            padding: 12px 18px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .compare-sec-body {
+            padding: 16px;
+            background: #f8fafc;
+        }
+
+        /* 雙欄獨立卡片 (解決左右黏在一起跑版) */
+        .record-box {
+            border-radius: 8px;
+            overflow: hidden;
+            background: #ffffff;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            border: 2px solid transparent;
+        }
+
+        .record-box-a {
+            border-color: #60a5fa;
+        }
+
+        .record-box-a .record-box-header {
+            background: #eff6ff;
+            border-bottom: 1.5px solid #bfdbfe;
+            padding: 10px 14px;
+        }
+
+        .record-box-b {
+            border-color: #94a3b8;
+        }
+
+        .record-box-b .record-box-header {
+            background: #f1f5f9;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding: 10px 14px;
+        }
+
+        .record-box-body {
+            flex: 1 1 auto;
+            padding: 14px;
+        }
+
+        .item-violation-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 6px;
+            padding: 7px 12px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .item-compliant-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+            padding: 7px 12px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .info-detail-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+
+        .info-detail-row {
+            display: flex;
+            gap: 10px;
+            padding: 6px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .info-detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-detail-label {
+            flex: 0 0 38%;
+            max-width: 38%;
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .info-detail-value {
+            flex: 1 1 auto;
+            color: #0f172a;
+            word-break: break-all;
+        }
+
+        .photo-empty-state {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 6px;
+            padding: 18px 10px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        .compare-photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .compare-photo-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #ffffff;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .compare-photo-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+        }
+
+        .photo-img-wrapper {
+            width: 100%;
+            height: 95px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .compare-photo-thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .photo-placeholder {
+            color: #94a3b8;
+            font-size: 11px;
+        }
+
+        .compare-photo-label {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 6px;
+            background: #f8fafc;
+            color: #475569;
+            border-top: 1px solid #e2e8f0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .compare-photo-memo {
+            font-size: 11px;
+            color: #64748b;
+            padding: 2px 6px 4px 6px;
+            background: #ffffff;
+            line-height: 1.25;
+            max-height: 38px;
+            overflow: hidden;
+        }
+
+        @media (max-width: 991px) {
+            .modal-compare-dialog {
+                max-width: 98vw;
+                margin: 0.5rem auto;
+            }
         }
 
         /* 抽屜面板 (Offcanvas Drawer) */
@@ -1011,14 +1223,45 @@
                 <div class="drawer-body">
                     <!-- Tab 1: 歷次現場查核紀錄 -->
                     <div v-if="drawerTab === 'invs'">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <h6 class="font-weight-bold text-dark m-0">現場巡查歷程紀錄</h6>
-                            <button type="button" class="btn btn-sm btn-success font-weight-bold" v-on:click="navigateNewCase(activeFac, false)">
-                                <i class="fas fa-plus mr-1"></i> 進行新增巡查
-                            </button>
+                        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                            <div class="d-flex align-items-center">
+                                <h6 class="font-weight-bold text-dark m-0 mr-2">現場巡查歷程紀錄</h6>
+                                <span class="badge badge-secondary">{{ drawerInvs.length }} 次</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary font-weight-bold" 
+                                        v-on:click="openCompareModalByDefault" 
+                                        :disabled="(drawerInvs && drawerInvs.length < 2)" 
+                                        title="比對任意兩次現場查核紀錄之評核與照片">
+                                    <i class="fas fa-columns mr-1"></i> 歷程雙向比對
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success font-weight-bold" v-on:click="navigateNewCase(activeFac, false)">
+                                    <i class="fas fa-plus mr-1"></i> 進行新增巡查
+                                </button>
+                            </div>
                         </div>
 
-                        <div v-if="drawerInvs.length === 0" class="text-center py-5 text-muted">
+                        <!-- 勾選比對提示工具列 -->
+                        <div v-if="selectedCompareInvNos && selectedCompareInvNos.length > 0" class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="small">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                已選取 <strong class="text-primary font-weight-bold">{{ selectedCompareInvNos.length }}</strong> / 2 筆紀錄進行比對
+                                <span v-if="selectedCompareInvNos.length === 2" class="text-success font-weight-bold ml-1">（已就緒）</span>
+                                <span v-else class="text-muted ml-1">（請勾選任 2 筆進入雙向對照）</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <button type="button" class="btn btn-primary btn-sm px-3 mr-2 font-weight-bold shadow-sm" 
+                                        :disabled="selectedCompareInvNos.length !== 2" 
+                                        v-on:click="startCompareSelected">
+                                    <i class="fas fa-exchange-alt mr-1"></i> 開始雙向比對
+                                </button>
+                                <button type="button" class="btn btn-link btn-sm text-secondary p-0" v-on:click="selectedCompareInvNos = []">
+                                    清除勾選
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-if="(!drawerInvs || drawerInvs.length === 0)" class="text-center py-5 text-muted">
                             <i class="fas fa-clipboard-check fa-3x mb-2 text-secondary"></i>
                             <div>目前尚無任何現場查核紀錄。</div>
                         </div>
@@ -1027,16 +1270,20 @@
                             <table class="table table-bordered table-hover">
                                 <thead class="thead-light">
                                     <tr>
+                                        <th style="width:40px;" class="text-center" title="勾選任兩筆進行比對">比對</th>
                                         <th style="width:140px;">巡查時間 / 屬性</th>
                                         <th style="width:100px;">運作狀態</th>
                                         <th style="width:90px;" class="text-center">缺失記點</th>
                                         <th>缺失項目內容</th>
                                         <th style="width:100px;" class="text-center">審核狀態</th>
-                                        <th style="width:160px;" class="text-center">功能動作</th>
+                                        <th style="width:190px;" class="text-center">功能動作</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="inv in drawerInvs" :key="inv.INV_NO">
+                                        <td class="text-center align-middle">
+                                            <input type="checkbox" :value="inv.INV_NO" v-model="selectedCompareInvNos" v-on:change="onCompareCheckboxChange(inv.INV_NO)" title="選擇此筆進行比對" />
+                                        </td>
                                         <td>
                                             <div class="font-weight-bold">{{ inv.INV_DATE }}</div>
                                             <span class="badge badge-secondary">{{ inv.INV_TYPE }}</span>
@@ -1057,6 +1304,9 @@
                                         </td>
                                         <td class="text-center">
                                             <div class="action-btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-dark btn-action" title="與相鄰紀錄歷程比對" v-on:click="quickCompareInv(inv)">
+                                                    <i class="fas fa-exchange-alt"></i>
+                                                </button>
                                                 <button v-if="inv.CanEdit" type="button" class="btn btn-sm btn-outline-primary btn-action" title="修改資料" v-on:click="navigateEditCase(inv.INV_NO)">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -1177,6 +1427,317 @@
 
                 <div class="drawer-footer">
                     <button type="button" class="btn btn-secondary" v-on:click="closeFacDrawer">關閉視窗</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. 歷次現場查核雙向比對視窗 (Compare Modal) -->
+        <div v-if="isCompareModalOpen" class="modal fade show d-block" tabindex="-1" style="background: rgba(15, 23, 42, 0.7); z-index: 1060; overflow-y: auto;">
+            <div class="modal-dialog modal-dialog-scrollable modal-compare-dialog">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                    <!-- 標題列 -->
+                    <div class="compare-header-box d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-columns text-primary fa-lg mr-2"></i>
+                            <div>
+                                <h5 class="m-0 font-weight-bold text-white">現場查核歷程雙向比對</h5>
+                                <div class="small text-white-50">{{ activeFac.FAC_NAME }} ({{ activeFac.C_NO }})</div>
+                            </div>
+                        </div>
+                        <button type="button" class="close text-white" style="font-size: 1.8rem;" v-on:click="isCompareModalOpen = false">&times;</button>
+                    </div>
+
+                    <!-- 控制選單與過濾列 -->
+                    <div class="compare-control-bar">
+                        <div class="row align-items-end">
+                            <div class="col-lg-5 col-md-5 col-12 mb-2 mb-md-0">
+                                <label class="small font-weight-bold text-muted mb-1 d-flex align-items-center">
+                                    <span class="badge badge-primary mr-1">紀錄 A (基準)</span> 選擇查核時間：
+                                </label>
+                                <select class="form-control font-weight-bold" style="height: 38px;" v-model="compareInvNoA" v-on:change="fetchCompareData">
+                                    <option v-for="inv in drawerInvs" :key="'A_' + inv.INV_NO" :value="inv.INV_NO">
+                                        {{ inv.INV_DATE }} (缺失記點: {{ inv.Total_Loss_Point }}點, {{ inv.Work_State }})
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-lg-2 col-md-2 col-12 mb-2 mb-md-0 text-center">
+                                <button type="button" class="btn btn-outline-secondary font-weight-bold w-100" style="height: 38px;" v-on:click="swapCompareInvs" title="左右紀錄對調">
+                                    <i class="fas fa-exchange-alt mr-1"></i> 左右對調
+                                </button>
+                            </div>
+                            <div class="col-lg-5 col-md-5 col-12">
+                                <label class="small font-weight-bold text-muted mb-1 d-flex align-items-center">
+                                    <span class="badge badge-secondary mr-1">紀錄 B (對照)</span> 選擇查核時間：
+                                </label>
+                                <select class="form-control font-weight-bold" style="height: 38px;" v-model="compareInvNoB" v-on:change="fetchCompareData">
+                                    <option v-for="inv in drawerInvs" :key="'B_' + inv.INV_NO" :value="inv.INV_NO">
+                                        {{ inv.INV_DATE }} (缺失記點: {{ inv.Total_Loss_Point }}點, {{ inv.Work_State }})
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between mt-3 pt-2 border-top flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm" 
+                                        :class="compareOnlyDiff ? 'btn-warning text-dark font-weight-bold' : 'btn-outline-secondary'" 
+                                        v-on:click="compareOnlyDiff = !compareOnlyDiff">
+                                    <i class="fas fa-filter mr-1"></i>
+                                    {{ compareOnlyDiff ? '目前顯示：僅缺失/差異項目' : '過濾：僅看缺失/差異設施' }}
+                                </button>
+                                <span class="small text-muted" v-if="compareData && compareData.DiffSummary">
+                                    已改善: <strong class="text-success">{{ compareData.DiffSummary.ImprovedCount }}</strong> 項 / 
+                                    新發生: <strong class="text-danger">{{ compareData.DiffSummary.WorsenedCount }}</strong> 項 / 
+                                    未改善: <strong class="text-warning">{{ compareData.DiffSummary.ContinuedCount }}</strong> 項 / 
+                                    其他項目差異: <strong class="text-info">{{ compareData.DiffSummary.InfoChangedCount }}</strong> 項
+                                </span>
+                            </div>
+                            <div class="small text-muted">
+                                <i class="fas fa-search-plus mr-1 text-primary"></i>點擊任意現場照片可開啟原圖放大檢視
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 比對內容 Body -->
+                    <div class="modal-body p-3" style="background: #f1f5f9;">
+                        <!-- Loading 狀態 -->
+                        <div v-if="compareLoading" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <div class="mt-2 text-muted font-weight-bold">載入歷程評核與現場照片中...</div>
+                        </div>
+
+                        <div v-else-if="compareData">
+                            <!-- 1. 查核總覽與缺失分差額指標卡片 -->
+                            <div class="card border-0 shadow-sm mb-3" style="border-radius: 8px;">
+                                <div class="card-body p-3">
+                                    <div class="row align-items-center">
+                                        <!-- 左：紀錄 A 摘要 -->
+                                        <div class="col-md-5 col-12 text-center text-md-left border-right mb-3 mb-md-0">
+                                            <div class="small text-muted font-weight-bold mb-1">
+                                                <i class="fas fa-calendar-alt text-primary mr-1"></i> {{ compareData.InvA.InvDate }}
+                                            </div>
+                                            <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2">
+                                                <span class="badge badge-primary px-2 py-1 font-weight-bold">紀錄 A</span>
+                                                <span class="font-weight-bold text-dark">{{ compareData.InvA.WorkState }}</span>
+                                                <span class="text-muted small">({{ compareData.InvA.Inspector }})</span>
+                                            </div>
+                                            <div class="mt-2">
+                                                <span class="loss-badge" :class="compareData.InvA.TotalLossPoint > 0 ? 'loss-major' : 'loss-zero'" style="font-size: 1.1rem; padding: 6px 14px;">
+                                                    缺失總記點：{{ compareData.InvA.TotalLossPoint }} 點
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- 中：差異指標 -->
+                                        <div class="col-md-2 col-12 text-center py-2 mb-3 mb-md-0">
+                                            <div class="small text-muted font-weight-bold mb-1">缺失增減評估</div>
+                                            <div class="font-weight-bold" :class="compareData.DiffSummary.DeltaClass" style="font-size: 1.15rem;">
+                                                <i class="fas mr-1" :class="compareData.DiffSummary.DeltaIcon"></i>
+                                                {{ compareData.DiffSummary.DeltaText }}
+                                            </div>
+                                            <div class="text-muted small mt-1">
+                                                (A 比 B: {{ compareData.DiffSummary.LossDelta >= 0 ? '+' : '' }}{{ compareData.DiffSummary.LossDelta }} 點)
+                                            </div>
+                                        </div>
+
+                                        <!-- 右：紀錄 B 摘要 -->
+                                        <div class="col-md-5 col-12 text-center text-md-right border-left">
+                                            <div class="small text-muted font-weight-bold mb-1">
+                                                <i class="fas fa-calendar-alt text-secondary mr-1"></i> {{ compareData.InvB.InvDate }}
+                                            </div>
+                                            <div class="d-flex align-items-center justify-content-center justify-content-md-end gap-2">
+                                                <span class="badge badge-secondary px-2 py-1 font-weight-bold">紀錄 B</span>
+                                                <span class="font-weight-bold text-dark">{{ compareData.InvB.WorkState }}</span>
+                                                <span class="text-muted small">({{ compareData.InvB.Inspector }})</span>
+                                            </div>
+                                            <div class="mt-2">
+                                                <span class="loss-badge" :class="compareData.InvB.TotalLossPoint > 0 ? 'loss-major' : 'loss-zero'" style="font-size: 1.1rem; padding: 6px 14px;">
+                                                    缺失總記點：{{ compareData.InvB.TotalLossPoint }} 點
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. 九大防制設施評核與現場照片雙欄獨立卡片比對 (解決跑版) -->
+                            <div v-for="diff in filteredDiffSections" :key="diff.Id" class="compare-sec-card">
+                                <!-- 設施標題列 -->
+                                <div class="compare-sec-header">
+                                    <div class="font-weight-bold text-dark d-flex align-items-center gap-2">
+                                        <span class="badge badge-dark px-2 py-1" style="font-size: 0.95rem;">{{ diff.Id }}</span>
+                                        <span style="font-size: 1.05rem;">{{ diff.Title }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="badge font-weight-bold px-3 py-1" style="font-size: 0.85rem;" :class="diff.DiffClass">
+                                            {{ diff.DiffBadge }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- 雙欄排版 (左紀錄 A / 右紀錄 B) -->
+                                <div class="compare-sec-body">
+                                    <div class="row">
+                                        <!-- 左欄：紀錄 A 獨立卡片 -->
+                                        <div class="col-12 col-lg-6 mb-3 mb-lg-0">
+                                            <div class="record-box record-box-a">
+                                                <div class="record-box-header d-flex align-items-center justify-content-between">
+                                                    <div class="d-flex align-items-center text-truncate mr-2">
+                                                        <span class="badge badge-primary mr-2 flex-shrink-0 font-weight-bold">紀錄 A (基準)</span>
+                                                        <span class="font-weight-bold text-dark text-truncate">{{ compareData.InvA.InvDate }}</span>
+                                                    </div>
+                                                    <span v-if="!diff.SectionA.IsInfo" class="badge font-weight-bold flex-shrink-0 px-2 py-1" :class="diff.SectionA.LossPoint > 0 ? 'badge-danger' : 'badge-success'">
+                                                        {{ diff.SectionA.LossPoint > 0 ? '記 ' + diff.SectionA.LossPoint + ' 點' : '0 點 (合格)' }}
+                                                    </span>
+                                                </div>
+
+                                                <div class="record-box-body">
+                                                    <!-- 評核狀態判定 -->
+                                                    <div v-if="diff.SectionA.IsInfo" class="mb-3">
+                                                        <div class="small font-weight-bold text-muted mb-1">填報內容：</div>
+                                                        <div v-if="diff.SectionA.Details && diff.SectionA.Details.length > 0" class="info-detail-box">
+                                                            <div v-for="(d, dIdx) in diff.SectionA.Details" :key="'dA_' + dIdx" class="info-detail-row">
+                                                                <span class="info-detail-label">{{ d.Label }}</span>
+                                                                <span class="info-detail-value">{{ d.Value }}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div v-else class="small text-muted font-italic">本項無文字填報內容</div>
+                                                    </div>
+                                                    <div class="mb-3" v-if="!diff.SectionA.IsInfo">
+                                                        <div class="small font-weight-bold text-muted mb-1">查核結果判定：</div>
+                                                        <div v-if="diff.SectionA.Violations && diff.SectionA.Violations.length > 0">
+                                                            <div v-for="(v, vIdx) in diff.SectionA.Violations" :key="'vA_' + vIdx" class="item-violation-box mb-1">
+                                                                <i class="fas fa-times-circle text-danger mr-1"></i>
+                                                                <span class="font-weight-bold text-danger">{{ v }}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div v-else class="item-compliant-box">
+                                                            <i class="fas fa-check-circle text-success mr-1"></i>
+                                                            <span class="font-weight-bold text-success">全項符合防制規範</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- 現場照片 -->
+                                                    <div class="border-top pt-2">
+                                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                                            <span class="small font-weight-bold text-muted"><i class="fas fa-camera text-primary mr-1"></i>現場拍攝照片：</span>
+                                                            <span class="badge badge-light border text-muted" v-if="diff.SectionA.Photos && diff.SectionA.Photos.length > 0">共 {{ diff.SectionA.Photos.length }} 張</span>
+                                                        </div>
+                                                        <div v-if="diff.SectionA.Photos && diff.SectionA.Photos.length > 0" class="compare-photo-grid">
+                                                            <div v-for="p in diff.SectionA.Photos" :key="'pA_' + p.Key" class="compare-photo-card" v-on:click="openCompareLightbox(p.Url, p.Label, p.Memo)">
+                                                                <div class="photo-img-wrapper">
+                                                                    <img v-if="p.Url" :src="p.Url" class="compare-photo-thumb" :alt="p.Label" />
+                                                                    <div v-else class="photo-placeholder"><i class="far fa-image mr-1"></i>無照片</div>
+                                                                </div>
+                                                                <div class="compare-photo-label" :title="p.Label">{{ p.Label }}</div>
+                                                                <div v-if="p.Memo" class="compare-photo-memo" :title="p.Memo">{{ p.Memo }}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div v-else class="photo-empty-state">
+                                                            <i class="far fa-image fa-lg text-muted mb-1 d-block"></i>
+                                                            <span>本次巡查未拍攝本項照片</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 右欄：紀錄 B 獨立卡片 -->
+                                        <div class="col-12 col-lg-6">
+                                            <div class="record-box record-box-b">
+                                                <div class="record-box-header d-flex align-items-center justify-content-between">
+                                                    <div class="d-flex align-items-center text-truncate mr-2">
+                                                        <span class="badge badge-secondary mr-2 flex-shrink-0 font-weight-bold">紀錄 B (對照)</span>
+                                                        <span class="font-weight-bold text-dark text-truncate">{{ compareData.InvB.InvDate }}</span>
+                                                    </div>
+                                                    <span v-if="!diff.SectionB.IsInfo" class="badge font-weight-bold flex-shrink-0 px-2 py-1" :class="diff.SectionB.LossPoint > 0 ? 'badge-danger' : 'badge-success'">
+                                                        {{ diff.SectionB.LossPoint > 0 ? '記 ' + diff.SectionB.LossPoint + ' 點' : '0 點 (合格)' }}
+                                                    </span>
+                                                </div>
+
+                                                <div class="record-box-body">
+                                                    <!-- 評核狀態判定 -->
+                                                    <div v-if="diff.SectionB.IsInfo" class="mb-3">
+                                                        <div class="small font-weight-bold text-muted mb-1">填報內容：</div>
+                                                        <div v-if="diff.SectionB.Details && diff.SectionB.Details.length > 0" class="info-detail-box">
+                                                            <div v-for="(d, dIdx) in diff.SectionB.Details" :key="'dB_' + dIdx" class="info-detail-row">
+                                                                <span class="info-detail-label">{{ d.Label }}</span>
+                                                                <span class="info-detail-value">{{ d.Value }}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div v-else class="small text-muted font-italic">本項無文字填報內容</div>
+                                                    </div>
+                                                    <div class="mb-3" v-if="!diff.SectionB.IsInfo">
+                                                        <div class="small font-weight-bold text-muted mb-1">查核結果判定：</div>
+                                                        <div v-if="diff.SectionB.Violations && diff.SectionB.Violations.length > 0">
+                                                            <div v-for="(v, vIdx) in diff.SectionB.Violations" :key="'vB_' + vIdx" class="item-violation-box mb-1">
+                                                                <i class="fas fa-times-circle text-danger mr-1"></i>
+                                                                <span class="font-weight-bold text-danger">{{ v }}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div v-else class="item-compliant-box">
+                                                            <i class="fas fa-check-circle text-success mr-1"></i>
+                                                            <span class="font-weight-bold text-success">全項符合防制規範</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- 現場照片 -->
+                                                    <div class="border-top pt-2">
+                                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                                            <span class="small font-weight-bold text-muted"><i class="fas fa-camera text-secondary mr-1"></i>現場拍攝照片：</span>
+                                                            <span class="badge badge-light border text-muted" v-if="diff.SectionB.Photos && diff.SectionB.Photos.length > 0">共 {{ diff.SectionB.Photos.length }} 張</span>
+                                                        </div>
+                                                        <div v-if="diff.SectionB.Photos && diff.SectionB.Photos.length > 0" class="compare-photo-grid">
+                                                            <div v-for="p in diff.SectionB.Photos" :key="'pB_' + p.Key" class="compare-photo-card" v-on:click="openCompareLightbox(p.Url, p.Label, p.Memo)">
+                                                                <div class="photo-img-wrapper">
+                                                                    <img v-if="p.Url" :src="p.Url" class="compare-photo-thumb" :alt="p.Label" />
+                                                                    <div v-else class="photo-placeholder"><i class="far fa-image mr-1"></i>無照片</div>
+                                                                </div>
+                                                                <div class="compare-photo-label" :title="p.Label">{{ p.Label }}</div>
+                                                                <div v-if="p.Memo" class="compare-photo-memo" :title="p.Memo">{{ p.Memo }}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div v-else class="photo-empty-state">
+                                                            <i class="far fa-image fa-lg text-muted mb-1 d-block"></i>
+                                                            <span>本次巡查未拍攝本項照片</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="filteredDiffSections.length === 0" class="card p-5 text-center text-muted">
+                                <i class="fas fa-check-double fa-3x text-success mb-3"></i>
+                                <h6 class="font-weight-bold text-dark">兩次查核無任何差異或缺失項目</h6>
+                                <p class="small text-muted m-0">所有防制設施皆正常合規，可點擊上方切換為檢視全部設施。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 底部按鈕 -->
+                    <div class="modal-footer bg-white py-2">
+                        <button type="button" class="btn btn-secondary font-weight-bold px-4" v-on:click="isCompareModalOpen = false">關閉比對視窗</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 8. 比對現場照片放大檢視 (Lightbox Modal) -->
+        <div v-if="compareLightboxPhoto" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.85); z-index: 1070;" v-on:click="compareLightboxPhoto = null">
+            <div class="modal-dialog modal-dialog-centered modal-lg" v-on:click.stop>
+                <div class="modal-content border-0 bg-transparent text-white">
+                    <div class="d-flex justify-content-between align-items-center p-2">
+                        <span class="font-weight-bold" style="font-size: 1.1rem;">{{ compareLightboxPhoto.label }}</span>
+                        <button type="button" class="close text-white" style="font-size: 2rem;" v-on:click="compareLightboxPhoto = null">&times;</button>
+                    </div>
+                    <div class="modal-body p-0 text-center">
+                        <img :src="compareLightboxPhoto.url" class="img-fluid rounded shadow-lg" style="max-height: 75vh;" :alt="compareLightboxPhoto.label" />
+                        <div v-if="compareLightboxPhoto.memo" class="bg-dark text-white p-2 mt-2 rounded small text-left">
+                            <i class="fas fa-comment-dots text-warning mr-1"></i><strong>照片備註：</strong>{{ compareLightboxPhoto.memo }}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1315,12 +1876,27 @@
                     isGcModalOpen: false,
                     gcLoading: false,
                     currentScId: '',
-                    gcData: null
+                    gcData: null,
+
+                    // 歷程比對控制狀態
+                    selectedCompareInvNos: [],
+                    isCompareModalOpen: false,
+                    compareLoading: false,
+                    compareData: null,
+                    compareInvNoA: null,
+                    compareInvNoB: null,
+                    compareOnlyDiff: false,
+                    compareLightboxPhoto: null
                 };
             },
             computed: {
                 totalPages() {
                     return Math.ceil(this.totalCount / this.pageSize) || 1;
+                },
+                filteredDiffSections() {
+                    if (!this.compareData || !this.compareData.DiffSections) return [];
+                    if (!this.compareOnlyDiff) return this.compareData.DiffSections;
+                    return this.compareData.DiffSections.filter(d => d.HasDifference);
                 },
                 visiblePages() {
                     const pages = [];
@@ -1792,6 +2368,87 @@
                         const input = document.getElementById('searchFacNameInput');
                         if (input) input.focus();
                     });
+                },
+
+                // 21. 歷程比對相關方法
+                onCompareCheckboxChange(invNo) {
+                    if (!this.selectedCompareInvNos) this.selectedCompareInvNos = [];
+                    if (this.selectedCompareInvNos.length > 2) {
+                        this.selectedCompareInvNos = this.selectedCompareInvNos.slice(-2);
+                    }
+                },
+                openCompareModalByDefault() {
+                    if (!this.drawerInvs || this.drawerInvs.length < 2) {
+                        alert('該場所查核紀錄不足 2 筆，無法進行歷程比對！');
+                        return;
+                    }
+                    if (this.selectedCompareInvNos && this.selectedCompareInvNos.length === 2) {
+                        this.compareInvNoA = this.selectedCompareInvNos[0];
+                        this.compareInvNoB = this.selectedCompareInvNos[1];
+                    } else {
+                        this.compareInvNoA = this.drawerInvs[0].INV_NO;
+                        this.compareInvNoB = this.drawerInvs[1].INV_NO;
+                    }
+                    this.isCompareModalOpen = true;
+                    this.fetchCompareData();
+                },
+                startCompareSelected() {
+                    if (!this.selectedCompareInvNos || this.selectedCompareInvNos.length !== 2) {
+                        alert('請勾選任 2 筆紀錄進行比對！');
+                        return;
+                    }
+                    this.compareInvNoA = this.selectedCompareInvNos[0];
+                    this.compareInvNoB = this.selectedCompareInvNos[1];
+                    this.isCompareModalOpen = true;
+                    this.fetchCompareData();
+                },
+                quickCompareInv(inv) {
+                    if (!this.drawerInvs || this.drawerInvs.length < 2) {
+                        alert('查核紀錄不足 2 筆，無法進行歷程比對！');
+                        return;
+                    }
+                    const idx = this.drawerInvs.findIndex(x => x.INV_NO === inv.INV_NO);
+                    let targetNoB = 0;
+                    if (idx >= 0 && idx + 1 < this.drawerInvs.length) {
+                        targetNoB = this.drawerInvs[idx + 1].INV_NO;
+                    } else if (idx > 0) {
+                        targetNoB = this.drawerInvs[idx - 1].INV_NO;
+                    } else {
+                        targetNoB = this.drawerInvs[1].INV_NO;
+                    }
+                    this.compareInvNoA = inv.INV_NO;
+                    this.compareInvNoB = targetNoB;
+                    this.isCompareModalOpen = true;
+                    this.fetchCompareData();
+                },
+                async fetchCompareData() {
+                    if (!this.activeFac || !this.activeFac.FAC_ID) return;
+                    if (!this.compareInvNoA || !this.compareInvNoB) return;
+                    this.compareLoading = true;
+                    try {
+                        const url = `CaseList.aspx?action=compareinvs&facId=${this.activeFac.FAC_ID}&invNoA=${this.compareInvNoA}&invNoB=${this.compareInvNoB}`;
+                        const res = await axios.get(url);
+                        if (res.data && res.data.Success) {
+                            this.compareData = res.data;
+                        } else {
+                            alert(res.data.Message || '讀取比對資料失敗');
+                        }
+                    } catch (e) {
+                        console.error('讀取比對資料異常', e);
+                        alert('讀取歷程比對資料發生異常');
+                    } finally {
+                        this.compareLoading = false;
+                    }
+                },
+                swapCompareInvs() {
+                    const temp = this.compareInvNoA;
+                    this.compareInvNoA = this.compareInvNoB;
+                    this.compareInvNoB = temp;
+                    this.fetchCompareData();
+                },
+                openCompareLightbox(url, label, memo) {
+                    if (!url) return;
+                    this.compareLightboxPhoto = { url: url, label: label, memo: memo };
                 },
 
                 // 20. 匯出 Excel 報表

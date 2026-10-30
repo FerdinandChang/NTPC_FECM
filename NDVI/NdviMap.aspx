@@ -5,7 +5,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - NDVI 植被監測</title>
+    <title>新北市固定逸散源管理平台 - NDVI 植被監測</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -139,7 +139,7 @@
                 </a>
                 <h1 class="brand-title">
                     <i class="fas fa-satellite text-warning mr-2"></i>
-                    <span class="d-none d-md-inline">新北市固定溢散源管理平台 - </span>NDVI 植被監測
+                    <span class="d-none d-md-inline">新北市固定逸散源管理平台 - </span>NDVI 植被監測
                 </h1>
             </div>
             <div class="d-flex align-items-center">

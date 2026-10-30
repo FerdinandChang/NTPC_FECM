@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 道路污染改善回報</title>
+    <title>新北市固定逸散源管理平台 - 道路污染改善回報</title>
     
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
 

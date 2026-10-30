@@ -445,7 +445,7 @@ namespace NTPC_FEC.Case
                 IRow rowTitle = sheet.CreateRow(rowIndex);
                 rowTitle.HeightInPoints = 32;
                 ICell cellTitle = rowTitle.CreateCell(0);
-                cellTitle.SetCellValue("新北市固定溢散源管理平台 - 公私場所巡查案件統計報表");
+                cellTitle.SetCellValue("新北市固定逸散源管理平台 - 公私場所巡查案件統計報表");
                 cellTitle.CellStyle = styleTitle;
                 sheet.AddMergedRegion(new CellRangeAddress(0, 0, 0, activeCols.Count - 1));
                 rowIndex++;

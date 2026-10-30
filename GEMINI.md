@@ -1,6 +1,6 @@
 # NTPC_FEC 專案永久開發與部署鐵律 (Project Rules)
 
-本檔案為 `d:\NTPC_FEC`（新北市固定溢散源管理平台，正式機測試站台 `D:\Web\NTPC_FECM`）的最高指導原則，所有程式碼撰寫與打包發布均須嚴格遵守：
+本檔案為 `d:\NTPC_FEC`（新北市固定逸散源管理平台，正式機測試站台 `D:\Web\NTPC_FECM`）的最高指導原則，所有程式碼撰寫與打包發布均須嚴格遵守：
 
 ## 1. 編碼與語法鐵律 (防止 IIS 編譯錯誤與亂碼)
 - **檔案編碼**：所有 `.aspx`、`.Master`、`.ashx`、`.cs` 檔案存檔時**必須使用 UTF-8 with BOM (`utf-8-sig`)**，嚴禁無 BOM 的 UTF-8（否則 Windows Server IIS 預設以 CP950 Big5 解讀會造成中文亂碼）。

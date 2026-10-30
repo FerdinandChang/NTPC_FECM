@@ -197,11 +197,13 @@ namespace NTPC_FEC.Security
             // 3. 確保核發 Anti-CSRF Cookie (供 Axios 與前端表單讀取)
             EnsureXsrfCookie(context);
 
-            // 4. 對具備狀態變更意圖之 POST AJAX action 執行 CSRF 雙重防禦檢核
+            // 4. 對具備狀態變更意圖之 POST AJAX action 執行 CSRF 雙重防禦檢核 (唯讀報表匯出 action 如 export/exportexcel 免於 CSRF 阻擋)
             if (string.Equals(context.Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) &&
                 !string.IsNullOrEmpty(context.Request["action"]))
             {
-                if (!ValidateXsrfToken(context))
+                string act = context.Request["action"].Trim().ToLower();
+                bool isReadOnlyExport = (act == "export" || act == "exportexcel");
+                if (!isReadOnlyExport && !ValidateXsrfToken(context))
                 {
                     DenyCsrf(context);
                     return;

@@ -4,7 +4,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-    <title>新北市固定溢散源管理平台 - 洗掃作業月報上傳管理</title>
+    <title>新北市固定逸散源管理平台 - 洗掃作業月報上傳管理</title>
 
     <!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
@@ -549,12 +549,12 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <!-- 頂部品牌導覽列 -->
-        <header class="top-navbar">
+        <!-- 頂部品牌導覽列 (依據專案 SKILL UI/UX 標準規範) -->
+        <header class="top-navbar no-print">
             <div class="d-flex align-items-center">
-                <a href="../MainPage.aspx?sub=menu2" class="nav-btn mr-3" title="回功能選單">
-                    <i class="fas fa-chevron-left"></i>
-                    <span class="d-none d-sm-inline">回選單</span>
+                <a href="../MainPage.aspx" class="nav-btn mr-2" title="回首頁">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline">回首頁</span>
                 </a>
                 <span class="navbar-brand-title">
                     <i class="fas fa-truck-pickup text-white"></i>
@@ -569,12 +569,9 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <button type="button" class="nav-btn nav-btn-highlight" v-on:click="openUploadModal">
+                <button type="button" class="nav-btn nav-btn-highlight shadow-sm" v-on:click="openUploadModal">
                     <i class="fas fa-cloud-upload-alt text-primary"></i>
                     <span>上傳新月報</span>
-                </button>
-                <button type="button" class="nav-btn ml-2" v-on:click="reloadAll" title="重新整理">
-                    <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
                 </button>
             </div>
         </header>

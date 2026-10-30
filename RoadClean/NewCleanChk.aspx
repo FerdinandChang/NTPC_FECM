@@ -10,7 +10,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
 
-    <title>新北市固定溢散源管理平台 - 道路潔淨巡檢表</title>
+    <title>新北市固定逸散源管理平台 - 道路潔淨巡檢表</title>
 
     
 
@@ -1281,6 +1281,116 @@
 
         }
 
+        /* 照片卡槽與外勤拍照樣式 */
+        .photo-slot-card {
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .photo-slot-card.has-photo {
+            border-style: solid;
+            border-color: #cbd5e1;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .photo-slot-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #334155;
+        }
+        .photo-empty-wrap {
+            padding: 24px 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: background 0.15s ease;
+        }
+        .photo-empty-wrap:hover {
+            background: #f1f5f9;
+        }
+        .photo-empty-text {
+            color: #0284c7;
+            font-size: 0.9rem;
+        }
+        .photo-preview-wrap {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #0f172a;
+        }
+        .photo-preview-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            cursor: pointer;
+            display: block;
+            transition: transform 0.2s ease;
+        }
+        .photo-preview-img:hover {
+            transform: scale(1.02);
+        }
+        .photo-actions {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            display: flex;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 4px 6px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .photo-lightbox-modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.85);
+            z-index: 2050;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .photo-lightbox-content {
+            max-width: 92vw;
+            max-height: 90vh;
+            position: relative;
+            text-align: center;
+        }
+        .photo-lightbox-content img {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+        .photo-lightbox-close {
+            position: absolute;
+            top: -14px;
+            right: -14px;
+            width: 36px;
+            height: 36px;
+            background: #ffffff;
+            color: #0f172a;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            border: none;
+        }
     </style>
 
 </head>
@@ -1833,9 +1943,9 @@
 
                                         <div class="score-chips-container">
 
-                                            <button v-for="opt in q.Options" :key="opt.Score" type="button" class="score-chip-btn" :class="getScoreChipClass(getScoreObj(pt, q.ChkCode).Score, opt.Score)" v-on:click="mode !== 'read' && setPointScore(pt, q.ChkCode, opt.Score)">
+                                            <button v-for="opt in q.Options" :key="opt.Text" type="button" class="score-chip-btn" :class="getScoreChipClass(pt, q.ChkCode, opt)" v-on:click="mode !== 'read' && setPointScore(pt, q.ChkCode, opt.Score, opt.Text)">
 
-                                                <i :class="getScoreIcon(opt.Score)"></i>
+                                                <i :class="getScoreIcon(q.ChkCode, opt)"></i>
 
                                                 {{ opt.Text }}
 
@@ -1889,9 +1999,9 @@
 
                                     <div class="score-chips-container">
 
-                                        <button v-for="opt in q.Options" :key="opt.Score" type="button" class="score-chip-btn" :class="getScoreChipClass(getScoreObj(pt, q.ChkCode).Score, opt.Score)" v-on:click="mode !== 'read' && setPointScore(pt, q.ChkCode, opt.Score)">
+                                        <button v-for="opt in q.Options" :key="opt.Text" type="button" class="score-chip-btn" :class="getScoreChipClass(pt, q.ChkCode, opt)" v-on:click="mode !== 'read' && setPointScore(pt, q.ChkCode, opt.Score, opt.Text)">
 
-                                            <i :class="getScoreIcon(opt.Score)"></i>
+                                            <i :class="getScoreIcon(q.ChkCode, opt)"></i>
 
                                             {{ opt.Text }}
 
@@ -1899,6 +2009,124 @@
 
                                     </div>
 
+                                </div>
+
+                                <!-- 區塊 4：現場照片 (Site Photos) -->
+                                <div class="section-divider mt-4">
+                                    <i class="fas fa-camera text-primary"></i> 現場照片 (現場查核環境)
+                                </div>
+                                <div class="row row-cols-1 row-cols-sm-2 g-2 mt-1">
+                                    <!-- 現場照片 1 -->
+                                    <div class="col mb-2">
+                                        <div class="photo-slot-card" :class="{ 'has-photo': pt.Photos && pt.Photos.site0 }">
+                                            <div class="photo-slot-header">
+                                                <span class="photo-slot-title"><i class="fas fa-image mr-1 text-primary"></i> 現場照片 1 (主視角)</span>
+                                                <span v-if="pt.Photos && pt.Photos.site0" class="badge badge-success"><i class="fas fa-check mr-1"></i>已拍照</span>
+                                            </div>
+                                            <div v-if="pt.Photos && pt.Photos.site0" class="photo-preview-wrap">
+                                                <img :src="pt.Photos.site0" class="photo-preview-img" alt="現場照片 1" v-on:click="openLightbox(pt.Photos.site0, pt.PointPlace + ' - 現場照片 1')" />
+                                                <div class="photo-actions" v-if="mode !== 'read'">
+                                                    <button type="button" class="btn btn-xs btn-outline-primary" v-on:click="triggerPhotoSelect(pt.PointId, 'site0')">
+                                                        <i class="fas fa-sync-alt"></i> 更換
+                                                    </button>
+                                                    <button type="button" class="btn btn-xs btn-outline-danger" v-on:click="removePhoto(pt, 'site0')">
+                                                        <i class="fas fa-trash-alt"></i> 刪除
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div v-else class="photo-empty-wrap" v-on:click="mode !== 'read' && triggerPhotoSelect(pt.PointId, 'site0')">
+                                                <i class="fas fa-camera fa-2x text-muted mb-2"></i>
+                                                <span class="photo-empty-text font-weight-bold">{{ mode === 'read' ? '無現場照片' : '點擊拍照或上傳現場照片' }}</span>
+                                                <small class="text-muted" v-if="mode !== 'read'">支援手機現場即時拍照</small>
+                                            </div>
+                                            <input type="file" :id="'file_' + pt.PointId + '_site0'" accept="image/*" capture="environment" style="display:none;" v-on:change="onFileSelected($event, pt, 'site0')" />
+                                        </div>
+                                    </div>
+                                    <!-- 現場照片 2 -->
+                                    <div class="col mb-2">
+                                        <div class="photo-slot-card" :class="{ 'has-photo': pt.Photos && pt.Photos.site1 }">
+                                            <div class="photo-slot-header">
+                                                <span class="photo-slot-title"><i class="fas fa-image mr-1 text-primary"></i> 現場照片 2 (副視角)</span>
+                                                <span v-if="pt.Photos && pt.Photos.site1" class="badge badge-success"><i class="fas fa-check mr-1"></i>已拍照</span>
+                                            </div>
+                                            <div v-if="pt.Photos && pt.Photos.site1" class="photo-preview-wrap">
+                                                <img :src="pt.Photos.site1" class="photo-preview-img" alt="現場照片 2" v-on:click="openLightbox(pt.Photos.site1, pt.PointPlace + ' - 現場照片 2')" />
+                                                <div class="photo-actions" v-if="mode !== 'read'">
+                                                    <button type="button" class="btn btn-xs btn-outline-primary" v-on:click="triggerPhotoSelect(pt.PointId, 'site1')">
+                                                        <i class="fas fa-sync-alt"></i> 更換
+                                                    </button>
+                                                    <button type="button" class="btn btn-xs btn-outline-danger" v-on:click="removePhoto(pt, 'site1')">
+                                                        <i class="fas fa-trash-alt"></i> 刪除
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div v-else class="photo-empty-wrap" v-on:click="mode !== 'read' && triggerPhotoSelect(pt.PointId, 'site1')">
+                                                <i class="fas fa-camera fa-2x text-muted mb-2"></i>
+                                                <span class="photo-empty-text font-weight-bold">{{ mode === 'read' ? '無現場照片' : '點擊拍照或上傳現場照片 2' }}</span>
+                                                <small class="text-muted" v-if="mode !== 'read'">副視角或細部狀況</small>
+                                            </div>
+                                            <input type="file" :id="'file_' + pt.PointId + '_site1'" accept="image/*" capture="environment" style="display:none;" v-on:change="onFileSelected($event, pt, 'site1')" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 區塊 5：道路淹水潛勢照片 (Flood Photos) -->
+                                <div class="section-divider mt-4">
+                                    <i class="fas fa-water text-info"></i> 道路淹水潛勢照片 (洩水孔/格柵/淤積現況)
+                                </div>
+                                <div class="row row-cols-1 row-cols-sm-2 g-2 mt-1">
+                                    <!-- 淹水照片 1 -->
+                                    <div class="col mb-2">
+                                        <div class="photo-slot-card" :class="{ 'has-photo': pt.Photos && pt.Photos.flood0 }">
+                                            <div class="photo-slot-header">
+                                                <span class="photo-slot-title"><i class="fas fa-tint mr-1 text-info"></i> 淹水潛勢照片 1</span>
+                                                <span v-if="pt.Photos && pt.Photos.flood0" class="badge badge-success"><i class="fas fa-check mr-1"></i>已拍照</span>
+                                            </div>
+                                            <div v-if="pt.Photos && pt.Photos.flood0" class="photo-preview-wrap">
+                                                <img :src="pt.Photos.flood0" class="photo-preview-img" alt="淹水潛勢照片 1" v-on:click="openLightbox(pt.Photos.flood0, pt.PointPlace + ' - 淹水潛勢照片 1')" />
+                                                <div class="photo-actions" v-if="mode !== 'read'">
+                                                    <button type="button" class="btn btn-xs btn-outline-primary" v-on:click="triggerPhotoSelect(pt.PointId, 'flood0')">
+                                                        <i class="fas fa-sync-alt"></i> 更換
+                                                    </button>
+                                                    <button type="button" class="btn btn-xs btn-outline-danger" v-on:click="removePhoto(pt, 'flood0')">
+                                                        <i class="fas fa-trash-alt"></i> 刪除
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div v-else class="photo-empty-wrap" v-on:click="mode !== 'read' && triggerPhotoSelect(pt.PointId, 'flood0')">
+                                                <i class="fas fa-camera fa-2x text-muted mb-2"></i>
+                                                <span class="photo-empty-text font-weight-bold">{{ mode === 'read' ? '無淹水照片' : '點擊拍照或上傳淹水照片' }}</span>
+                                                <small class="text-muted" v-if="mode !== 'read'">洩水孔或格柵排水狀況</small>
+                                            </div>
+                                            <input type="file" :id="'file_' + pt.PointId + '_flood0'" accept="image/*" capture="environment" style="display:none;" v-on:change="onFileSelected($event, pt, 'flood0')" />
+                                        </div>
+                                    </div>
+                                    <!-- 淹水照片 2 -->
+                                    <div class="col mb-2">
+                                        <div class="photo-slot-card" :class="{ 'has-photo': pt.Photos && pt.Photos.flood1 }">
+                                            <div class="photo-slot-header">
+                                                <span class="photo-slot-title"><i class="fas fa-tint mr-1 text-info"></i> 淹水潛勢照片 2</span>
+                                                <span v-if="pt.Photos && pt.Photos.flood1" class="badge badge-success"><i class="fas fa-check mr-1"></i>已拍照</span>
+                                            </div>
+                                            <div v-if="pt.Photos && pt.Photos.flood1" class="photo-preview-wrap">
+                                                <img :src="pt.Photos.flood1" class="photo-preview-img" alt="淹水潛勢照片 2" v-on:click="openLightbox(pt.Photos.flood1, pt.PointPlace + ' - 淹水潛勢照片 2')" />
+                                                <div class="photo-actions" v-if="mode !== 'read'">
+                                                    <button type="button" class="btn btn-xs btn-outline-primary" v-on:click="triggerPhotoSelect(pt.PointId, 'flood1')">
+                                                        <i class="fas fa-sync-alt"></i> 更換
+                                                    </button>
+                                                    <button type="button" class="btn btn-xs btn-outline-danger" v-on:click="removePhoto(pt, 'flood1')">
+                                                        <i class="fas fa-trash-alt"></i> 刪除
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div v-else class="photo-empty-wrap" v-on:click="mode !== 'read' && triggerPhotoSelect(pt.PointId, 'flood1')">
+                                                <i class="fas fa-camera fa-2x text-muted mb-2"></i>
+                                                <span class="photo-empty-text font-weight-bold">{{ mode === 'read' ? '無淹水照片' : '點擊拍照或上傳淹水照片 2' }}</span>
+                                                <small class="text-muted" v-if="mode !== 'read'">淤積或低窪路面狀況</small>
+                                            </div>
+                                            <input type="file" :id="'file_' + pt.PointId + '_flood1'" accept="image/*" capture="environment" style="display:none;" v-on:change="onFileSelected($event, pt, 'flood1')" />
+                                        </div>
+                                    </div>
                                 </div>
 
                             </div>
@@ -1996,6 +2224,21 @@
                 <!-- ============================================== -->
         <!-- 電子手寫簽章全螢幕畫布 (Pointer Events 頂級平滑觸控) -->
         <!-- ============================================== -->
+        <!-- ============================================== -->
+        <!-- 現場與淹水照片全螢幕燈箱檢視器 (Lightbox Modal) -->
+        <!-- ============================================== -->
+        <div v-if="showLightbox" class="photo-lightbox-modal" v-on:click.self="closeLightbox">
+            <div class="photo-lightbox-header">
+                <span class="photo-lightbox-title"><i class="fas fa-image mr-2 text-info"></i>{{ lightboxTitle }}</span>
+                <button type="button" class="btn btn-sm btn-outline-light" v-on:click="closeLightbox">
+                    <i class="fas fa-times mr-1"></i> 關閉
+                </button>
+            </div>
+            <div class="photo-lightbox-body" v-on:click.self="closeLightbox">
+                <img :src="lightboxImg" class="photo-lightbox-img" :alt="lightboxTitle" />
+            </div>
+        </div>
+
         <div v-if="showSigModal" class="sig-modal-backdrop">
             <div class="sig-modal-window">
                 <div class="sig-modal-header">
@@ -2100,6 +2343,10 @@
 
                     showSigModal: false,
                     hasDrawnSignature: false,
+                    tempDir: 'temp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+                    showLightbox: false,
+                    lightboxImg: '',
+                    lightboxTitle: '',
 
                     saving: false,
 
@@ -2660,6 +2907,7 @@
                                     SIsland: 'Y',
 
                                     CivilSide: 'N',
+                                    Photos: { site0: '', site1: '', flood0: '', flood1: '' },
 
                                     Scores: {}
 
@@ -2669,24 +2917,26 @@
 
 
 
-                            // 預填預設滿分 (100)
-
+                            // 預填預設滿分 (RCC 為 100 分，FLD 為各題最佳安全項目)
                             this.pointList.forEach(pt => {
-
-                                [...this.questions.RCC, ...this.questions.FLD].forEach(q => {
-
+                                this.questions.RCC.forEach(q => {
+                                    const fullOpt = q.Options ? (q.Options.find(o => o.Score === 100) || q.Options[0]) : null;
                                     pt.Scores[q.ChkCode] = {
-
                                         ChkCode: q.ChkCode,
-
                                         Score: 100,
-
-                                        ChiItem1: ''
-
+                                        ChiItem1: '',
+                                        SelectedText: fullOpt ? fullOpt.Text : ''
                                     };
-
                                 });
-
+                                this.questions.FLD.forEach(q => {
+                                    const safeOpt = q.Options && q.Options.length > 0 ? q.Options[0] : null;
+                                    pt.Scores[q.ChkCode] = {
+                                        ChkCode: q.ChkCode,
+                                        Score: safeOpt ? safeOpt.Score : 25,
+                                        ChiItem1: safeOpt ? safeOpt.Text : '',
+                                        SelectedText: safeOpt ? safeOpt.Text : ''
+                                    };
+                                });
                             });
 
 
@@ -2842,119 +3092,157 @@
 
 
                 // 取得題目計分物件
-
                 getScoreObj(pt, chkCode) {
-
                     if (!pt.Scores[chkCode]) {
-
-                        pt.Scores[chkCode] = { ChkCode: chkCode, Score: 100, ChiItem1: '' };
-
+                        pt.Scores[chkCode] = { ChkCode: chkCode, Score: null, ChiItem1: '', SelectedText: '' };
                     }
-
                     return pt.Scores[chkCode];
-
                 },
-
-
 
                 // 判斷是否為「不需填寫」
-
                 isNoNeed(pt, chkCode) {
-
                     if (chkCode === 'RCC005' && pt.STree === 'N') return true;
-
                     if (chkCode === 'RCC004' && pt.SIsland === 'N') return true;
-
                     if (chkCode === 'RCC006' && pt.CivilSide === 'N') return true;
-
                     return false;
-
                 },
 
+                // 判定選項所屬色階：'safe' (綠色), 'warning' (黃色), 'danger' (紅色)
+                getOptionSeverity(chkCode, opt) {
+                    if (!opt) return 'safe';
+                    // 1. RCC 道路潔淨度
+                    if (chkCode && chkCode.startsWith('RCC')) {
+                        if (opt.Score >= 100) return 'safe';
+                        if (opt.Score >= 60) return 'warning';
+                        return 'danger';
+                    }
+                    // 2. FLD 道路淹水潛勢調查
+                    const text = (opt.Text || '').trim();
+                    // 紅色危險/嚴重：嚴重遮蔽、嚴重淤積、全為硬鋪面無排水、低窪處、倒灌、無處宣洩/大面積漫流
+                    if (text.includes('嚴重') ||
+                        text.includes('無處宣洩') ||
+                        text.includes('倒灌') ||
+                        text.includes('低窪') ||
+                        text.includes('大面積漫流') ||
+                        text.includes('硬鋪面') ||
+                        text.includes('全為硬鋪面')) {
+                        return 'danger';
+                    }
+                    // 綠色良好/安全：暢通、無明顯淤積、順流至洩水孔、自然漫流、自然透水、微高地/坡地、漫流至周邊地表/植被
+                    if (text.includes('暢通') ||
+                        text.includes('無明顯') ||
+                        text.includes('順流') ||
+                        text.includes('自然漫流') ||
+                        text.includes('自然透水') ||
+                        text.includes('微高地') ||
+                        text.includes('坡地') ||
+                        text.includes('植被') ||
+                        text.includes('周邊地表')) {
+                        return 'safe';
+                    }
+                    // 黃色注意/中度：局部遮蔽、局部淤積、平坦地、路面局部滯留
+                    if (text.includes('局部') ||
+                        text.includes('平坦') ||
+                        text.includes('滯留') ||
+                        text.includes('稍有') ||
+                        text.includes('輕微') ||
+                        text.includes('部分')) {
+                        return 'warning';
+                    }
+                    // 兜底分數判斷
+                    if (opt.Score >= 20) return 'safe';
+                    if (opt.Score > 0) return 'warning';
+                    return 'danger';
+                },
 
+                // 判斷按鈕是否為選中狀態 (使用 SelectedText 精確比對，杜絕同分多選項被同時選中)
+                isOptionSelected(pt, chkCode, opt) {
+                    const obj = this.getScoreObj(pt, chkCode);
+                    if (!obj || obj.Score === null || obj.Score === undefined) return false;
+
+                    // 1. 若有明確記錄選中的文字，優先以文字比對
+                    if (obj.SelectedText) {
+                        return obj.SelectedText === opt.Text;
+                    }
+                    // 2. 若為 FLD 且 ChiItem1 有文字，則以 ChiItem1 比對
+                    if (chkCode && chkCode.startsWith('FLD') && obj.ChiItem1 && obj.ChiItem1 === opt.Text) {
+                        return true;
+                    }
+                    // 3. 載入既有歷史資料（只有 Score），比對 Score
+                    if (obj.Score === opt.Score) {
+                        const allQ = [...this.questions.RCC, ...this.questions.FLD];
+                        const q = allQ.find(item => item.ChkCode === chkCode);
+                        if (q && q.Options) {
+                            const firstMatch = q.Options.find(o => o.Score === obj.Score);
+                            return firstMatch && firstMatch.Text === opt.Text;
+                        }
+                        return true;
+                    }
+                    return false;
+                },
 
                 // 設定評分
-
-                setPointScore(pt, chkCode, score) {
-
+                setPointScore(pt, chkCode, score, optText) {
                     const obj = this.getScoreObj(pt, chkCode);
-
                     obj.Score = score;
-
-                    if (score === 100) {
-
-                        obj.ChiItem1 = '';
-
+                    obj.SelectedText = optText;
+                    if (chkCode && chkCode.startsWith('FLD')) {
+                        obj.ChiItem1 = optText;
+                    } else {
+                        if (score === 100) {
+                            obj.ChiItem1 = '';
+                        }
                     }
-
                 },
 
-
-
-                // 評分按鈕高亮 Class
-
-                getScoreChipClass(currentScore, targetScore) {
-
-                    if (currentScore !== targetScore) return '';
-
-                    if (targetScore >= 100) return 'selected-100';
-
-                    if (targetScore >= 80) return 'selected-80';
-
-                    if (targetScore >= 60) return 'selected-60';
-
+                // 評分按鈕高亮 Class (依據該選項的色階與選中狀態)
+                getScoreChipClass(pt, chkCode, opt) {
+                    if (!this.isOptionSelected(pt, chkCode, opt)) return '';
+                    const sev = this.getOptionSeverity(chkCode, opt);
+                    if (sev === 'safe') return 'selected-100';
+                    if (sev === 'warning') return 'selected-60';
                     return 'selected-0';
-
                 },
 
-
-
-                getScoreIcon(score) {
-
-                    if (score >= 100) return 'fas fa-check-circle text-success';
-
-                    if (score >= 80) return 'fas fa-thumbs-up text-primary';
-
-                    if (score >= 60) return 'fas fa-minus-circle text-warning';
-
+                // 評分按鈕圖示 (依據選項色階呈現：綠色勾勾、黃色橫槓、紅色叉叉)
+                getScoreIcon(chkCode, opt) {
+                    const sev = this.getOptionSeverity(chkCode, opt);
+                    if (sev === 'safe') return 'fas fa-check-circle text-success';
+                    if (sev === 'warning') return 'fas fa-minus-circle text-warning';
                     return 'fas fa-times-circle text-danger';
-
                 },
-
-
 
                 // 一鍵全合格
-
                 quickPassAll() {
-
                     if (this.pointList.length === 0) return;
-
                     this.pointList.forEach(pt => {
-
                         pt.STree = 'Y';
-
                         pt.SIsland = 'Y';
-
                         pt.CivilSide = 'N';
-
-                        [...this.questions.RCC, ...this.questions.FLD].forEach(q => {
-
+                        this.questions.RCC.forEach(q => {
                             const scoreObj = this.getScoreObj(pt, q.ChkCode);
-
                             scoreObj.Score = 100;
-
                             scoreObj.ChiItem1 = '';
-
+                            const fullOpt = q.Options ? (q.Options.find(o => o.Score === 100) || q.Options[0]) : null;
+                            scoreObj.SelectedText = fullOpt ? fullOpt.Text : '';
                         });
-
+                        this.questions.FLD.forEach(q => {
+                            const scoreObj = this.getScoreObj(pt, q.ChkCode);
+                            const safeOpt = q.Options && q.Options.length > 0 ? q.Options[0] : null;
+                            if (safeOpt) {
+                                scoreObj.Score = safeOpt.Score;
+                                scoreObj.ChiItem1 = safeOpt.Text;
+                                scoreObj.SelectedText = safeOpt.Text;
+                            } else {
+                                scoreObj.Score = 25;
+                                scoreObj.ChiItem1 = '';
+                                scoreObj.SelectedText = '';
+                            }
+                        });
                     });
-
-                    this.alertMessage = '已為全部檢核點套用 100 分滿分合格！';
-
+                    this.alertMessage = '已為全部檢核點套用最優良合格項目！';
                     this.alertType = 'success';
-
                     setTimeout(() => { this.alertMessage = ''; }, 3000);
-
                 },
 
 
@@ -2996,6 +3284,89 @@
                 // 手寫簽名彈窗管理
 
                                 // 手寫簽名全螢幕彈窗管理 (Pointer Events 高性能平滑流暢觸控)
+                // 照片拍攝與上傳管理 (現場照片 2 張 + 道路淹水潛勢照片 2 張)
+                triggerPhotoSelect(pointId, photoType) {
+                    if (this.mode === 'read') return;
+                    const el = document.getElementById('file_' + pointId + '_' + photoType);
+                    if (el) el.click();
+                },
+
+                async onFileSelected(e, pt, photoType) {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
+                    const file = files[0];
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('mode', this.mode);
+                    formData.append('tempDir', this.tempDir);
+                    formData.append('chkId', this.chkId || '');
+                    formData.append('pointId', pt.PointId);
+                    formData.append('photoType', photoType);
+
+                    try {
+                        const res = await axios.post('NewCleanChk.aspx?action=upload_photo', formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                        });
+                        if (res.data && res.data.Success) {
+                            if (res.data.TempDir) {
+                                this.tempDir = res.data.TempDir;
+                            }
+                            if (!pt.Photos) {
+                                pt.Photos = { site0: '', site1: '', flood0: '', flood1: '' };
+                            }
+                            pt.Photos[photoType] = res.data.Url;
+                        } else {
+                            alert('照片上傳失敗：' + (res.data ? res.data.Message : '未知錯誤'));
+                        }
+                    } catch (err) {
+                        console.error('照片上傳失敗', err);
+                        alert('照片上傳異常，請檢查網路連線或檔案大小！');
+                    } finally {
+                        e.target.value = '';
+                    }
+                },
+
+                async removePhoto(pt, photoType) {
+                    if (this.mode === 'read') return;
+                    if (!confirm('確定要刪除此張照片嗎？')) return;
+
+                    const formData = new FormData();
+                    formData.append('mode', this.mode);
+                    formData.append('tempDir', this.tempDir);
+                    formData.append('chkId', this.chkId || '');
+                    formData.append('pointId', pt.PointId);
+                    formData.append('photoType', photoType);
+
+                    try {
+                        const res = await axios.post('NewCleanChk.aspx?action=delete_photo', formData);
+                        if (res.data && res.data.Success) {
+                            if (pt.Photos) {
+                                pt.Photos[photoType] = '';
+                            }
+                        } else {
+                            alert('刪除照片失敗：' + (res.data ? res.data.Message : '未知錯誤'));
+                        }
+                    } catch (err) {
+                        console.error('刪除照片失敗', err);
+                        alert('刪除照片通訊異常！');
+                    }
+                },
+
+                openLightbox(url, title) {
+                    if (!url) return;
+                    this.lightboxImg = url;
+                    this.lightboxTitle = title || '照片檢視';
+                    this.showLightbox = true;
+                    document.body.style.overflow = 'hidden';
+                },
+
+                closeLightbox() {
+                    this.showLightbox = false;
+                    this.lightboxImg = '';
+                    document.body.style.overflow = '';
+                },
+
                 openSignatureModal() {
                     this.showSigModal = true;
                     this.hasDrawnSignature = !!this.signatureImg;
@@ -3162,6 +3533,7 @@
 
                         Rdid: this.selectedRdid,
 
+                        TempDir: this.tempDir,
                         Signature: this.signatureImg,
 
                         Points: this.pointList.map(pt => {
@@ -3283,6 +3655,7 @@
                                         if (pm.SIsland) pt.SIsland = pm.SIsland;
 
                                         if (pm.CivilSide) pt.CivilSide = pm.CivilSide;
+                                        if (pm.Photos) pt.Photos = pm.Photos;
 
                                     }
 
@@ -3313,8 +3686,17 @@
                                         }
 
                                         pt.Scores[sChkCode].Score = (s.Score !== null && s.Score !== undefined) ? Number(s.Score) : null;
-
                                         pt.Scores[sChkCode].ChiItem1 = (s.ChiItem1 || '').trim();
+                                        if (sChkCode.startsWith('FLD') && pt.Scores[sChkCode].ChiItem1) {
+                                            pt.Scores[sChkCode].SelectedText = pt.Scores[sChkCode].ChiItem1;
+                                        } else {
+                                            const allQ = [...this.questions.RCC, ...this.questions.FLD];
+                                            const q = allQ.find(item => item.ChkCode === sChkCode);
+                                            if (q && q.Options && pt.Scores[sChkCode].Score !== null) {
+                                                const matched = q.Options.find(o => o.Score === pt.Scores[sChkCode].Score);
+                                                if (matched) pt.Scores[sChkCode].SelectedText = matched.Text;
+                                            }
+                                        }
 
                                     }
 
