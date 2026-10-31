@@ -321,63 +321,93 @@ namespace NTPC_FEC.RoadBreak
             }
         }
 
-        // 退回通報時產生新案號並複製現場照片
+        // 退回通報時產生新案號並複製現場照片 (具備併發衝突重試機制)
         private string CreateNewBreakIdFromBack(string originBreakId, DataRow originRow, string originPhysDir)
         {
             string datePrefix = DateTime.Now.ToString("yyyyMMdd");
             string timePrefix = DateTime.Now.ToString("HHmmss");
             string fullPrefix = datePrefix + timePrefix;
+            string newBreakId = "";
+            bool inserted = false;
+            int maxRetry = 5;
 
-            string seqSql = "SELECT TOP 1 Break_ID FROM RoadBreak_CaseMain WHERE Break_ID LIKE @prefix + '%' ORDER BY Break_ID DESC";
-            object maxObj = DbHelper.ExecuteScalar(seqSql, new SqlParameter("@prefix", fullPrefix));
-            int seq = 1;
-            if (maxObj != null && maxObj != DBNull.Value)
+            for (int retry = 0; retry < maxRetry; retry++)
             {
-                string maxId = maxObj.ToString().Trim();
-                if (maxId.Length >= 17)
+                if (retry > 0)
                 {
-                    string seqStr = maxId.Substring(14, 3);
-                    int.TryParse(seqStr, out seq);
-                    seq++;
+                    System.Threading.Thread.Sleep(50 * retry + new Random().Next(10, 50));
+                    fullPrefix = DateTime.Now.ToString("yyyyMMddHHmmss");
+                }
+
+                string seqSql = "SELECT TOP 1 Break_ID FROM RoadBreak_CaseMain WHERE Break_ID LIKE @prefix + '%' ORDER BY Break_ID DESC";
+                object maxObj = DbHelper.ExecuteScalar(seqSql, new SqlParameter("@prefix", fullPrefix));
+                int seq = 1;
+                if (maxObj != null && maxObj != DBNull.Value)
+                {
+                    string maxId = maxObj.ToString().Trim();
+                    if (maxId.Length >= 17)
+                    {
+                        string seqStr = maxId.Substring(14, 3);
+                        int.TryParse(seqStr, out seq);
+                        seq++;
+                    }
+                }
+
+                newBreakId = fullPrefix + string.Format("{0:000}", seq);
+
+                DateTime rptDate = DateTime.Now;
+                if (originRow["Report_Date"] != DBNull.Value) rptDate = Convert.ToDateTime(originRow["Report_Date"]);
+
+                double utmE = 0, utmN = 0;
+                if (originRow["S_UTME"] != DBNull.Value) double.TryParse(originRow["S_UTME"].ToString(), out utmE);
+                if (originRow["S_UTMN"] != DBNull.Value) double.TryParse(originRow["S_UTMN"].ToString(), out utmN);
+
+                string roadName = originRow["ROAD_Name"] != DBNull.Value ? originRow["ROAD_Name"].ToString() : "";
+                string roadLv = originRow["ROAD_LV"] != DBNull.Value ? originRow["ROAD_LV"].ToString() : "";
+                string townCode = originRow["TOWN_CODE"] != DBNull.Value ? originRow["TOWN_CODE"].ToString() : "";
+                string smooth = originRow["Smooth"] != DBNull.Value ? originRow["Smooth"].ToString() : "";
+                string hole = originRow["Hole_Conn_St"] != DBNull.Value ? originRow["Hole_Conn_St"].ToString() : "";
+                string memo = originRow["Memo"] != DBNull.Value ? originRow["Memo"].ToString() : "";
+                string rptUser = originRow["Report_User"] != DBNull.Value ? originRow["Report_User"].ToString().Trim() : "";
+
+                string insertSql = "INSERT INTO RoadBreak_CaseMain " +
+                    "(Break_ID, Report_Date, S_UTME, S_UTMN, ROAD_Name, ROAD_LV, TOWN_CODE, Smooth, Hole_Conn_St, Memo, Report_User, FromBack_ID) " +
+                    "VALUES " +
+                    "(@Break_ID, @Report_Date, @S_UTME, @S_UTMN, @ROAD_Name, @ROAD_LV, @TOWN_CODE, @Smooth, @Hole_Conn_St, @Memo, @Report_User, @FromBack_ID)";
+
+                try
+                {
+                    DbHelper.ExecuteNonQuery(insertSql,
+                        new SqlParameter("@Break_ID", newBreakId),
+                        new SqlParameter("@Report_Date", rptDate),
+                        new SqlParameter("@S_UTME", utmE),
+                        new SqlParameter("@S_UTMN", utmN),
+                        new SqlParameter("@ROAD_Name", roadName),
+                        new SqlParameter("@ROAD_LV", roadLv),
+                        new SqlParameter("@TOWN_CODE", townCode),
+                        new SqlParameter("@Smooth", smooth),
+                        new SqlParameter("@Hole_Conn_St", hole),
+                        new SqlParameter("@Memo", memo),
+                        new SqlParameter("@Report_User", rptUser),
+                        new SqlParameter("@FromBack_ID", originBreakId)
+                    );
+                    inserted = true;
+                    break;
+                }
+                catch (SqlException ex)
+                {
+                    if (ex.Number == 2627 || ex.Number == 2601)
+                    {
+                        continue;
+                    }
+                    throw;
                 }
             }
 
-            string newBreakId = fullPrefix + string.Format("{0:000}", seq);
-
-            DateTime rptDate = DateTime.Now;
-            if (originRow["Report_Date"] != DBNull.Value) rptDate = Convert.ToDateTime(originRow["Report_Date"]);
-
-            double utmE = 0, utmN = 0;
-            if (originRow["S_UTME"] != DBNull.Value) double.TryParse(originRow["S_UTME"].ToString(), out utmE);
-            if (originRow["S_UTMN"] != DBNull.Value) double.TryParse(originRow["S_UTMN"].ToString(), out utmN);
-
-            string roadName = originRow["ROAD_Name"] != DBNull.Value ? originRow["ROAD_Name"].ToString() : "";
-            string roadLv = originRow["ROAD_LV"] != DBNull.Value ? originRow["ROAD_LV"].ToString() : "";
-            string townCode = originRow["TOWN_CODE"] != DBNull.Value ? originRow["TOWN_CODE"].ToString() : "";
-            string smooth = originRow["Smooth"] != DBNull.Value ? originRow["Smooth"].ToString() : "";
-            string hole = originRow["Hole_Conn_St"] != DBNull.Value ? originRow["Hole_Conn_St"].ToString() : "";
-            string memo = originRow["Memo"] != DBNull.Value ? originRow["Memo"].ToString() : "";
-            string rptUser = originRow["Report_User"] != DBNull.Value ? originRow["Report_User"].ToString().Trim() : "";
-
-            string insertSql = @"INSERT INTO RoadBreak_CaseMain 
-                (Break_ID, Report_Date, S_UTME, S_UTMN, ROAD_Name, ROAD_LV, TOWN_CODE, Smooth, Hole_Conn_St, Memo, Report_User, FromBack_ID)
-                VALUES 
-                (@Break_ID, @Report_Date, @S_UTME, @S_UTMN, @ROAD_Name, @ROAD_LV, @TOWN_CODE, @Smooth, @Hole_Conn_St, @Memo, @Report_User, @FromBack_ID)";
-
-            DbHelper.ExecuteNonQuery(insertSql,
-                new SqlParameter("@Break_ID", newBreakId),
-                new SqlParameter("@Report_Date", rptDate),
-                new SqlParameter("@S_UTME", utmE),
-                new SqlParameter("@S_UTMN", utmN),
-                new SqlParameter("@ROAD_Name", roadName),
-                new SqlParameter("@ROAD_LV", roadLv),
-                new SqlParameter("@TOWN_CODE", townCode),
-                new SqlParameter("@Smooth", smooth),
-                new SqlParameter("@Hole_Conn_St", hole),
-                new SqlParameter("@Memo", memo),
-                new SqlParameter("@Report_User", rptUser),
-                new SqlParameter("@FromBack_ID", originBreakId)
-            );
+            if (!inserted)
+            {
+                throw new InvalidOperationException("產生破損案件編號併發衝突，請稍後再試。");
+            }
 
             // 複製照片到新目錄
             string newRelDir = "Upload/RoadBreakPIC/" + newBreakId;
@@ -394,7 +424,8 @@ namespace NTPC_FEC.RoadBreak
                 {
                     if (f.Name.IndexOf("佐證照片") >= 0 && f.Name.IndexOf("改善後") < 0)
                     {
-                        string destPath = Path.Combine(newPhysDir, f.Name);
+                        string safeName = Path.GetFileName(f.Name);
+                        string destPath = Path.Combine(newPhysDir, safeName);
                         try { f.CopyTo(destPath, true); } catch { }
                     }
                 }
@@ -403,10 +434,12 @@ namespace NTPC_FEC.RoadBreak
             return newBreakId;
         }
 
-        // 儲存改善照片
+        // 儲存改善照片 (安全防護路徑穿透與惡意刪除)
         private void SavePhotos(string physDir, List<PhotoUploadItem> photos)
         {
             if (photos == null || photos.Count == 0) return;
+
+            string canonBaseDir = Path.GetFullPath(physDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
             foreach (var item in photos)
             {
@@ -416,10 +449,12 @@ namespace NTPC_FEC.RoadBreak
                 {
                     if (!string.IsNullOrEmpty(item.FileName))
                     {
-                        string delPath = Path.Combine(physDir, item.FileName);
-                        if (File.Exists(delPath))
+                        string safeName = Path.GetFileName(item.FileName);
+                        string delPath = Path.Combine(physDir, safeName);
+                        string canonDel = Path.GetFullPath(delPath);
+                        if (canonDel.StartsWith(canonBaseDir, StringComparison.OrdinalIgnoreCase) && File.Exists(canonDel))
                         {
-                            try { File.Delete(delPath); } catch { }
+                            try { File.Delete(canonDel); } catch { }
                         }
                     }
                     continue;
@@ -427,18 +462,26 @@ namespace NTPC_FEC.RoadBreak
 
                 if (!string.IsNullOrEmpty(item.Base64Data))
                 {
-                    string targetFileName = !string.IsNullOrEmpty(item.FileName) 
+                    string rawName = !string.IsNullOrEmpty(item.FileName) 
                         ? item.FileName 
                         : (item.TargetTitle ?? "改善後佐證照片_1") + ".jpg";
 
-                    if (!targetFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && 
-                        !targetFileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) && 
-                        !targetFileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                    string safeFileName = Path.GetFileName(rawName);
+
+                    if (!safeFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && 
+                        !safeFileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) && 
+                        !safeFileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
                     {
-                        targetFileName += ".jpg";
+                        safeFileName += ".jpg";
                     }
 
-                    string fullPath = Path.Combine(physDir, targetFileName);
+                    string fullPath = Path.Combine(physDir, safeFileName);
+                    string canonFull = Path.GetFullPath(fullPath);
+
+                    if (!canonFull.StartsWith(canonBaseDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
 
                     try
                     {
@@ -449,7 +492,7 @@ namespace NTPC_FEC.RoadBreak
                             b64 = b64.Substring(commaIdx + 1);
                         }
                         byte[] fileBytes = Convert.FromBase64String(b64);
-                        File.WriteAllBytes(fullPath, fileBytes);
+                        File.WriteAllBytes(canonFull, fileBytes);
                     }
                     catch { }
                 }
@@ -512,29 +555,36 @@ namespace NTPC_FEC.RoadBreak
 
                 string bodyHtml = sb.ToString();
 
-                SmtpClient client = new SmtpClient(host, 587);
-                client.EnableSsl = false;
-                client.Timeout = 15000;
-                if (!string.IsNullOrEmpty(smtpUser) && !string.IsNullOrEmpty(smtpPass)) client.Credentials = new NetworkCredential(smtpUser, smtpPass);
-
-                foreach (DataRow uRow in dtEmails.Rows)
+                using (SmtpClient client = new SmtpClient(host, 587))
                 {
-                    string targetEmail = uRow["UserEmail"].ToString().Trim();
-                    if (string.IsNullOrEmpty(targetEmail)) continue;
-
-                    try
+                    client.EnableSsl = false;
+                    client.Timeout = 15000;
+                    if (!string.IsNullOrEmpty(smtpUser) && !string.IsNullOrEmpty(smtpPass))
                     {
-                        MailMessage msg = new MailMessage();
-                        msg.From = new MailAddress(fromAddr, "新北市固定逸散源管理平台", Encoding.UTF8);
-                        msg.To.Add(new MailAddress(targetEmail));
-                        msg.Subject = subject;
-                        msg.IsBodyHtml = true;
-                        msg.BodyEncoding = Encoding.UTF8;
-                        msg.Body = bodyHtml;
-
-                        client.Send(msg);
+                        client.Credentials = new NetworkCredential(smtpUser, smtpPass);
                     }
-                    catch { }
+
+                    foreach (DataRow uRow in dtEmails.Rows)
+                    {
+                        string targetEmail = uRow["UserEmail"].ToString().Trim();
+                        if (string.IsNullOrEmpty(targetEmail)) continue;
+
+                        try
+                        {
+                            using (MailMessage msg = new MailMessage())
+                            {
+                                msg.From = new MailAddress(fromAddr, "新北市固定逸散源管理平台", Encoding.UTF8);
+                                msg.To.Add(new MailAddress(targetEmail));
+                                msg.Subject = subject;
+                                msg.IsBodyHtml = true;
+                                msg.BodyEncoding = Encoding.UTF8;
+                                msg.Body = bodyHtml;
+
+                                client.Send(msg);
+                            }
+                        }
+                        catch { }
+                    }
                 }
             }
             catch { }

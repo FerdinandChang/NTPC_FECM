@@ -10,6 +10,8 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
+using NTPC_FEC.Services;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 
@@ -715,43 +717,83 @@ namespace NTPC_FEC.Manager
             string currentUser = GetCurrentUser();
             int passedCount = 0;
 
-            foreach (string facId in facIdArr)
+            using (SqlConnection conn = DbHelper.GetOpenConnection())
+            using (SqlTransaction trans = conn.BeginTransaction())
             {
-                string fid = facId.Trim();
-                if (string.IsNullOrEmpty(fid)) continue;
-
-                string sqlInv = "SELECT * FROM INV_DATA WHERE FAC_ID = @FAC_ID AND INV_State = @INV_State";
-                DataTable dtInv = DbHelper.ExecuteDataTable(sqlInv, 
-                    new SqlParameter("@FAC_ID", fid),
-                    new SqlParameter("@INV_State", currentState));
-
-                if (dtInv != null)
+                try
                 {
-                    foreach (DataRow row in dtInv.Rows)
+                    foreach (string facId in facIdArr)
                     {
-                        if (LossPointCalculator.CalTotalLossPoint(row) == 0)
+                        string fid = facId.Trim();
+                        if (string.IsNullOrEmpty(fid)) continue;
+
+                        string sqlInv = "SELECT * FROM INV_DATA WHERE FAC_ID = @FAC_ID AND INV_State = @INV_State";
+                        DataTable dtInv = new DataTable();
+                        using (SqlCommand cmdInv = new SqlCommand(sqlInv, conn, trans))
                         {
-                            int invNo = Convert.ToInt32(row["INV_NO"]);
+                            cmdInv.Parameters.AddWithValue("@FAC_ID", fid);
+                            cmdInv.Parameters.AddWithValue("@INV_State", currentState);
+                            using (SqlDataAdapter da = new SqlDataAdapter(cmdInv))
+                            {
+                                da.Fill(dtInv);
+                            }
+                        }
 
-                            string sqlInsertResult = "INSERT INTO INV_Chk_Result (FAC_ID, INV_NO, Chk_Date, Chk_Result, Chk_Memo, INV_State, Chk_User) VALUES (@FAC_ID, @INV_NO, @Chk_Date, @Chk_Result, @Chk_Memo, @INV_State, @Chk_User)";
-                            DbHelper.ExecuteNonQuery(sqlInsertResult,
-                                new SqlParameter("@FAC_ID", fid),
-                                new SqlParameter("@INV_NO", invNo),
-                                new SqlParameter("@Chk_Date", DateTime.Now),
-                                new SqlParameter("@Chk_Result", "通過"),
-                                new SqlParameter("@Chk_Memo", "批次通過"),
-                                new SqlParameter("@INV_State", currentState),
-                                new SqlParameter("@Chk_User", currentUser));
+                        if (dtInv != null)
+                        {
+                            foreach (DataRow row in dtInv.Rows)
+                            {
+                                if (LossPointCalculator.CalTotalLossPoint(row) == 0)
+                                {
+                                    int invNo = Convert.ToInt32(row["INV_NO"]);
 
-                            string sqlUpdateInv = "UPDATE INV_DATA SET INV_State = @Next_State WHERE FAC_ID = @FAC_ID AND INV_NO = @INV_NO";
-                            DbHelper.ExecuteNonQuery(sqlUpdateInv,
-                                new SqlParameter("@Next_State", nextState),
-                                new SqlParameter("@FAC_ID", fid),
-                                new SqlParameter("@INV_NO", invNo));
+                                    string sqlInsertResult = "INSERT INTO INV_Chk_Result (FAC_ID, INV_NO, Chk_Date, Chk_Result, Chk_Memo, INV_State, Chk_User) VALUES (@FAC_ID, @INV_NO, @Chk_Date, @Chk_Result, @Chk_Memo, @INV_State, @Chk_User)";
+                                    using (SqlCommand cmdIns = new SqlCommand(sqlInsertResult, conn, trans))
+                                    {
+                                        cmdIns.Parameters.AddWithValue("@FAC_ID", fid);
+                                        cmdIns.Parameters.AddWithValue("@INV_NO", invNo);
+                                        cmdIns.Parameters.AddWithValue("@Chk_Date", DateTime.Now);
+                                        cmdIns.Parameters.AddWithValue("@Chk_Result", "通過");
+                                        cmdIns.Parameters.AddWithValue("@Chk_Memo", "批次通過");
+                                        cmdIns.Parameters.AddWithValue("@INV_State", currentState);
+                                        cmdIns.Parameters.AddWithValue("@Chk_User", currentUser);
+                                        cmdIns.ExecuteNonQuery();
+                                    }
 
-                            passedCount++;
+                                    string sqlUpdateInv = "UPDATE INV_DATA SET INV_State = @Next_State WHERE FAC_ID = @FAC_ID AND INV_NO = @INV_NO";
+                                    using (SqlCommand cmdUpd = new SqlCommand(sqlUpdateInv, conn, trans))
+                                    {
+                                        cmdUpd.Parameters.AddWithValue("@Next_State", nextState);
+                                        cmdUpd.Parameters.AddWithValue("@FAC_ID", fid);
+                                        cmdUpd.Parameters.AddWithValue("@INV_NO", invNo);
+                                        cmdUpd.ExecuteNonQuery();
+                                    }
+
+                                    passedCount++;
+                                }
+                            }
                         }
                     }
+
+                    trans.Commit();
+
+                    // 寫入 AuditLog 稽核日誌
+                    AuditLogger.Log(
+                        operatorUser: currentUser,
+                        actionType: "AUDIT_BATCH_PASS_" + invState,
+                        targetUser: "INV_DATA",
+                        clientIp: Request.UserHostAddress,
+                        details: string.Format("執行初複審批次通過，階段：{0} -> {1}，通過共 {2} 件，場所代碼清單：{3}",
+                            currentState, nextState, passedCount, string.Join(",", facIdArr)),
+                        oldValue: currentState,
+                        newValue: nextState
+                    );
+                }
+                catch (Exception ex)
+                {
+                    try { trans.Rollback(); } catch { }
+                    Response.Write(json.Serialize(new { Success = false, Message = "批次通過處理失敗：" + ex.Message }));
+                    return;
                 }
             }
 

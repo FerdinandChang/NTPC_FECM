@@ -17,6 +17,13 @@ namespace NTPC_FEC.BufferAnalysis
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 登入狀態前置檢查 (防止未經授權存取環域空間分析地圖與工廠環景資訊)
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             // 權限檢查 (Session 或 FormsAuthentication)
             UserAccount user = Session["LoginUser"] as UserAccount;
             if (user == null)
@@ -32,8 +39,9 @@ namespace NTPC_FEC.BufferAnalysis
             }
             else
             {
-                CurrentUserName = "訪客";
-                CurrentUserId = "";
+                string rawUser = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : (Session["User"] != null ? Session["User"].ToString() : "");
+                CurrentUserName = rawUser;
+                CurrentUserId = rawUser;
             }
         }
     }

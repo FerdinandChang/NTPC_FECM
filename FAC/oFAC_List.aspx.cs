@@ -11,6 +11,7 @@ using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NTPC_FEC.Helpers;
 using NTPC_FEC.Services;
+using NTPC_FEC.Security;
 
 namespace NTPC_FEC.FAC
 {
@@ -573,6 +574,22 @@ namespace NTPC_FEC.FAC
 
         private void SaveProcess()
         {
+            // 權責檢核：系統管理員或具備許可證資訊維護權限者皆可操作
+            string userId = Session["LoginUser"] != null ? Session["LoginUser"].ToString().Trim() : "";
+            long lic = Session["LIC"] != null ? Convert.ToInt64(Session["LIC"]) : 0L;
+            string role = Session["Role"] != null ? Session["Role"].ToString().Trim() : "";
+            bool isAdmin = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(role, "SystemAdmin", StringComparison.OrdinalIgnoreCase);
+
+            bool hasAuth = isAdmin || PermissionService.HasPermission(userId, lic, "FAC_LICENSE_QUERY", 10)
+                                   || PermissionService.HasPermission(userId, lic, "FAC_LIST_READ", 41);
+
+            if (!hasAuth)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您尚未取得維護許可證與製程資料之權責。" }));
+                return;
+            }
+
             string isEditStr = Request["isEdit"];
             bool isEdit = isEditStr == "true" || isEditStr == "1";
             string oFacId = Request["oFacId"] != null ? Request["oFacId"].Trim() : "";
@@ -615,73 +632,144 @@ namespace NTPC_FEC.FAC
             if (!isEdit)
             {
                 // 新增模式
-                // 1. 若 oFacId 為空，檢查或建立 oFAC_Main
-                if (string.IsNullOrEmpty(oFacId))
+                using (SqlConnection conn = DbHelper.GetOpenConnection())
+                using (SqlTransaction trans = conn.BeginTransaction())
                 {
-                    string checkMainSql = "SELECT oFAC_ID, FAC_NAME FROM oFAC_Main WHERE C_NO = @CNo";
-                    DataTable dtMain = DbHelper.ExecuteDataTable(checkMainSql, new SqlParameter("@CNo", cNo));
-                    if (dtMain.Rows.Count > 0)
+                    try
                     {
-                        oFacId = dtMain.Rows[0]["oFAC_ID"].ToString();
-                    }
-                    else
-                    {
-                        if (string.IsNullOrEmpty(facName))
+                        // 1. 若 oFacId 為空，檢查或建立 oFAC_Main
+                        if (string.IsNullOrEmpty(oFacId))
                         {
-                            Response.Write(json.Serialize(new { Success = false, Message = "此為新管制編號，請輸入公私場所名稱" }));
+                            string checkMainSql = "SELECT oFAC_ID, FAC_NAME FROM oFAC_Main WHERE C_NO = @CNo";
+                            using (SqlCommand cmdCheck = new SqlCommand(checkMainSql, conn, trans))
+                            {
+                                cmdCheck.Parameters.AddWithValue("@CNo", cNo);
+                                object existObj = cmdCheck.ExecuteScalar();
+                                if (existObj != null && existObj != DBNull.Value)
+                                {
+                                    oFacId = existObj.ToString();
+                                }
+                            }
+
+                            if (string.IsNullOrEmpty(oFacId))
+                            {
+                                if (string.IsNullOrEmpty(facName))
+                                {
+                                    trans.Rollback();
+                                    Response.Write(json.Serialize(new { Success = false, Message = "此為新管制編號，請輸入公私場所名稱" }));
+                                    return;
+                                }
+
+                                bool insertedMain = false;
+                                for (int retry = 0; retry < 5; retry++)
+                                {
+                                    if (retry > 0)
+                                    {
+                                        System.Threading.Thread.Sleep(30 * retry + new Random().Next(10, 30));
+                                    }
+
+                                    string prefix = "FAC" + DateTime.Now.ToString("yyyyMMdd");
+                                    string maxSql = "SELECT TOP 1 oFAC_ID FROM oFAC_Main WHERE oFAC_ID LIKE @Prefix + '%' ORDER BY oFAC_ID DESC";
+                                    int nextNum = 1;
+                                    using (SqlCommand cmdMax = new SqlCommand(maxSql, conn, trans))
+                                    {
+                                        cmdMax.Parameters.AddWithValue("@Prefix", prefix);
+                                        object maxObj = cmdMax.ExecuteScalar();
+                                        if (maxObj != null && maxObj != DBNull.Value)
+                                        {
+                                            string maxStr = maxObj.ToString().Replace(prefix, "");
+                                            int curNum;
+                                            if (int.TryParse(maxStr, out curNum))
+                                            {
+                                                nextNum = curNum + 1;
+                                            }
+                                        }
+                                    }
+                                    string candidateId = prefix + nextNum.ToString("00000");
+
+                                    string insertMain = "INSERT INTO oFAC_Main (oFAC_ID, C_NO, FAC_NAME) VALUES (@OFacId, @CNo, @FacName)";
+                                    using (SqlCommand cmdIns = new SqlCommand(insertMain, conn, trans))
+                                    {
+                                        cmdIns.Parameters.AddWithValue("@OFacId", candidateId);
+                                        cmdIns.Parameters.AddWithValue("@CNo", cNo);
+                                        cmdIns.Parameters.AddWithValue("@FacName", facName);
+                                        try
+                                        {
+                                            cmdIns.ExecuteNonQuery();
+                                            oFacId = candidateId;
+                                            insertedMain = true;
+                                            break;
+                                        }
+                                        catch (SqlException ex)
+                                        {
+                                            if (ex.Number == 2627 || ex.Number == 2601) continue;
+                                            throw;
+                                        }
+                                    }
+                                }
+
+                                if (!insertedMain)
+                                {
+                                    trans.Rollback();
+                                    Response.Write(json.Serialize(new { Success = false, Message = "場所案號取號併發衝突，請稍後重試" }));
+                                    return;
+                                }
+                            }
+                        }
+
+                        // 2. 檢查 oFAC_Process 是否已存在相同 oFAC_ID 與 Process_ID
+                        string checkProc = "SELECT COUNT(*) FROM oFAC_Process WHERE oFAC_ID = @OFacId AND Process_ID = @ProcessId";
+                        int existProc = 0;
+                        using (SqlCommand cmdCheckProc = new SqlCommand(checkProc, conn, trans))
+                        {
+                            cmdCheckProc.Parameters.AddWithValue("@OFacId", oFacId);
+                            cmdCheckProc.Parameters.AddWithValue("@ProcessId", processId);
+                            existProc = Convert.ToInt32(cmdCheckProc.ExecuteScalar());
+                        }
+
+                        if (existProc > 0)
+                        {
+                            trans.Rollback();
+                            Response.Write(json.Serialize(new { Success = false, Message = "該公私場所已存在相同製程編號：" + processId }));
                             return;
                         }
 
-                        string prefix = "FAC" + DateTime.Now.ToString("yyyyMMdd");
-                        string maxSql = "SELECT TOP 1 oFAC_ID FROM oFAC_Main WHERE oFAC_ID LIKE @Prefix + '%' ORDER BY oFAC_ID DESC";
-                        object maxObj = DbHelper.ExecuteScalar(maxSql, new SqlParameter("@Prefix", prefix));
-                        int nextNum = 1;
-                        if (maxObj != null && maxObj != DBNull.Value)
+                        // 3. 寫入 oFAC_Process
+                        string insertProc = "INSERT INTO oFAC_Process (oFAC_ID, Process_ID, Process_Name, Process_Type, Process_Lic, Start_Date, End_Date, Continue_Deadline, Work_Deadline, pMemo) " +
+                                            "VALUES (@OFacId, @ProcessId, @ProcessName, @ProcessType, @ProcessLic, @StartDate, @EndDate, @ContinueDeadline, @WorkDeadline, @PMemo)";
+                        using (SqlCommand cmdProc = new SqlCommand(insertProc, conn, trans))
                         {
-                            string maxStr = maxObj.ToString().Replace(prefix, "");
-                            int curNum;
-                            if (int.TryParse(maxStr, out curNum))
-                            {
-                                nextNum = curNum + 1;
-                            }
+                            cmdProc.Parameters.AddWithValue("@OFacId", oFacId);
+                            cmdProc.Parameters.AddWithValue("@ProcessId", processId);
+                            cmdProc.Parameters.AddWithValue("@ProcessName", (object)processName ?? DBNull.Value);
+                            cmdProc.Parameters.AddWithValue("@ProcessType", (object)processType ?? DBNull.Value);
+                            cmdProc.Parameters.AddWithValue("@ProcessLic", (object)processLic ?? DBNull.Value);
+                            cmdProc.Parameters.AddWithValue("@StartDate", (object)dtStart ?? DBNull.Value);
+                            cmdProc.Parameters.AddWithValue("@EndDate", (object)dtEnd ?? DBNull.Value);
+                            cmdProc.Parameters.AddWithValue("@ContinueDeadline", (object)dtContinue ?? DBNull.Value);
+                            cmdProc.Parameters.AddWithValue("@WorkDeadline", (object)dtWork ?? DBNull.Value);
+                            cmdProc.Parameters.AddWithValue("@PMemo", (object)pMemo ?? DBNull.Value);
+                            cmdProc.ExecuteNonQuery();
                         }
-                        oFacId = prefix + nextNum.ToString("00000");
 
-                        string insertMain = "INSERT INTO oFAC_Main (oFAC_ID, C_NO, FAC_NAME) VALUES (@OFacId, @CNo, @FacName)";
-                        DbHelper.ExecuteNonQuery(insertMain,
-                            new SqlParameter("@OFacId", oFacId),
-                            new SqlParameter("@CNo", cNo),
-                            new SqlParameter("@FacName", facName));
+                        trans.Commit();
+
+                        // 寫入 AuditLog 稽核日誌
+                        AuditLogger.Log(
+                            "OFAC_PROCESS_CREATE",
+                            oFacId + "_" + processId,
+                            string.Format("新增製程資料：管制編號 [{0}], 場所名稱 [{1}], 製程編號 [{2}], 製程名稱 [{3}], 許可證號 [{4}]",
+                                cNo, facName, processId, processName, processLic)
+                        );
+
+                        Response.Write(json.Serialize(new { Success = true, Message = "製程資料新增成功！" }));
+                    }
+                    catch (Exception ex)
+                    {
+                        try { trans.Rollback(); } catch { }
+                        Response.Write(json.Serialize(new { Success = false, Message = "儲存製程失敗：" + ex.Message }));
                     }
                 }
-
-                // 2. 檢查 oFAC_Process 是否已存在相同 oFAC_ID 與 Process_ID
-                string checkProc = "SELECT COUNT(*) FROM oFAC_Process WHERE oFAC_ID = @OFacId AND Process_ID = @ProcessId";
-                int existProc = Convert.ToInt32(DbHelper.ExecuteScalar(checkProc,
-                    new SqlParameter("@OFacId", oFacId),
-                    new SqlParameter("@ProcessId", processId)));
-                if (existProc > 0)
-                {
-                    Response.Write(json.Serialize(new { Success = false, Message = "該公私場所已存在相同製程編號：" + processId }));
-                    return;
-                }
-
-                // 3. 寫入 oFAC_Process
-                string insertProc = "INSERT INTO oFAC_Process (oFAC_ID, Process_ID, Process_Name, Process_Type, Process_Lic, Start_Date, End_Date, Continue_Deadline, Work_Deadline, pMemo) " +
-                                    "VALUES (@OFacId, @ProcessId, @ProcessName, @ProcessType, @ProcessLic, @StartDate, @EndDate, @ContinueDeadline, @WorkDeadline, @PMemo)";
-                DbHelper.ExecuteNonQuery(insertProc,
-                    new SqlParameter("@OFacId", oFacId),
-                    new SqlParameter("@ProcessId", processId),
-                    new SqlParameter("@ProcessName", (object)processName ?? DBNull.Value),
-                    new SqlParameter("@ProcessType", (object)processType ?? DBNull.Value),
-                    new SqlParameter("@ProcessLic", (object)processLic ?? DBNull.Value),
-                    new SqlParameter("@StartDate", (object)dtStart ?? DBNull.Value),
-                    new SqlParameter("@EndDate", (object)dtEnd ?? DBNull.Value),
-                    new SqlParameter("@ContinueDeadline", (object)dtContinue ?? DBNull.Value),
-                    new SqlParameter("@WorkDeadline", (object)dtWork ?? DBNull.Value),
-                    new SqlParameter("@PMemo", (object)pMemo ?? DBNull.Value));
-
-                Response.Write(json.Serialize(new { Success = true, Message = "製程資料新增成功！" }));
             }
             else
             {

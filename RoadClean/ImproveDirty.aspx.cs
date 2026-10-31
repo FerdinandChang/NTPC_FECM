@@ -10,6 +10,8 @@ using System.Web.Configuration;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
+using NTPC_FEC.Services;
 
 namespace NTPC_FEC.RoadClean
 {
@@ -472,6 +474,14 @@ namespace NTPC_FEC.RoadClean
                 // 發送改善完成通知信
                 SendNotificationEmail(dirtyId, false, input.G_Memo);
 
+                // 寫入 AuditLog 稽核日誌
+                AuditLogger.Log(
+                    "ROAD_DIRTY_IMPROVE_FINISH",
+                    dirtyId,
+                    string.Format("道路髒污改善完成回報送出，案號: {0}, 回報人員: {1}, 備註說明: {2}",
+                        dirtyId, loginUser, input.G_Memo ?? "")
+                );
+
                 Response.Write(json.Serialize(new
                 {
                     Success = true,
@@ -481,7 +491,7 @@ namespace NTPC_FEC.RoadClean
             }
         }
 
-        // 儲存或刪除照片檔案
+        // 儲存或刪除照片檔案 (嚴格防禦路徑遍歷與任意檔案刪除)
         private void SavePhotos(string physDir, List<PhotoUploadItem> photos)
         {
             if (photos == null || photos.Count == 0) return;
@@ -495,8 +505,9 @@ namespace NTPC_FEC.RoadClean
                 {
                     if (!string.IsNullOrEmpty(item.FileName))
                     {
-                        string delPath = Path.Combine(physDir, item.FileName);
-                        if (File.Exists(delPath))
+                        string cleanFileName = FileSecurityHelper.SanitizeFileName(item.FileName);
+                        string delPath = Path.Combine(physDir, cleanFileName);
+                        if (FileSecurityHelper.IsSafePath(physDir, delPath) && File.Exists(delPath))
                         {
                             try { File.Delete(delPath); } catch { }
                         }
@@ -507,9 +518,10 @@ namespace NTPC_FEC.RoadClean
                 // 若有新上傳的 Base64 檔案
                 if (!string.IsNullOrEmpty(item.Base64Data))
                 {
+                    string cleanTitle = FileSecurityHelper.SanitizeFileName(item.TargetTitle ?? "髒污點改善後照片_1");
                     string targetFileName = !string.IsNullOrEmpty(item.FileName) 
-                        ? item.FileName 
-                        : (item.TargetTitle ?? "髒污點改善後照片_1") + ".jpg";
+                        ? FileSecurityHelper.SanitizeFileName(item.FileName) 
+                        : cleanTitle + ".jpg";
 
                     if (!targetFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && 
                         !targetFileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) && 
@@ -519,19 +531,21 @@ namespace NTPC_FEC.RoadClean
                     }
 
                     string fullPath = Path.Combine(physDir, targetFileName);
-
-                    try
+                    if (FileSecurityHelper.IsSafePath(physDir, fullPath))
                     {
-                        string b64 = item.Base64Data;
-                        int commaIdx = b64.IndexOf(',');
-                        if (commaIdx >= 0)
+                        try
                         {
-                            b64 = b64.Substring(commaIdx + 1);
+                            string b64 = item.Base64Data;
+                            int commaIdx = b64.IndexOf(',');
+                            if (commaIdx >= 0)
+                            {
+                                b64 = b64.Substring(commaIdx + 1);
+                            }
+                            byte[] fileBytes = Convert.FromBase64String(b64);
+                            File.WriteAllBytes(fullPath, fileBytes);
                         }
-                        byte[] fileBytes = Convert.FromBase64String(b64);
-                        File.WriteAllBytes(fullPath, fileBytes);
+                        catch { }
                     }
-                    catch { }
                 }
             }
         }
@@ -542,22 +556,6 @@ namespace NTPC_FEC.RoadClean
             string datePrefix = DateTime.Now.ToString("yyyyMMdd");
             string timePrefix = DateTime.Now.ToString("HHmmss");
             string fullPrefix = datePrefix + timePrefix;
-
-            string seqSql = "SELECT TOP 1 Dirty_ID FROM RoadDirty_CaseMain WHERE Dirty_ID LIKE @prefix + '%' ORDER BY Dirty_ID DESC";
-            object maxObj = DbHelper.ExecuteScalar(seqSql, new SqlParameter("@prefix", fullPrefix));
-            int seq = 1;
-            if (maxObj != null && maxObj != DBNull.Value)
-            {
-                string maxId = maxObj.ToString().Trim();
-                if (maxId.Length >= 17)
-                {
-                    string seqStr = maxId.Substring(14, 3);
-                    int.TryParse(seqStr, out seq);
-                    seq++;
-                }
-            }
-
-            string newDirtyId = fullPrefix + string.Format("{0:000}", seq);
 
             DateTime rptDate = DateTime.Now;
             if (originRow["Report_Date"] != DBNull.Value) rptDate = Convert.ToDateTime(originRow["Report_Date"]);
@@ -588,24 +586,57 @@ namespace NTPC_FEC.RoadClean
                 originLon = clon;
             }
 
-            string insertSql = @"
-                INSERT INTO RoadDirty_CaseMain 
-                    (Dirty_ID, Show_ID, Report_Date, S_UTME, S_UTMN, Lat, Lon, COMM, Report_User, FromBack_ID) 
-                VALUES 
-                    (@Dirty_ID, @Show_ID, @Report_Date, @S_UTME, @S_UTMN, @Lat, @Lon, @COMM, @Report_User, @FromBack_ID)";
+            string insertSql = "INSERT INTO RoadDirty_CaseMain (Dirty_ID, Show_ID, Report_Date, S_UTME, S_UTMN, Lat, Lon, COMM, Report_User, FromBack_ID) VALUES (@Dirty_ID, @Show_ID, @Report_Date, @S_UTME, @S_UTMN, @Lat, @Lon, @COMM, @Report_User, @FromBack_ID)";
 
-            DbHelper.ExecuteNonQuery(insertSql,
-                new SqlParameter("@Dirty_ID", newDirtyId),
-                new SqlParameter("@Show_ID", newDirtyId),
-                new SqlParameter("@Report_Date", rptDate),
-                new SqlParameter("@S_UTME", utmE),
-                new SqlParameter("@S_UTMN", utmN),
-                new SqlParameter("@Lat", originLat.HasValue ? (object)originLat.Value : DBNull.Value),
-                new SqlParameter("@Lon", originLon.HasValue ? (object)originLon.Value : DBNull.Value),
-                new SqlParameter("@COMM", comm),
-                new SqlParameter("@Report_User", rptUser),
-                new SqlParameter("@FromBack_ID", originDirtyId)
-            );
+            string newDirtyId = "";
+            int maxRetry = 5;
+            for (int attempt = 1; attempt <= maxRetry; attempt++)
+            {
+                string seqSql = "SELECT TOP 1 Dirty_ID FROM RoadDirty_CaseMain WHERE Dirty_ID LIKE @prefix + '%' ORDER BY Dirty_ID DESC";
+                object maxObj = DbHelper.ExecuteScalar(seqSql, new SqlParameter("@prefix", fullPrefix));
+                int seq = attempt;
+                if (maxObj != null && maxObj != DBNull.Value)
+                {
+                    string maxId = maxObj.ToString().Trim();
+                    if (maxId.Length >= 17)
+                    {
+                        string seqStr = maxId.Substring(14, 3);
+                        int parsedSeq = 0;
+                        if (int.TryParse(seqStr, out parsedSeq))
+                        {
+                            seq = parsedSeq + attempt;
+                        }
+                    }
+                }
+
+                newDirtyId = fullPrefix + string.Format("{0:000}", seq);
+
+                try
+                {
+                    DbHelper.ExecuteNonQuery(insertSql,
+                        new SqlParameter("@Dirty_ID", newDirtyId),
+                        new SqlParameter("@Show_ID", newDirtyId),
+                        new SqlParameter("@Report_Date", rptDate),
+                        new SqlParameter("@S_UTME", utmE),
+                        new SqlParameter("@S_UTMN", utmN),
+                        new SqlParameter("@Lat", originLat.HasValue ? (object)originLat.Value : DBNull.Value),
+                        new SqlParameter("@Lon", originLon.HasValue ? (object)originLon.Value : DBNull.Value),
+                        new SqlParameter("@COMM", comm),
+                        new SqlParameter("@Report_User", rptUser),
+                        new SqlParameter("@FromBack_ID", originDirtyId)
+                    );
+                    break;
+                }
+                catch (SqlException ex)
+                {
+                    if ((ex.Number == 2627 || ex.Number == 2601) && attempt < maxRetry)
+                    {
+                        System.Threading.Thread.Sleep(50 * attempt);
+                        continue;
+                    }
+                    throw;
+                }
+            }
 
             // 複製照片到新目錄
             string newRelDir = "/Upload/RoadDirtyPIC/" + newDirtyId + "/";

@@ -14,6 +14,13 @@ namespace NTPC_FEC
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 安全限制：強制僅允許 HTTP POST 請求，阻斷 GET 請求洩漏密碼於 Log 或瀏覽器歷程
+            if (!string.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Redirect("Default.aspx", true);
+                return;
+            }
+
             string reqUser = Request["user"];
             string reqPassword = Request["password"];
 

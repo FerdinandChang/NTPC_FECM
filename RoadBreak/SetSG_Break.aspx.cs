@@ -12,6 +12,8 @@ using System.Web.Configuration;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
+using NTPC_FEC.Services;
 
 namespace NTPC_FEC.RoadBreak
 {
@@ -273,7 +275,7 @@ namespace NTPC_FEC.RoadBreak
             }));
         }
 
-        // 即時更新承辦人 Email
+        // 即時更新承辦人 Email (含權限防護)
         private void UpdateUserEmail()
         {
             string rawJson = "";
@@ -295,6 +297,35 @@ namespace NTPC_FEC.RoadBreak
                 return;
             }
 
+            string currentUserId = Session["UserID"] != null ? Session["UserID"].ToString().Trim() : "";
+            if (string.IsNullOrEmpty(currentUserId) && Session["LoginUser"] != null) currentUserId = Session["LoginUser"].ToString().Trim();
+            long lic = Session["LIC"] != null ? Convert.ToInt64(Session["LIC"]) : 0L;
+            string currentRole = Session["Role"] != null ? Session["Role"].ToString().Trim() : "";
+            bool isAdmin = string.Equals(currentRole, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(currentRole, "SystemAdmin", StringComparison.OrdinalIgnoreCase);
+
+            // 權責檢核：管理員、本人、或具備道路通報維護權限者 (ROAD_BREAK_NEW)
+            bool hasAuth = isAdmin || string.Equals(currentUserId, input.RunUser.Trim(), StringComparison.OrdinalIgnoreCase)
+                                   || PermissionService.HasPermission(currentUserId, lic, "ROAD_BREAK_NEW", 26);
+
+            if (!hasAuth)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您未具備維護該單位承辦人通訊信箱之權限。" }));
+                return;
+            }
+
+            // 查詢舊 Email 供 AuditLog 比對
+            string sqlOld = "SELECT TOP 1 UserEmail FROM RoadBreak_UnitUser WHERE RunUser = @user";
+            object objOld = DbHelper.ExecuteScalar(sqlOld, new SqlParameter("@user", input.RunUser.Trim()));
+            string oldEmail = objOld != null && objOld != DBNull.Value ? objOld.ToString().Trim() : "";
+
+            string email = input.UserEmail != null ? input.UserEmail.Trim() : "";
+            if (!string.IsNullOrEmpty(email) && (!email.Contains("@") || !email.Contains(".")))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "電子信箱格式無效。" }));
+                return;
+            }
+
             string sql = "UPDATE RoadBreak_UnitUser SET UserEmail = @email WHERE RunUser = @user";
             if (!string.IsNullOrEmpty(input.UnitID))
             {
@@ -302,7 +333,7 @@ namespace NTPC_FEC.RoadBreak
             }
 
             List<SqlParameter> paramList = new List<SqlParameter>();
-            paramList.Add(new SqlParameter("@email", input.UserEmail != null ? input.UserEmail.Trim() : ""));
+            paramList.Add(new SqlParameter("@email", email));
             paramList.Add(new SqlParameter("@user", input.RunUser.Trim()));
             if (!string.IsNullOrEmpty(input.UnitID))
             {
@@ -310,6 +341,18 @@ namespace NTPC_FEC.RoadBreak
             }
 
             int affected = DbHelper.ExecuteNonQuery(sql, paramList.ToArray());
+
+            // 寫入 AuditLog 稽核日誌
+            AuditLogger.Log(
+                operatorUser: currentUserId,
+                actionType: "DISPATCH_EMAIL_UPDATE",
+                targetUser: input.RunUser,
+                clientIp: Request.UserHostAddress,
+                details: string.Format("更新道路破損通報單位 [{0}] 承辦人員電子信箱", input.UnitID ?? ""),
+                oldValue: oldEmail,
+                newValue: email
+            );
+
             Response.Write(json.Serialize(new
             {
                 Success = true,
@@ -477,44 +520,48 @@ namespace NTPC_FEC.RoadBreak
 
                 string bodyHtml = sb.ToString();
 
-                SmtpClient client = new SmtpClient(host, 587);
-                client.EnableSsl = false;
-                client.Timeout = 15000;
-                if (!string.IsNullOrEmpty(smtpUser) && !string.IsNullOrEmpty(smtpPass))
+                using (SmtpClient client = new SmtpClient(host, 587))
                 {
-                    client.Credentials = new NetworkCredential(smtpUser, smtpPass);
-                }
-
-                int sentCount = 0;
-                foreach (DataRow uRow in dtEmails.Rows)
-                {
-                    string targetEmail = uRow["UserEmail"].ToString().Trim();
-                    if (string.IsNullOrEmpty(targetEmail)) continue;
-
-                    try
+                    client.EnableSsl = false;
+                    client.Timeout = 15000;
+                    if (!string.IsNullOrEmpty(smtpUser) && !string.IsNullOrEmpty(smtpPass))
                     {
-                        MailMessage msg = new MailMessage();
-                        msg.From = new MailAddress(fromAddr, "新北市固定逸散源管理平台", Encoding.UTF8);
-                        msg.To.Add(new MailAddress(targetEmail));
-                        msg.Subject = subject;
-                        msg.IsBodyHtml = true;
-                        msg.BodyEncoding = Encoding.UTF8;
-                        msg.Body = bodyHtml;
-
-                        client.Send(msg);
-                        sentCount++;
-
-                        // 記錄發信歷史
-                        RecordEmailHistory(targetEmail, subject, bodyHtml, breakId, "道路破損通報");
+                        client.Credentials = new NetworkCredential(smtpUser, smtpPass);
                     }
-                    catch (Exception ex)
+
+                    int sentCount = 0;
+                    foreach (DataRow uRow in dtEmails.Rows)
                     {
-                        // 記錄單一收件人發送錯誤，不阻斷後續收件人
-                        RecordEmailHistory(targetEmail, subject, "發信失敗: " + ex.Message, breakId, "道路破損通報");
-                    }
-                }
+                        string targetEmail = uRow["UserEmail"].ToString().Trim();
+                        if (string.IsNullOrEmpty(targetEmail)) continue;
 
-                return string.Format("已寄送通知至 {0} 個信箱。", sentCount);
+                        try
+                        {
+                            using (MailMessage msg = new MailMessage())
+                            {
+                                msg.From = new MailAddress(fromAddr, "新北市固定逸散源管理平台", Encoding.UTF8);
+                                msg.To.Add(new MailAddress(targetEmail));
+                                msg.Subject = subject;
+                                msg.IsBodyHtml = true;
+                                msg.BodyEncoding = Encoding.UTF8;
+                                msg.Body = bodyHtml;
+
+                                client.Send(msg);
+                                sentCount++;
+
+                                // 記錄發信歷史
+                                RecordEmailHistory(targetEmail, subject, bodyHtml, breakId, "道路破損通報");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // 記錄單一收件人發送錯誤，不阻斷後續收件人
+                            RecordEmailHistory(targetEmail, subject, "發信失敗: " + ex.Message, breakId, "道路破損通報");
+                        }
+                    }
+
+                    return string.Format("已寄送通知至 {0} 個信箱。", sentCount);
+                }
             }
             catch (Exception ex)
             {

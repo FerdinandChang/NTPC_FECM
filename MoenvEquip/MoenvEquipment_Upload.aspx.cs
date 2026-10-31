@@ -319,9 +319,9 @@ namespace NTPC_FEC.MoenvEquip
                     conn.Open();
                     string updateSql = @"
                         UPDATE [dbo].[MoenvEquipment_Photo] 
-                        SET [PhotoPath] = '/NTPCEPD_New/MoenvEquip/' + SUBSTRING([PhotoPath], CHARINDEX('Uploads/', [PhotoPath]), LEN([PhotoPath]))
+                        SET [PhotoPath] = 'Uploads/' + SUBSTRING([PhotoPath], CHARINDEX('Uploads/', [PhotoPath]) + 8, LEN([PhotoPath]))
                         WHERE [PhotoPath] LIKE '%Uploads/%' 
-                          AND [PhotoPath] NOT LIKE '/NTPCEPD_New/MoenvEquip/Uploads/%';";
+                          AND [PhotoPath] LIKE '/NTPCEPD_New/%';";
                     using (SqlCommand cmd = new SqlCommand(updateSql, conn))
                     {
                         cmd.ExecuteNonQuery();

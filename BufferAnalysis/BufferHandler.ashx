@@ -12,6 +12,8 @@ using System.Web.SessionState;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
+using NTPC_FEC.Services;
 
 namespace NTPC_FEC.BufferAnalysis
 {
@@ -2047,8 +2049,23 @@ namespace NTPC_FEC.BufferAnalysis
                     );
                 END";
 
+            // 權責檢查：系統管理員或具備環域圖資維護權責 (FAC_BUFFER_MAP) 皆可同步
+            string curUser = context.Session["LoginUser"] != null ? context.Session["LoginUser"].ToString() : "";
+            long lic = context.Session["LIC"] != null ? Convert.ToInt64(context.Session["LIC"]) : 0L;
+            string role = context.Session["Role"] != null ? context.Session["Role"].ToString().Trim() : "";
+            bool isAdmin = curUser.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(role, "SystemAdmin", StringComparison.OrdinalIgnoreCase);
+
+            bool hasAuth = isAdmin || PermissionService.HasPermission(curUser, lic, "FAC_BUFFER_MAP", 41);
+            if (!hasAuth)
+            {
+                context.Response.StatusCode = 403;
+                context.Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您尚未取得學校空間圖資同步維護之權責。" }));
+                return;
+            }
+
             DbHelper.ExecuteNonQuery(sqlCreateTable);
-            DbHelper.ExecuteNonQuery("TRUNCATE TABLE School_Main");
 
             int inserted = 0;
             string sqlInsert = @"
@@ -2062,27 +2079,59 @@ namespace NTPC_FEC.BufferAnalysis
                     @X, @Y, @Lat, @Lng, GETDATE()
                 )";
 
-            foreach (SchoolItem s in schools)
+            using (SqlConnection conn = DbHelper.GetOpenConnection())
+            using (SqlTransaction trans = conn.BeginTransaction())
             {
-                DbHelper.ExecuteNonQuery(sqlInsert,
-                    new SqlParameter("@Id", s.Id ?? ""),
-                    new SqlParameter("@Name", s.Name ?? ""),
-                    new SqlParameter("@Alias", s.Alias ?? ""),
-                    new SqlParameter("@Town", s.Town ?? ""),
-                    new SqlParameter("@Level", s.Level ?? ""),
-                    new SqlParameter("@HasK", s.HasKindergarten),
-                    new SqlParameter("@PubPriv", s.PublicPrivate ?? ""),
-                    new SqlParameter("@Types", s.Types ?? ""),
-                    new SqlParameter("@Phone", s.Phone ?? ""),
-                    new SqlParameter("@Addr", s.Addr ?? ""),
-                    new SqlParameter("@Url", s.Url ?? ""),
-                    new SqlParameter("@X", s.X),
-                    new SqlParameter("@Y", s.Y),
-                    new SqlParameter("@Lat", s.Lat),
-                    new SqlParameter("@Lng", s.Lng)
-                );
-                inserted++;
+                try
+                {
+                    using (SqlCommand cmdTrunc = new SqlCommand("TRUNCATE TABLE School_Main", conn, trans))
+                    {
+                        cmdTrunc.ExecuteNonQuery();
+                    }
+
+                    foreach (SchoolItem s in schools)
+                    {
+                        using (SqlCommand cmdIns = new SqlCommand(sqlInsert, conn, trans))
+                        {
+                            cmdIns.Parameters.Add(new SqlParameter("@Id", s.Id ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@Name", s.Name ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@Alias", s.Alias ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@Town", s.Town ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@Level", s.Level ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@HasK", s.HasKindergarten));
+                            cmdIns.Parameters.Add(new SqlParameter("@PubPriv", s.PublicPrivate ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@Types", s.Types ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@Phone", s.Phone ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@Addr", s.Addr ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@Url", s.Url ?? ""));
+                            cmdIns.Parameters.Add(new SqlParameter("@X", s.X));
+                            cmdIns.Parameters.Add(new SqlParameter("@Y", s.Y));
+                            cmdIns.Parameters.Add(new SqlParameter("@Lat", s.Lat));
+                            cmdIns.Parameters.Add(new SqlParameter("@Lng", s.Lng));
+                            cmdIns.ExecuteNonQuery();
+                        }
+                        inserted++;
+                    }
+
+                    trans.Commit();
+                }
+                catch
+                {
+                    trans.Rollback();
+                    throw;
+                }
             }
+
+            // 寫入 AuditLog 稽核日誌
+            AuditLogger.Log(
+                operatorUser: curUser,
+                actionType: "BUFFER_SCHOOL_SYNC",
+                targetUser: "School_Main",
+                clientIp: context.Request.UserHostAddress,
+                details: string.Format("重新同步全校名冊空間資料庫，共建立與寫入 {0} 所新北市各級學校座標", inserted),
+                oldValue: null,
+                newValue: inserted.ToString()
+            );
 
             // 重新整理快取
             lock (_schoolLock)

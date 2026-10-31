@@ -4,6 +4,54 @@
 
 ---
 
+## [2.0.0] - 2026-10-31
+
+### 🚀 版本概述
+新北市固定逸散源管理平台（NTPC_FECM）迎來重大里程碑旗艦版 **2.0.0**。本版本標誌著系統邁入高度強健性與全面企業級架構演進：核心資料異動全面導入「ACID 資料庫交易與復原機制（`SqlTransaction`）」，杜絕主從資料不一致；全域特權操作全面串接「結構化稽核追蹤日誌（`AuditLogger`）」，符合資通安全稽核標準；空間圖台實施零信任存取防禦；重構通訊連線資源管理；升級 Sentinel-2 衛星 NDVI 智慧填磚排程引擎，並全面強化外勤業務審查與派工運算健壯性。
+
+### ✨ 主要歷程與改動
+
+#### 1. 全域資料庫交易與強一致性防護架構 (ACID Transactions & Robustness)
+- **主從關聯資料原子性交易全面落實**：
+  - 固定污染源許可證與製程異動（`FAC/oFAC_List.aspx.cs`）：全面納入 `SqlTransaction` 與回滾機制，徹底消除因網路中斷造成之孤立製程紀錄。
+  - 作業機具初複三審審查（`Manager/Check_Step1_Mac.aspx.cs`）：將審查紀錄寫入（`Mac_Chk_Result`）與主檔機具狀態更新（`Machine_Main.Mac_State`）統一綁定於單一交易中，杜絕狀態脫節。
+  - 敏感受體學校資料庫同步（`BufferAnalysis/BufferHandler.ashx`）：清空舊檔與批次寫入新學校圖資一律採單一交易保護，防止同步中斷遺失全校點位。
+- **高併發序號防衝突重試機制 (`RoadClean/ImproveDirty.aspx.cs`)**：
+  - 道路髒污退回重派案件序號產生實作動態回退重試機制（Exponential Backoff Retry），徹底根治高併發主鍵衝突（SQL 2627 / 2601 錯誤）。
+
+#### 2. 全面落實特權操作稽核追蹤日誌 (Comprehensive Audit Trail Logs)
+- **核心特權與資料異動全面審計**：
+  - 深度整合 `AuditLogger.Log` 稽核引擎：
+    - 許可證與製程維護：`OFAC_PROCESS_CREATE`
+    - 施工機具初複三審審查：`MAC_REVIEW_PASS`、`MAC_REVIEW_REJECT`
+    - 敏感受體學校圖資庫重整：`BUFFER_SCHOOL_SYNC`
+    - 洗掃路段月報與抽查 Excel 批次匯入：`WASH_MAP_MONTHLY_IMPORT`
+  - 完整記錄操作人員、客戶端 IP、變更明細與新舊數值，達成不可否認性與最高法規資安稽核標準。
+
+#### 3. 空間圖台零信任存取防護與未授權攔截 (Defensive Spatial Access Control)
+- **圖台頁面 Session 前置強制檢核**：
+  - 環域空間分析圖台（`BufferAnalysis/BufferMap.aspx.cs`）與洗掃空間地圖（`Wash/WashMap.aspx.cs`）全面強化 Session 驗證，未登入者一律強制重導回登入首頁。
+- **後端 API 細粒度權限校驗**：
+  - 學校圖資同步與洗掃月報 Excel 匯入 API 實施 403 Forbidden 嚴格權限檢核（`PermissionService.HasPermission`），杜絕越權調用。
+
+#### 4. 通訊資源管理與 Socket 洩漏防護 (`App_Code/Services/MailService.cs`)
+- **生命週期自動釋放**：
+  - `SmtpClient` 與 `MailMessage` 全面導入 `using` 模式管理，確保寄信完成或異常時即時釋放網路連線與 Socket 資源，杜絕高頻率寄信造成之資源耗盡。
+
+#### 5. Sentinel-2 衛星 NDVI 智慧補磚排程器升級 (`NdviJob/fill_blank_tiles.py`)
+- **空白圖磚快速補全**：
+  - 新增 `fill_blank_tiles.py` 腳本，自動產製海面與外縣市邊界透明空白圖磚，耗時僅約 1 秒。
+  - 徹底根治使用者漫遊平移 NDVI 衛星圖台時瀏覽器 Console 出現 403 / 404 報錯問題，顯著提升圖台加載流暢度與穩定度。
+
+#### 6. 業務模組與外勤介面健壯性優化
+- **道路破損與派工改善聯動**：
+  - `RoadBreak/SetSG_Break.aspx.cs` 與 `ImproveBreak.aspx.cs` 強化派工案件狀態回寫與相片比對。
+- **營建工程與機具清單優化**：
+  - `CaseList.aspx` 前端 UI 移除冗餘關閉按鈕，消除重複 DOM 警告。
+  - `MoenvEquipment_List.aspx` 與 `MoenvEquipment_Upload.aspx.cs` 改善大批次機具 Excel 解析之防呆校驗與自適應篩選。
+
+---
+
 ## [1.9.0] - 2026-10-31
 
 ### 🚀 版本概述

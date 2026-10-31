@@ -995,7 +995,7 @@
                                             <td>
                                                 <template v-if="field.key === 'Id'">
                                                     <code class="px-2 py-1 bg-light border rounded text-primary font-weight-bold">{{ currentDetail.Id }}</code>
-                                                    <small class="text-muted ml-2">(照片目錄：/NTPCEPD_New/MoenvEquip/Uploads/{{ currentDetail.Id }}/)</small>
+                                                    <small class="text-muted ml-2">(照片目錄：Uploads/{{ currentDetail.Id }}/)</small>
                                                 </template>
                                                 <template v-else-if="field.key === 'ProjectType'">
                                                     <select class="form-control form-control-sm d-inline-block w-auto font-weight-bold"
@@ -1351,18 +1351,21 @@
                 getPhotoUrl: function (photoPath) {
                     if (!photoPath) return '';
                     var p = photoPath.trim().replace(/\\/g, '/');
+                    if (p.indexOf('http://') === 0 || p.indexOf('https://') === 0) {
+                        return p;
+                    }
                     var idx = p.indexOf('Uploads/');
                     if (idx >= 0) {
-                        return '/NTPCEPD_New/MoenvEquip/' + p.substring(idx);
+                        return p.substring(idx);
                     }
                     var idxLower = p.toLowerCase().indexOf('uploads/');
                     if (idxLower >= 0) {
-                        return '/NTPCEPD_New/MoenvEquip/' + p.substring(idxLower);
+                        return 'Uploads/' + p.substring(idxLower + 8);
                     }
-                    if (p.indexOf('/NTPCEPD_New/') === 0) {
-                        return p;
+                    if (p.indexOf('/NTPCEPD_New/MoenvEquip/') === 0) {
+                        return p.substring('/NTPCEPD_New/MoenvEquip/'.length);
                     }
-                    return '/NTPCEPD_New/MoenvEquip/Uploads/' + p.replace(/^~?\/?/, '');
+                    return 'Uploads/' + p.replace(/^~?\/?/, '');
                 },
                 moveSlide: function (dir) {
                     if (this.photosList.length <= 1) return;

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 NTPC_FEC  新北市 NDVI 月報圖磚產生器 (Sentinel-2 L2A, Microsoft Planetary Computer STAC)
 
@@ -303,6 +303,14 @@ def make_tiles(cls, transform, wgs_bbox, zmin, zmax, out_dir):
     pal = build_palette()
     src_crs = "EPSG:%d" % UTM_EPSG
     total = 0
+    # 建立 1 個極輕量的全透明圖磚 (僅約 68 bytes)，供純海面與純外縣市圖磚使用，防止前端 Console 出現 403/404
+    import io
+    blank_im = Image.fromarray(np.zeros((256, 256), np.uint8))
+    blank_im.putpalette(pal)
+    bio = io.BytesIO()
+    blank_im.save(bio, format="PNG", optimize=True, transparency=0)
+    blank_bytes = bio.getvalue()
+
     for z in range(zmax, zmin - 1, -1):
         rs = Resampling.nearest if z >= zmax else Resampling.mode
         n = 0
@@ -312,14 +320,17 @@ def make_tiles(cls, transform, wgs_bbox, zmin, zmax, out_dir):
             reproject(source=cls, destination=dst, src_transform=transform, src_crs=src_crs,
                       dst_transform=from_bounds(b.left, b.bottom, b.right, b.top, 256, 256),
                       dst_crs="EPSG:3857", resampling=rs, src_nodata=0, dst_nodata=0)
-            if not dst.any():
-                continue
             d = os.path.join(out_dir, str(z), str(t.x))
             if not os.path.isdir(d):
                 os.makedirs(d)
-            im = Image.fromarray(dst)
-            im.putpalette(pal)
-            im.save(os.path.join(d, "%d.png" % t.y), optimize=True, transparency=0)
+            tile_path = os.path.join(d, "%d.png" % t.y)
+            if not dst.any():
+                with open(tile_path, "wb") as f:
+                    f.write(blank_bytes)
+            else:
+                im = Image.fromarray(dst)
+                im.putpalette(pal)
+                im.save(tile_path, optimize=True, transparency=0)
             n += 1
         log.info("z%d: %d tiles", z, n)
         total += n

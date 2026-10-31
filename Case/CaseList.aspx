@@ -1290,10 +1290,6 @@
                         </button>
                     </div>
                 </div>
-                    <button type="button" class="btn btn-sm btn-light" v-on:click="closeFacDrawer">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
 
                 <div class="bg-light px-3 border-bottom">
                     <ul class="nav nav-tabs border-0">

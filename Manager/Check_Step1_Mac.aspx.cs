@@ -9,6 +9,8 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
+using NTPC_FEC.Services;
 
 namespace NTPC_FEC.Manager
 {
@@ -533,39 +535,71 @@ namespace NTPC_FEC.Manager
 
             try
             {
-                // 1. 寫入歷次審查紀錄 Mac_Chk_Result
-                string sqlInsertReview = @"
-                    INSERT INTO Mac_Chk_Result (FAC_ID, mac_ID, Chk_Date, Chk_Result, Chk_Memo, Mac_State, Chk_User)
-                    VALUES (@FAC_ID, @mac_ID, GETDATE(), @Chk_Result, @Chk_Memo, @Mac_State, @Chk_User)";
-
-                DbHelper.ExecuteNonQuery(sqlInsertReview,
-                    new SqlParameter("@FAC_ID", facId),
-                    new SqlParameter("@mac_ID", macId),
-                    new SqlParameter("@Chk_Result", resultText),
-                    new SqlParameter("@Chk_Memo", memo),
-                    new SqlParameter("@Mac_State", stateId),
-                    new SqlParameter("@Chk_User", currentUser));
-
                 // 2. 查詢 mac_State_List 取得 Next_State 與 Back_State
-                string sqlState = "SELECT * FROM mac_State_List WHERE State_ID = @State_ID";
-                DataTable dtState = DbHelper.ExecuteDataTable(sqlState, new SqlParameter("@State_ID", stateId));
+            string sqlState = "SELECT * FROM mac_State_List WHERE State_ID = @State_ID";
+            DataTable dtState = DbHelper.ExecuteDataTable(sqlState, new SqlParameter("@State_ID", stateId));
 
-                string nextState = "";
-                string backState = "";
-                if (dtState != null && dtState.Rows.Count > 0)
+            string nextState = "";
+            string backState = "";
+            if (dtState != null && dtState.Rows.Count > 0)
+            {
+                nextState = dtState.Rows[0]["Next_State"].ToString().Trim();
+                backState = dtState.Rows[0]["Back_State"].ToString().Trim();
+            }
+
+            string targetState = (result == "PASS") ? nextState : backState;
+
+            using (SqlConnection conn = DbHelper.GetOpenConnection())
+            using (SqlTransaction trans = conn.BeginTransaction())
+            {
+                try
                 {
-                    nextState = dtState.Rows[0]["Next_State"].ToString().Trim();
-                    backState = dtState.Rows[0]["Back_State"].ToString().Trim();
+                    // 1. 寫入歷次審查紀錄 Mac_Chk_Result
+                    string sqlInsertReview = "INSERT INTO Mac_Chk_Result (FAC_ID, mac_ID, Chk_Date, Chk_Result, Chk_Memo, Mac_State, Chk_User) " +
+                        "VALUES (@FAC_ID, @mac_ID, GETDATE(), @Chk_Result, @Chk_Memo, @Mac_State, @Chk_User)";
+
+                    using (SqlCommand cmdIns = new SqlCommand(sqlInsertReview, conn, trans))
+                    {
+                        cmdIns.Parameters.AddWithValue("@FAC_ID", facId);
+                        cmdIns.Parameters.AddWithValue("@mac_ID", macId);
+                        cmdIns.Parameters.AddWithValue("@Chk_Result", resultText);
+                        cmdIns.Parameters.AddWithValue("@Chk_Memo", memo);
+                        cmdIns.Parameters.AddWithValue("@Mac_State", stateId);
+                        cmdIns.Parameters.AddWithValue("@Chk_User", currentUser);
+                        cmdIns.ExecuteNonQuery();
+                    }
+
+                    // 3. 更新 Machine_Main 之 Mac_State 狀態
+                    string sqlUpdateMac = "UPDATE Machine_Main SET Mac_State = @TargetState WHERE FAC_ID = @FAC_ID AND mac_ID = @mac_ID";
+                    using (SqlCommand cmdUpd = new SqlCommand(sqlUpdateMac, conn, trans))
+                    {
+                        cmdUpd.Parameters.AddWithValue("@TargetState", targetState);
+                        cmdUpd.Parameters.AddWithValue("@FAC_ID", facId);
+                        cmdUpd.Parameters.AddWithValue("@mac_ID", macId);
+                        cmdUpd.ExecuteNonQuery();
+                    }
+
+                    trans.Commit();
+
+                    // 寫入 AuditLog 稽核日誌
+                    AuditLogger.Log(
+                        operatorUser: currentUser,
+                        actionType: "MAC_CASE_REVIEW_" + resultText,
+                        targetUser: facId + "_" + macId,
+                        clientIp: Request.UserHostAddress,
+                        details: string.Format("機具審核完成，模式：{0}，階段：{1}，結果：{2}，目標狀態：{3}，備註：{4}",
+                            mode, stateId, resultText, targetState, memo ?? ""),
+                        oldValue: stateId,
+                        newValue: targetState
+                    );
                 }
-
-                string targetState = (result == "PASS") ? nextState : backState;
-
-                // 3. 更新 Machine_Main 之 Mac_State 狀態
-                string sqlUpdateMac = "UPDATE Machine_Main SET Mac_State = @TargetState WHERE FAC_ID = @FAC_ID AND mac_ID = @mac_ID";
-                DbHelper.ExecuteNonQuery(sqlUpdateMac,
-                    new SqlParameter("@TargetState", targetState),
-                    new SqlParameter("@FAC_ID", facId),
-                    new SqlParameter("@mac_ID", macId));
+                catch (Exception ex)
+                {
+                    try { trans.Rollback(); } catch { }
+                    Response.Write(json.Serialize(new { Success = false, Message = "審查紀錄儲存失敗：" + ex.Message }));
+                    return;
+                }
+            }
 
                 // 4. 計算返回跳轉網址
                 string redirectUrl = "managerList.aspx?INV_State=" + mode;

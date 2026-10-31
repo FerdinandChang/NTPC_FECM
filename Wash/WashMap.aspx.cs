@@ -17,6 +17,7 @@ using NPOI.XSSF.UserModel;
 using NTPC_FEC.Helpers;
 using NTPC_FEC.Models;
 using NTPC_FEC.Services;
+using NTPC_FEC.Security;
 
 namespace NTPC_FEC.Wash
 {
@@ -37,16 +38,14 @@ namespace NTPC_FEC.Wash
                 user = AuthService.GetCurrentUser(Context);
             }
 
-            if (user != null)
+            if (user == null)
             {
-                CurrentUserName = user.Name ?? "";
-                CurrentUserId = user.UserID ?? "";
+                Response.Redirect("~/Default.aspx", true);
+                return;
             }
-            else
-            {
-                CurrentUserName = "訪客";
-                CurrentUserId = "";
-            }
+
+            CurrentUserName = user.Name ?? "";
+            CurrentUserId = user.UserID ?? "";
         }
     }
 
@@ -684,6 +683,24 @@ END";
 
         private void UploadExcelData(HttpContext context)
         {
+            // 權責檢驗：最高管理員或具備洗掃業務維護權責同仁皆可操作
+            string userId = context.Session["LoginUser"] != null ? context.Session["LoginUser"].ToString().Trim() : "";
+            long lic = context.Session["LIC"] != null ? Convert.ToInt64(context.Session["LIC"]) : 0L;
+            string role = context.Session["Role"] != null ? context.Session["Role"].ToString().Trim() : "";
+            bool isAdmin = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(role, "SystemAdmin", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(userId, "Admin", StringComparison.OrdinalIgnoreCase);
+
+            bool hasAuth = isAdmin || PermissionService.HasPermission(userId, lic, "ROAD_WASH_UPLOAD", 21)
+                                   || PermissionService.HasPermission(userId, lic, "ROAD_WASH_REPORT", 21);
+
+            if (!hasAuth)
+            {
+                context.Response.StatusCode = 403;
+                context.Response.Write(json.Serialize(new { Success = false, Message = "權限不足！您未具備道路洗掃月報維護權責。" }));
+                return;
+            }
+
             if (context.Request.Files == null || context.Request.Files.Count == 0)
             {
                 context.Response.Write(json.Serialize(new { Success = false, Message = "請選擇至少一個 Excel (.xlsx / .xls) 檔案上傳！" }));
@@ -956,6 +973,18 @@ END";
             respSb.Append(",\"Data\":");
             respSb.Append(updatedJson);
             respSb.Append("}");
+
+            // 寫入 AuditLog 稽核日誌
+            AuditLogger.Log(
+                operatorUser: userId,
+                actionType: "WASH_MAP_MONTHLY_IMPORT",
+                targetUser: "WashMap_Factory",
+                clientIp: context.Request.UserHostAddress,
+                details: string.Format("上傳洗掃月報 Excel，處理檔案: {0}，寫入洗掃日誌 {1} 筆，稽查抽查 {2} 筆，更新工廠 {3} 家",
+                    string.Join(",", processedFiles.ToArray()), updatedLogRecordCount, updatedAuditRecordCount, updatedFacIds.Count),
+                oldValue: null,
+                newValue: updatedFacIds.Count.ToString()
+            );
 
             context.Response.Write(respSb.ToString());
         }
