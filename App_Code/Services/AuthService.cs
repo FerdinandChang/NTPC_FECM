@@ -371,7 +371,12 @@ namespace NTPC_FEC.Services
             }
 
             // 2. 檢查圖形驗證碼
+            // 2. 檢查圖形驗證碼 (讀取後立即銷毀，無論成功失敗皆不可二次使用，杜絕重放猜解)
             var sessionCode = (context != null && context.Session != null) ? context.Session["ValidateCode"] as string : null;
+            if (context != null && context.Session != null)
+            {
+                context.Session.Remove("ValidateCode");
+            }
             if (string.IsNullOrEmpty(sessionCode))
             {
                 result.Success = false;
@@ -386,7 +391,7 @@ namespace NTPC_FEC.Services
                 return result;
             }
 
-            // 驗證碼使用一次後即清除，防範重送攻擊
+
             if (context != null && context.Session != null)
             {
                 context.Session.Remove("ValidateCode");

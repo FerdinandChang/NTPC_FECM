@@ -18,6 +18,22 @@ namespace NTPC_FEC.Case
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null && string.IsNullOrEmpty(Request["id1"]))
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時，請重新登入！", NeedLogin = true }));
+                    AjaxResponseHelper.CompleteRequest(Response, Context);
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -85,11 +101,10 @@ namespace NTPC_FEC.Case
                 mode = "edit";
             }
 
-            // 安全 Token 檢查 (若有帶 token 則比對前後1小時，若 Session 已登入則寬容通過)
-            if (!string.IsNullOrEmpty(token))
+            // 安全 Token 檢查 (若未登入工作階段，則強制要求有效之 Token)
+            if (Session["LoginUser"] == null && Session["User"] == null)
             {
-                bool tokenValid = SecurityTokenHelper.ValidateHourToken(token, facId);
-                if (!tokenValid && Session["LoginUser"] == null)
+                if (string.IsNullOrEmpty(token) || !SecurityTokenHelper.ValidateHourToken(token, facId))
                 {
                     Response.Write(json.Serialize(new { Success = false, Message = "安全憑證已過期或無效，請由案件清單重新進入。" }));
                     return;
@@ -677,6 +692,12 @@ namespace NTPC_FEC.Case
         #region 4. 儲存查核結果與三方簽名
         private void SaveCaseResult()
         {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "未授權的操作：請先登入系統後再執行簽章與儲存！" }));
+                return;
+            }
+
             string reqJson = "";
             using (StreamReader reader = new StreamReader(Request.InputStream, Encoding.UTF8))
             {

@@ -8,6 +8,7 @@ using System.IO;
 using System.Text;
 using System.Web;
 using System.Web.Script.Serialization;
+using System.Web.SessionState;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NTPC_FEC.Helpers;
@@ -17,7 +18,7 @@ namespace NTPC_FEC.BufferAnalysis
     /// <summary>
     /// 環域分析核心 API 處理常式 (智慧動態欄位適配，符合 C# 5.0 規範與無 CDN 資安原則)
     /// </summary>
-    public class BufferHandler : IHttpHandler
+    public class BufferHandler : IHttpHandler, IRequiresSessionState
     {
         private JavaScriptSerializer json;
 
@@ -29,6 +30,22 @@ namespace NTPC_FEC.BufferAnalysis
 
         public void ProcessRequest(HttpContext context)
         {
+            // 身分驗證：保護內部工廠與學校敏感空間資料，禁止未授權存取
+            if (context.Session == null || context.Session["LoginUser"] == null)
+            {
+                if (string.Equals(context.Request["action"], "exportschooldist", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.StatusCode = 401;
+                    context.Response.ContentType = "text/plain; charset=utf-8";
+                    context.Response.Write("未授權存取：請先登入系統後再執行匯出操作。");
+                    return;
+                }
+                context.Response.StatusCode = 401;
+                context.Response.ContentType = "application/json; charset=utf-8";
+                context.Response.Write(json.Serialize(new { Success = false, Message = "登入逾時或尚未登入，請先登入系統。", NeedLogin = true }));
+                return;
+            }
+
             string action = context.Request["action"];
             if (!string.IsNullOrEmpty(action) && action.ToLower() == "exportschooldist")
             {

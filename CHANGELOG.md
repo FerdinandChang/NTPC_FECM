@@ -4,6 +4,48 @@
 
 ---
 
+## [1.9.0] - 2026-10-31
+
+### 🚀 版本概述
+新北市固定逸散源管理平台（NTPC_FECM）發布 1.9.0 版本。本版本實現了道路外勤巡檢三大核心業務（道路潔淨度巡檢、路面破損巡查、車行路段跳空落塵）的「通報 - 派工 - 改善 - 審核」全閉環流程建置，正式上線車行路段改善申報（`ImproveBSC.aspx`）、通報派工（`SetSG_BSC.aspx`）與道路髒污通報派工（`SetSG_Dirty.aspx`）；大幅提升資料庫層存取效能（連線字串執行緒安全高速快取）；強化登入防禦（驗證碼一次性銷毀與防暴力猜解）；全面重構所有業務模組後端 CodeBehind 落實細粒度代碼授權，並執行專案瘦身與打包清單同步。
+
+### ✨ 主要歷程與改動
+
+#### 1. 道路巡檢三大業務「通報 - 派工 - 改善 - 審核」全閉環流程完整落實
+- **車行路段落塵通報派工與改善申報 (`RoadBSC/SetSG_BSC.aspx`, `RoadBSC/ImproveBSC.aspx`)**：
+  - 新增車行路段跳空通道落塵通報派工頁面（`SetSG_BSC.aspx`），支援缺失案件指派與權責單位/公所即時通報。
+  - 新增車行路段缺失改善回報頁面（`ImproveBSC.aspx`），落實改善前後相片對比上傳、施工回報與審核核銷。
+- **道路髒污通報派工機制正式上線 (`RoadClean/SetSG_Dirty.aspx`)**：
+  - 新增道路髒污通報派工頁面（`SetSG_Dirty.aspx`），串接髒污通報（`NewDirty.aspx`）、清單（`Dirty_List.aspx`）、改善回報（`ImproveDirty.aspx`）與詳情（`DirtyDetail.aspx`），打通完整的髒污列管與指派流程。
+- **全系列道路巡檢流程一致性**：
+  - 道路潔淨、路面破損、車行路段三大模組均遵循現代化外勤規範（`inspection-ui-standard`），具備完整的「外勤查核 -> 派工通報 -> 責任改善 -> 複核結案」標準作業體系。
+
+#### 2. 資料庫核心連線效能重大優化 (`App_Code/Helpers/DbHelper.cs`)
+- **執行緒安全連線字串快取機制**：
+  - 導入 `ConcurrentDictionary<string, string> ConnectionStringCache`。
+  - 徹底消除以往每個資料庫操作重複讀取與解析 `Web.config` 設定檔的磁碟 I/O 與 XML 剖析負擔，高併發情境下資料存取吞吐量顯著躍升。
+
+#### 3. 登入身分驗證與圖形驗證碼防重放強化 (`App_Code/Services/AuthService.cs`)
+- **一次性圖形驗證碼（One-Time Token）即驗即銷**：
+  - 登入驗證流程中，讀取 Session 驗證碼後立即主動移除（無論比對成功或失敗），杜絕多線程併發重放反覆猜解與彩虹字典攻擊。
+
+#### 4. 全站後端 CodeBehind 細緻化代碼授權重構
+- **全面升級細粒度權限比對**：
+  - 對主要業務模組（`BareGround/`、`Case/`、`FAC/`、`Machine/`、`Manager/`、`MoenvEquip/`、`OwnReport/`、`RoadBSC/`、`RoadBreak/`、`RoadClean/`、`Wash/`）之後端頁面 CodeBehind 進行全面重構。
+  - 一律透過 `PermissionService.HasPermission(...)` 進行嚴格之功能代碼驗證，杜絕水平越權與垂直越權（BOLA/IDOR）存取風險。
+
+#### 5. 權限項目定義與選單體系標準化對齊 (`MenuService.cs`, `PermissionService.cs`)
+- **權限與選單名稱統一**：
+  - 統一各功能權限代碼之顯示名稱，涵蓋道路潔淨現場查核、指派通報、改善申報、臺北港專區、管辦改善歷程追蹤統計、固定污染源施工機具普查、洗車水電紀錄列表等。
+
+#### 6. 專案瘦身與正式機打包清單同步 (`deploy_manifest.json`)
+- **清除臨時開發腳本**：
+  - 清理過去開發與轉換階段之臨時性 Python/文字分析腳本，確保專案乾淨且易於長期維護。
+- **打包發布清單同步升級**：
+  - 將新增之 `RoadClean/SetSG_Dirty.aspx`、`RoadBSC/SetSG_BSC.aspx`、`RoadBSC/ImproveBSC.aspx` 納入正式機發布白名單，冒煙自檢 100% 驗證通過（收錄 202 個發布檔案與 105 項關鍵核心資產）。
+
+---
+
 ## [1.8.0] - 2026-10-31
 
 ### 🚀 版本概述

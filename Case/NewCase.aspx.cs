@@ -16,8 +16,75 @@ namespace NTPC_FEC.Case
     {
         private JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
+        private static HashSet<string> _validInvDataColumns = null;
+        private static readonly object _columnLock = new object();
+
+        private static HashSet<string> GetInvDataColumns()
+        {
+            if (_validInvDataColumns == null)
+            {
+                lock (_columnLock)
+                {
+                    if (_validInvDataColumns == null)
+                    {
+                        var cols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        try
+                        {
+                            DataTable dt = DbHelper.ExecuteDataTable("SELECT TOP 0 * FROM INV_DATA");
+                            if (dt != null)
+                            {
+                                foreach (DataColumn c in dt.Columns)
+                                {
+                                    cols.Add(c.ColumnName);
+                                }
+                            }
+                        }
+                        catch { }
+                        _validInvDataColumns = cols;
+                    }
+                }
+            }
+            return _validInvDataColumns;
+        }
+
+        private static bool IsValidCaseColumn(string colName, HashSet<string> validCols, bool isInsert)
+        {
+            if (string.IsNullOrEmpty(colName)) return false;
+            colName = colName.Trim();
+            if (!System.Text.RegularExpressions.Regex.IsMatch(colName, @"^[a-zA-Z0-9_]+$")) return false;
+            if (validCols != null && validCols.Count > 0 && !validCols.Contains(colName)) return false;
+            if (colName.Equals("FAC_ID", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("INV_NO", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("Create_User", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("Create_Date", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+            if (isInsert && (colName.Equals("INV_TYPE", StringComparison.OrdinalIgnoreCase) || colName.Equals("INV_State", StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+            return true;
+        }
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null && string.IsNullOrEmpty(Request["id1"]))
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時，請重新登入！", NeedLogin = true }));
+                    AjaxResponseHelper.CompleteRequest(Response, Context);
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -74,16 +141,10 @@ namespace NTPC_FEC.Case
                 mode = "new";
             }
 
-            // 安全 Token 檢查 (若有帶 token 則比對前後1小時，若 Session 已登入則寬容通過)
-            if (!string.IsNullOrEmpty(token))
+            // 安全 Token 檢查 (未登入工作階段時，強制要求有效 Token)
+            if (Session["LoginUser"] == null && Session["User"] == null)
             {
-
-
-
-
-
-                bool tokenValid = SecurityTokenHelper.ValidateHourToken(token, facId);
-                if (!tokenValid && Session["LoginUser"] == null)
+                if (string.IsNullOrEmpty(token) || !SecurityTokenHelper.ValidateHourToken(token, facId))
                 {
                     Response.Write(json.Serialize(new { Success = false, Message = "安全憑證已過期或無效，請由案件清單重新進入。" }));
                     return;
@@ -382,6 +443,8 @@ namespace NTPC_FEC.Case
                 fields = new Dictionary<string, object>();
             }
 
+            HashSet<string> validCols = GetInvDataColumns();
+
             // 1. 若為新增巡查 (new 或 new_re)，取得最新流水號
             if (mode == "new" || mode == "new_re" || invNo <= 0)
             {
@@ -394,8 +457,14 @@ namespace NTPC_FEC.Case
                 }
                 invNo = maxNo + 1;
 
+                if (Session["LoginUser"] == null && Session["User"] == null)
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "未授權的操作：請先登入系統後再執行建立查核案件！" }));
+                    return;
+                }
+
                 string invType = (mode == "new_re") ? "改善複查" : "例行巡查";
-                string loginUser = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "外勤查核人員";
+                string loginUser = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : (Session["User"] != null ? Session["User"].ToString() : "外勤查核人員");
 
                 // 組合 INSERT 欄位
                 var colNames = new List<string>();
@@ -426,10 +495,11 @@ namespace NTPC_FEC.Case
                 colValues.Add("@Create_Date");
                 sqlParams.Add(new SqlParameter("@Create_Date", DateTime.Now));
 
-                // 填入所有自訂欄位
+                // 填入所有自訂欄位 (白名單過濾)
                 foreach (var kvp in fields)
                 {
                     string colName = kvp.Key;
+                    if (!IsValidCaseColumn(colName, validCols, true)) continue;
                     object val = kvp.Value;
                     string pName = "@p_" + colName;
 
@@ -471,7 +541,43 @@ namespace NTPC_FEC.Case
                 }
 
                 string sqlInsert = "INSERT INTO INV_DATA (" + string.Join(", ", colNames.ToArray()) + ") VALUES (" + string.Join(", ", colValues.ToArray()) + ")";
-                DbHelper.ExecuteNonQuery(sqlInsert, sqlParams.ToArray());
+                int maxRetry = 5;
+                bool inserted = false;
+                for (int attempt = 1; attempt <= maxRetry; attempt++)
+                {
+                    try
+                    {
+                        DbHelper.ExecuteNonQuery(sqlInsert, sqlParams.ToArray());
+                        inserted = true;
+                        break;
+                    }
+                    catch (SqlException ex)
+                    {
+                        if ((ex.Number == 2627 || ex.Number == 2601) && attempt < maxRetry)
+                        {
+                            System.Threading.Thread.Sleep(50 * attempt);
+                            object objRetryMax = DbHelper.ExecuteScalar("SELECT ISNULL(MAX(INV_NO), 0) FROM INV_DATA WHERE FAC_ID = @FAC_ID", new SqlParameter("@FAC_ID", facId));
+                            int retryNo = 1;
+                            if (objRetryMax != null && objRetryMax != DBNull.Value) int.TryParse(objRetryMax.ToString(), out retryNo);
+                            invNo = retryNo + attempt;
+                            for (int i = 0; i < sqlParams.Count; i++)
+                            {
+                                if (sqlParams[i].ParameterName == "@INV_NO")
+                                {
+                                    sqlParams[i].Value = invNo;
+                                    break;
+                                }
+                            }
+                            continue;
+                        }
+                        throw;
+                    }
+                }
+                if (!inserted)
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "巡查案件併發建立繁忙，請稍後重試！" }));
+                    return;
+                }
             }
             else
             {
@@ -482,6 +588,7 @@ namespace NTPC_FEC.Case
                 foreach (var kvp in fields)
                 {
                     string colName = kvp.Key;
+                    if (!IsValidCaseColumn(colName, validCols, true)) continue;
                     object val = kvp.Value;
                     string pName = "@p_" + colName;
 
@@ -528,13 +635,14 @@ namespace NTPC_FEC.Case
                 DbHelper.ExecuteNonQuery(sqlUpdate, sqlParams.ToArray());
             }
 
-            // 3. 處理照片實體圖檔儲存
+            // 3. 處理照片實體圖檔儲存 (消毒路徑與邊界校驗)
             if (postData.ContainsKey("Photos"))
             {
                 var photos = postData["Photos"] as Dictionary<string, object>;
                 if (photos != null && photos.Count > 0)
                 {
-                    string picDirRel = "~/Upload/PIC/" + facId + "/" + invNo;
+                    string safeFacId = FileSecurityHelper.SanitizeFileName(facId);
+                    string picDirRel = "~/Upload/PIC/" + safeFacId + "/" + invNo;
                     string picDirPhy = HttpContext.Current.Server.MapPath(picDirRel);
                     if (!Directory.Exists(picDirPhy))
                     {
@@ -544,6 +652,9 @@ namespace NTPC_FEC.Case
                     foreach (var pKvp in photos)
                     {
                         string photoKey = pKvp.Key;
+                        if (string.IsNullOrEmpty(photoKey)) continue;
+                        photoKey = FileSecurityHelper.SanitizeFileName(photoKey.Trim());
+                        if (string.IsNullOrEmpty(photoKey)) continue;
                         string base64Str = pKvp.Value != null ? pKvp.Value.ToString() : "";
                         if (string.IsNullOrEmpty(base64Str) || !base64Str.Contains("base64,"))
                         {
@@ -554,8 +665,15 @@ namespace NTPC_FEC.Case
                         {
                             string rawBase64 = base64Str.Substring(base64Str.IndexOf("base64,") + 7);
                             byte[] imgBytes = Convert.FromBase64String(rawBase64);
+                            if (!FileSecurityHelper.HasValidMagicBytes(imgBytes, "jpg") && !FileSecurityHelper.HasValidMagicBytes(imgBytes, "png"))
+                            {
+                                continue;
+                            }
                             string savePath = Path.Combine(picDirPhy, photoKey + ".jpg");
-                            File.WriteAllBytes(savePath, imgBytes);
+                            if (FileSecurityHelper.IsSafePath(picDirPhy, savePath))
+                            {
+                                File.WriteAllBytes(savePath, imgBytes);
+                            }
                         }
                         catch
                         {
@@ -564,13 +682,14 @@ namespace NTPC_FEC.Case
                 }
             }
 
-            // 4. 處理電子手寫簽名檔儲存
+            // 4. 處理電子手寫簽名檔儲存 (消毒路徑與邊界校驗)
             if (postData.ContainsKey("Signatures"))
             {
                 var sigs = postData["Signatures"] as Dictionary<string, object>;
                 if (sigs != null && sigs.Count > 0)
                 {
-                    string picDirRel = "~/Upload/PIC/" + facId + "/" + invNo;
+                    string safeFacId = FileSecurityHelper.SanitizeFileName(facId);
+                    string picDirRel = "~/Upload/PIC/" + safeFacId + "/" + invNo;
                     string picDirPhy = HttpContext.Current.Server.MapPath(picDirRel);
                     if (!Directory.Exists(picDirPhy))
                     {
@@ -580,6 +699,9 @@ namespace NTPC_FEC.Case
                     foreach (var sKvp in sigs)
                     {
                         string sigName = sKvp.Key;
+                        if (string.IsNullOrEmpty(sigName)) continue;
+                        sigName = FileSecurityHelper.SanitizeFileName(sigName.Trim());
+                        if (string.IsNullOrEmpty(sigName)) continue;
                         string base64Str = sKvp.Value != null ? sKvp.Value.ToString() : "";
                         if (string.IsNullOrEmpty(base64Str) || !base64Str.Contains("base64,"))
                         {
@@ -590,8 +712,15 @@ namespace NTPC_FEC.Case
                         {
                             string rawBase64 = base64Str.Substring(base64Str.IndexOf("base64,") + 7);
                             byte[] imgBytes = Convert.FromBase64String(rawBase64);
+                            if (!FileSecurityHelper.HasValidMagicBytes(imgBytes, "jpg") && !FileSecurityHelper.HasValidMagicBytes(imgBytes, "png"))
+                            {
+                                continue;
+                            }
                             string savePath = Path.Combine(picDirPhy, sigName + ".png");
-                            File.WriteAllBytes(savePath, imgBytes);
+                            if (FileSecurityHelper.IsSafePath(picDirPhy, savePath))
+                            {
+                                File.WriteAllBytes(savePath, imgBytes);
+                            }
                         }
                         catch
                         {

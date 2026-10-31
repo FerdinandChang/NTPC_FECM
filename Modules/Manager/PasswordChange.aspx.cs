@@ -21,13 +21,28 @@ namespace NTPC_FEC.Modules.Manager
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 登入狀態前置檢查 (防止未授權調用)
+            if (Session["LoginUser"] == null)
+            {
+                if (Request.HttpMethod == "POST" && Request["action"] == "changePassword")
+                {
+                    Response.Clear();
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(Newtonsoft.Json.JsonConvert.SerializeObject(new OperationResult { Success = false, Message = "登入已逾時，請重新登入系統。" }));
+                    Response.End();
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             // 支援頂部 Navbar 遮罩視窗 AJAX 變更密碼
             if (Request.HttpMethod == "POST" && Request["action"] == "changePassword")
             {
                 Response.Clear();
                 Response.ContentType = "application/json; charset=utf-8";
 
-                string uId = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "";
+                string uId = Session["LoginUser"].ToString();
                 string oPwd = Request["oldPwd"] != null ? Request["oldPwd"].Trim() : "";
                 string nPwd = Request["newPwd"] != null ? Request["newPwd"].Trim() : "";
                 string cPwd = Request["confirmPwd"] != null ? Request["confirmPwd"].Trim() : "";
@@ -35,12 +50,6 @@ namespace NTPC_FEC.Modules.Manager
                 OperationResult ajaxRes = AuthService.ChangePassword(uId, oPwd, nPwd, cPwd);
                 Response.Write(Newtonsoft.Json.JsonConvert.SerializeObject(ajaxRes));
                 Response.End();
-                return;
-            }
-
-            if (Session["LoginUser"] == null)
-            {
-                Response.Redirect("~/Default.aspx", true);
                 return;
             }
 

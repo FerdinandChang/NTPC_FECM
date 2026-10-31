@@ -36,6 +36,21 @@ namespace NTPC_FEC.MoenvEquip
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Dictionary<string, object> err = new Dictionary<string, object>();
+                    err["success"] = false;
+                    err["message"] = "登入已逾時，請重新登入！";
+                    SendJsonResponse(err);
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {

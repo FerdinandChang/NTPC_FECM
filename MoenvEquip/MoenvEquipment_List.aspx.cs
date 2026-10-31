@@ -37,36 +37,20 @@ namespace NTPC_FEC.MoenvEquip
             int idx = p.IndexOf("Uploads/", StringComparison.OrdinalIgnoreCase);
             if (idx >= 0)
             {
-                return "/NTPCEPD_New/MoenvEquip/" + p.Substring(idx);
+                return PathHelper.ResolveUrl("~/MoenvEquip/" + p.Substring(idx));
             }
-            if (p.StartsWith("/NTPCEPD_New/", StringComparison.OrdinalIgnoreCase))
-            {
-                return p;
-            }
-            return "/NTPCEPD_New/MoenvEquip/Uploads/" + p.TrimStart('~', '/');
+            return PathHelper.ResolveUrl("~/MoenvEquip/Uploads/" + p.TrimStart('~', '/'));
         }
 
         public static string GetUploadPhysicalDir(int equipId)
         {
-            string hardcodedBase = @"D:\Web\NTPCEPD_New\MoenvEquip\Uploads\";
-            if (Directory.Exists(@"D:\Web\NTPCEPD_New\MoenvEquip\Uploads"))
+            string relDir = "~/MoenvEquip/Uploads/" + equipId + "/";
+            string physDir = PathHelper.FindDirectory(relDir);
+            if (!Directory.Exists(physDir))
             {
-                string target = Path.Combine(hardcodedBase, equipId.ToString());
-                if (!Directory.Exists(target))
-                {
-                    Directory.CreateDirectory(target);
-                }
-                return target;
+                Directory.CreateDirectory(physDir);
             }
-
-            string localBase = HttpContext.Current != null
-                ? HttpContext.Current.Server.MapPath("~/MoenvEquip/Uploads/" + equipId + "/")
-                : "";
-            if (!string.IsNullOrEmpty(localBase) && !Directory.Exists(localBase))
-            {
-                Directory.CreateDirectory(localBase);
-            }
-            return localBase;
+            return physDir;
         }
 
         protected override void Render(HtmlTextWriter writer)
@@ -80,6 +64,21 @@ namespace NTPC_FEC.MoenvEquip
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Dictionary<string, object> err = new Dictionary<string, object>();
+                    err["success"] = false;
+                    err["message"] = "登入已逾時，請重新登入！";
+                    SendJsonResponse(err);
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             MoenvEquipment_Helper.EnsureDatabaseSchema();
 
             string action = Request["action"];

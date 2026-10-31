@@ -17,6 +17,22 @@ namespace NTPC_FEC.RoadClean
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時，請重新登入！", NeedLogin = true }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             // Ajax API 請求處理
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
@@ -79,8 +95,8 @@ namespace NTPC_FEC.RoadClean
 
             if (string.IsNullOrEmpty(loginUser))
             {
-                loginUser = "tester";
-                loginUserName = "現場巡查員";
+                loginUser = Session["User"] != null ? Session["User"].ToString() : "巡查人員";
+                loginUserName = loginUser;
             }
 
             var result = new Dictionary<string, object>();
@@ -315,26 +331,8 @@ namespace NTPC_FEC.RoadClean
 
             if (isNew)
             {
-                // 產生自動流水號：以當日日期為前綴 (如 20261022001)
+                // 產生自動流水號：以當日日期為前綴 (如 20261022001)，並加入併發防撞重試機制
                 string datePrefix = DateTime.Now.ToString("yyyyMMdd");
-                string sqlSeq = "SELECT TOP 1 Dirty_ID FROM RoadDirty_CaseMain WHERE Dirty_ID LIKE @prefix + '%' ORDER BY Dirty_ID DESC";
-                object maxObj = DbHelper.ExecuteScalar(sqlSeq, new SqlParameter("@prefix", datePrefix));
-                int seq = 1;
-                if (maxObj != null && maxObj != DBNull.Value)
-                {
-                    string maxId = maxObj.ToString().Trim();
-                    if (maxId.Length >= 11)
-                    {
-                        string seqStr = maxId.Substring(8);
-                        int parsedSeq = 0;
-                        if (int.TryParse(seqStr, out parsedSeq))
-                        {
-                            seq = parsedSeq + 1;
-                        }
-                    }
-                }
-                dirtyId = datePrefix + string.Format("{0:000}", seq);
-
                 bool hasAddrCol = CheckColumnExists("RoadDirty_CaseMain", "Address");
                 bool hasAddr1Col = CheckColumnExists("RoadDirty_CaseMain", "Address1");
                 string insertCols = "Dirty_ID, Show_ID, Report_Date, Report_User, S_UTME, S_UTMN, S_UTME1, S_UTMN1, Lat, Lon, Lat1, Lon1, COMM, KIND";
@@ -351,30 +349,75 @@ namespace NTPC_FEC.RoadClean
                 }
 
                 string insertSql = "INSERT INTO RoadDirty_CaseMain (" + insertCols + ") VALUES (" + insertVals + ")";
-                List<SqlParameter> pList = new List<SqlParameter>();
-                pList.Add(new SqlParameter("@Dirty_ID", dirtyId));
-                pList.Add(new SqlParameter("@Show_ID", dirtyId));
-                pList.Add(new SqlParameter("@Report_Date", reportDate));
-                pList.Add(new SqlParameter("@Report_User", loginUser));
-                pList.Add(new SqlParameter("@S_UTME", input.S_UTME));
-                pList.Add(new SqlParameter("@S_UTMN", input.S_UTMN));
-                pList.Add(new SqlParameter("@S_UTME1", input.S_UTME1.HasValue && input.S_UTME1.Value > 0 ? (object)input.S_UTME1.Value : DBNull.Value));
-                pList.Add(new SqlParameter("@S_UTMN1", input.S_UTMN1.HasValue && input.S_UTMN1.Value > 0 ? (object)input.S_UTMN1.Value : DBNull.Value));
-                pList.Add(new SqlParameter("@Lat", saveLat.HasValue && saveLat.Value > 0 ? (object)saveLat.Value : DBNull.Value));
-                pList.Add(new SqlParameter("@Lon", saveLon.HasValue && saveLon.Value > 0 ? (object)saveLon.Value : DBNull.Value));
-                pList.Add(new SqlParameter("@Lat1", saveLat1.HasValue && saveLat1.Value > 0 ? (object)saveLat1.Value : DBNull.Value));
-                pList.Add(new SqlParameter("@Lon1", saveLon1.HasValue && saveLon1.Value > 0 ? (object)saveLon1.Value : DBNull.Value));
-                pList.Add(new SqlParameter("@COMM", input.Comm ?? ""));
-                pList.Add(new SqlParameter("@KIND", input.Kind ?? "EF"));
-                if (hasAddrCol)
+                int maxRetry = 5;
+                bool inserted = false;
+
+                for (int attempt = 1; attempt <= maxRetry; attempt++)
                 {
-                    pList.Add(new SqlParameter("@Address", input.Address ?? ""));
+                    string sqlSeq = "SELECT TOP 1 Dirty_ID FROM RoadDirty_CaseMain WHERE Dirty_ID LIKE @prefix + '%' ORDER BY Dirty_ID DESC";
+                    object maxObj = DbHelper.ExecuteScalar(sqlSeq, new SqlParameter("@prefix", datePrefix));
+                    int seq = attempt;
+                    if (maxObj != null && maxObj != DBNull.Value)
+                    {
+                        string maxId = maxObj.ToString().Trim();
+                        if (maxId.Length >= 11)
+                        {
+                            string seqStr = maxId.Substring(8);
+                            int parsedSeq = 0;
+                            if (int.TryParse(seqStr, out parsedSeq))
+                            {
+                                seq = parsedSeq + attempt;
+                            }
+                        }
+                    }
+                    dirtyId = datePrefix + string.Format("{0:000}", seq);
+
+                    List<SqlParameter> pList = new List<SqlParameter>();
+                    pList.Add(new SqlParameter("@Dirty_ID", dirtyId));
+                    pList.Add(new SqlParameter("@Show_ID", dirtyId));
+                    pList.Add(new SqlParameter("@Report_Date", reportDate));
+                    pList.Add(new SqlParameter("@Report_User", loginUser));
+                    pList.Add(new SqlParameter("@S_UTME", input.S_UTME));
+                    pList.Add(new SqlParameter("@S_UTMN", input.S_UTMN));
+                    pList.Add(new SqlParameter("@S_UTME1", input.S_UTME1.HasValue && input.S_UTME1.Value > 0 ? (object)input.S_UTME1.Value : DBNull.Value));
+                    pList.Add(new SqlParameter("@S_UTMN1", input.S_UTMN1.HasValue && input.S_UTMN1.Value > 0 ? (object)input.S_UTMN1.Value : DBNull.Value));
+                    pList.Add(new SqlParameter("@Lat", saveLat.HasValue && saveLat.Value > 0 ? (object)saveLat.Value : DBNull.Value));
+                    pList.Add(new SqlParameter("@Lon", saveLon.HasValue && saveLon.Value > 0 ? (object)saveLon.Value : DBNull.Value));
+                    pList.Add(new SqlParameter("@Lat1", saveLat1.HasValue && saveLat1.Value > 0 ? (object)saveLat1.Value : DBNull.Value));
+                    pList.Add(new SqlParameter("@Lon1", saveLon1.HasValue && saveLon1.Value > 0 ? (object)saveLon1.Value : DBNull.Value));
+                    pList.Add(new SqlParameter("@COMM", input.Comm ?? ""));
+                    pList.Add(new SqlParameter("@KIND", input.Kind ?? "EF"));
+                    if (hasAddrCol)
+                    {
+                        pList.Add(new SqlParameter("@Address", input.Address ?? ""));
+                    }
+                    if (hasAddr1Col)
+                    {
+                        pList.Add(new SqlParameter("@Address1", input.Address1 ?? ""));
+                    }
+
+                    try
+                    {
+                        DbHelper.ExecuteNonQuery(insertSql, pList.ToArray());
+                        inserted = true;
+                        break;
+                    }
+                    catch (SqlException ex)
+                    {
+                        if ((ex.Number == 2627 || ex.Number == 2601) && attempt < maxRetry)
+                        {
+                            System.Threading.Thread.Sleep(50 * attempt);
+                            continue;
+                        }
+                        throw;
+                    }
                 }
-                if (hasAddr1Col)
+
+                if (!inserted)
                 {
-                    pList.Add(new SqlParameter("@Address1", input.Address1 ?? ""));
+                    Response.Write(json.Serialize(new { Success = false, Message = "無法取得唯一案號，請稍後再試！" }));
+                    return;
                 }
-                DbHelper.ExecuteNonQuery(insertSql, pList.ToArray());
             }
             else
             {
@@ -464,8 +507,9 @@ namespace NTPC_FEC.RoadClean
                 {
                     if (!string.IsNullOrEmpty(item.FileName))
                     {
-                        string delPath = Path.Combine(physDir, item.FileName);
-                        if (File.Exists(delPath))
+                        string safeFileName = Path.GetFileName(item.FileName);
+                        string delPath = Path.Combine(physDir, safeFileName);
+                        if (FileSecurityHelper.IsSafePath(delPath, physDir) && File.Exists(delPath))
                         {
                             try { File.Delete(delPath); } catch { }
                         }
@@ -511,11 +555,36 @@ namespace NTPC_FEC.RoadClean
                 return;
             }
 
+            string checkSql = "SELECT Report_User, SetCOM_Date, Improve_Date FROM RoadDirty_CaseMain WHERE Dirty_ID = @id";
+            DataTable dtCase = DbHelper.ExecuteDataTable(checkSql, new SqlParameter("@id", dirtyId));
+            if (dtCase == null || dtCase.Rows.Count == 0)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "查無此通報案件！" }));
+                return;
+            }
+
+            DataRow rCase = dtCase.Rows[0];
+            if (rCase["SetCOM_Date"] != DBNull.Value || rCase["Improve_Date"] != DBNull.Value)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "此案件已成案指派改善或已結案，系統嚴禁刪除！" }));
+                return;
+            }
+
+            string reportU = rCase["Report_User"] != DBNull.Value ? rCase["Report_User"].ToString().Trim() : "";
+            string curU = Session["LoginUser"] != null ? Session["LoginUser"].ToString().Trim() : "";
+            bool isAdmin = curU.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+            if (!isAdmin && !string.Equals(reportU, curU, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：僅本通報建立者或管理員方可刪除此紀錄！" }));
+                return;
+            }
+
             string sql = "DELETE FROM RoadDirty_CaseMain WHERE Dirty_ID = @id";
             DbHelper.ExecuteNonQuery(sql, new SqlParameter("@id", dirtyId));
 
             // 清理硬碟目錄
-            string relDir = "/Upload/RoadDirtyPIC/" + dirtyId + "/";
+            string safeDirtyId = Path.GetFileName(dirtyId);
+            string relDir = "/Upload/RoadDirtyPIC/" + safeDirtyId + "/";
             string physDir = PathHelper.FindDirectory(relDir);
             if (Directory.Exists(physDir))
             {

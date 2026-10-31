@@ -57,6 +57,24 @@ namespace NTPC_FEC.FAC
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 檢查登入狀態
+            if (Session["LoginUser"] == null && Session["UserAccount"] == null)
+            {
+                if (Request["action"] != null)
+                {
+                    Response.Clear();
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入逾時，請重新登入系統。", NeedLogin = true }));
+                    Response.End();
+                    return;
+                }
+                else
+                {
+                    Response.Redirect("~/Default.aspx");
+                    return;
+                }
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {

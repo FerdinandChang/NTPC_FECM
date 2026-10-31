@@ -654,7 +654,7 @@
             <!-- 1. 頂部導覽列 -->
             <header class="top-navbar no-print">
                 <div class="brand-title">
-                    <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                    <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
                         <i class="fas fa-home"></i>
                         <span class="d-none d-sm-inline">回首頁</span>
                     </a>
@@ -1207,7 +1207,7 @@
                         const data = res.data;
                         if (data.NeedLogin) {
                             alert('登入已逾時，將返回登入頁');
-                            window.location.href = '../Login.aspx';
+                            window.location.href = '../Default.aspx';
                             return;
                         }
                         if (data.Success) {

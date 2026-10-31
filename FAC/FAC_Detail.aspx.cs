@@ -9,6 +9,8 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Models;
+using NTPC_FEC.Services;
 
 namespace NTPC_FEC.FAC
 {
@@ -55,14 +57,35 @@ namespace NTPC_FEC.FAC
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            string action = Request["action"];
-            if (!string.IsNullOrEmpty(action))
+            // Session Guard：最頂部登入驗證
+            string currentUserId = Session["LoginUser"] != null ? Session["LoginUser"].ToString().Trim() : "";
+            if (string.IsNullOrEmpty(currentUserId) && (User == null || User.Identity == null || !User.Identity.IsAuthenticated))
+            {
+                string action = Request["action"];
+                if (!string.IsNullOrEmpty(action))
+                {
+                    Response.Clear();
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, NeedLogin = true, Message = "尚未登入或登入逾時，請重新登入！" }));
+                    Response.End();
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
+            string act = Request["action"];
+            if (!string.IsNullOrEmpty(act))
             {
                 Response.Clear();
                 Response.ContentType = "application/json; charset=utf-8";
                 try
                 {
-                    HandleAjaxAction(action);
+                    HandleAjaxAction(act);
+                }
+                catch (System.Threading.ThreadAbortException)
+                {
+                    return;
                 }
                 catch (Exception ex)
                 {
@@ -72,7 +95,14 @@ namespace NTPC_FEC.FAC
                         Message = "系統發生錯誤：" + ex.Message
                     }));
                 }
-                Response.End();
+                try
+                {
+                    Response.End();
+                }
+                catch (System.Threading.ThreadAbortException)
+                {
+                    return;
+                }
                 return;
             }
         }
@@ -292,9 +322,21 @@ namespace NTPC_FEC.FAC
         }
         #endregion
 
-        #region 2. 儲存基本資料 (SaveBasic)
+        #region 2. 儲存基本資料 (SaveBasic - IDOR 與權限防護)
         private void SaveBasic()
         {
+            string loginUser = Session["LoginUser"] != null ? Session["LoginUser"].ToString().Trim() : "";
+            if (string.IsNullOrEmpty(loginUser) && User != null && User.Identity != null)
+            {
+                loginUser = User.Identity.Name;
+            }
+
+            if (string.IsNullOrEmpty(loginUser))
+            {
+                Response.Write(json.Serialize(new { Success = false, NeedLogin = true, Message = "尚未登入或登入逾時，請重新登入！" }));
+                return;
+            }
+
             string body;
             using (var reader = new StreamReader(Request.InputStream, Encoding.UTF8))
             {
@@ -311,6 +353,50 @@ namespace NTPC_FEC.FAC
             if (model == null || string.IsNullOrEmpty(model.FacId))
             {
                 Response.Write(json.Serialize(new { Success = false, Message = "未指定場所代碼" }));
+                return;
+            }
+
+            // 檢查使用者權限 (若為業者，僅能修改其自身所屬的 FacID)
+            UserAccount user = AuthService.GetCurrentUser(Context);
+            bool isManager = false;
+            string userFacId = "";
+            if (user != null)
+            {
+                userFacId = !string.IsNullOrEmpty(user.FacID) ? user.FacID.Trim() : "";
+                if ((user.Lic & (1L << 9)) != 0 || (user.Lic & (1L << 13)) != 0 || 
+                    (user.Lic & (1L << 14)) != 0 || (user.Lic & (1L << 63)) != 0 || 
+                    string.IsNullOrEmpty(userFacId))
+                {
+                    isManager = true;
+                }
+            }
+            else
+            {
+                string queryUserSql = "SELECT FAC_ID, LIC FROM UserAcc WHERE UserID = @UserID";
+                var pList = new SqlParameter[] { new SqlParameter("@UserID", SqlDbType.VarChar) { Value = loginUser } };
+                DataTable userDt = DbHelper.ExecuteDataTable(queryUserSql, pList);
+                if (userDt != null && userDt.Rows.Count > 0)
+                {
+                    DataRow uRow = userDt.Rows[0];
+                    userFacId = uRow["FAC_ID"] != DBNull.Value ? uRow["FAC_ID"].ToString().Trim() : "";
+                    long licVal = 0L;
+                    if (uRow["LIC"] != DBNull.Value)
+                    {
+                        long.TryParse(uRow["LIC"].ToString(), out licVal);
+                    }
+                    if ((licVal & (1L << 9)) != 0 || (licVal & (1L << 13)) != 0 || 
+                        (licVal & (1L << 14)) != 0 || (licVal & (1L << 63)) != 0 || 
+                        string.IsNullOrEmpty(userFacId))
+                    {
+                        isManager = true;
+                    }
+                }
+            }
+
+            // IDOR 防護：非管理者禁止修改其他工廠的基本資料
+            if (!isManager && !string.Equals(model.FacId.Trim(), userFacId, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "您無權限修改其他場所之基本資料！" }));
                 return;
             }
 
@@ -340,11 +426,6 @@ namespace NTPC_FEC.FAC
             if (aff > 0)
             {
                 // 寫入異動歷程 (依據 FAC_EditHis 正確結構寫入)
-                string loginUser = "";
-                if (Session["LoginUser"] != null) loginUser = Session["LoginUser"].ToString();
-                if (string.IsNullOrEmpty(loginUser) && User != null && User.Identity != null) loginUser = User.Identity.Name;
-                if (string.IsNullOrEmpty(loginUser)) loginUser = "SYSTEM";
-
                 try
                 {
                     string sqlHis = @"

@@ -16,10 +16,17 @@ namespace NTPC_FEC.Helpers
     public static class DbHelper
     {
         private static string DefaultConnectionStringName = "MainConnectionString";
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> ConnectionStringCache =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         public static string GetConnectionString(string connectionName = null)
         {
             string name = string.IsNullOrEmpty(connectionName) ? DefaultConnectionStringName : connectionName;
+            string cachedConnStr;
+            if (ConnectionStringCache.TryGetValue(name, out cachedConnStr) && !string.IsNullOrEmpty(cachedConnStr))
+            {
+                return cachedConnStr;
+            }
             string connStr = null;
 
             // 1. 優先嘗試 WebConfigurationManager (標準 ASP.NET Web 配置管理器)
@@ -142,6 +149,7 @@ namespace NTPC_FEC.Helpers
                 throw new InvalidOperationException(sb.ToString());
             }
 
+            ConnectionStringCache[name] = connStr;
             return connStr;
         }
 

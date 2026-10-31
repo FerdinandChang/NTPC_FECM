@@ -695,14 +695,90 @@
 
         .drawer-content {
             background: #ffffff;
-            width: 100%;
-            max-width: 820px;
+            width: var(--drawer-width, 1080px);
+            max-width: 96vw;
+            min-width: 540px;
             height: 100%;
-            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+            box-shadow: -6px 0 28px rgba(0, 0, 0, 0.22);
             display: flex;
             flex-direction: column;
+            position: relative;
             overflow: hidden;
+            transition: width 0.2s cubic-bezier(0.2, 0, 0, 1);
             animation: slideInRight 0.25s ease;
+        }
+
+        .drawer-content.resizing {
+            transition: none !important;
+            user-select: none;
+        }
+
+        /* 左側邊緣滑鼠拖曳拉桿 */
+        .drawer-resize-handle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 10px;
+            height: 100%;
+            cursor: ew-resize;
+            z-index: 1060;
+            background: transparent;
+            transition: background 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drawer-resize-handle:hover,
+        .drawer-resize-handle.active {
+            background: rgba(0, 123, 255, 0.25);
+        }
+
+        .drawer-resize-handle::after {
+            content: '';
+            width: 4px;
+            height: 48px;
+            border-radius: 2px;
+            background: #cbd5e1;
+            transition: background 0.15s ease, height 0.15s ease;
+        }
+
+        .drawer-resize-handle:hover::after,
+        .drawer-resize-handle.active::after {
+            background: #007bff;
+            height: 64px;
+        }
+
+        /* 缺失項目膠囊徽章標籤 */
+        .loss-item-tag {
+            display: inline-block;
+            background-color: #fff1f0;
+            border: 1px solid #ffa39e;
+            color: #cf1322;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            line-height: 1.35;
+            margin-bottom: 4px;
+            margin-right: 4px;
+            word-break: break-word;
+            text-align: left;
+            box-shadow: 0 1px 2px rgba(207, 19, 34, 0.06);
+        }
+
+        .loss-item-tag i {
+            margin-right: 4px;
+        }
+
+        .loss-item-tag:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 抽屜內緊湊型動作按鈕 */
+        .drawer-action-btn {
+            padding: 3px 7px !important;
+            font-size: 0.82rem !important;
+            line-height: 1.2 !important;
         }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1187,14 +1263,33 @@
 
         <!-- 5. 場所歷程與查核抽屜 (Offcanvas Drawer) -->
         <div v-if="isDrawerOpen" class="drawer-overlay" v-on:click.self="closeFacDrawer">
-            <div class="drawer-content">
-                <div class="drawer-header">
+            <div class="drawer-content" :class="{ 'resizing': isResizingDrawer }" :style="{ width: drawerWidth + 'px' }">
+                <!-- 左側拖曳拉桿 -->
+                <div class="drawer-resize-handle" 
+                     :class="{ 'active': isResizingDrawer }" 
+                     title="按住左右拖曳可調整視窗寬度"
+                     v-on:mousedown.stop="startDrawerResize"></div>
+
+                <div class="drawer-header d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="m-0 font-weight-bold">
+                        <h5 class="m-0 font-weight-bold text-white">
                             <i class="fas fa-building mr-2"></i>{{ activeFac.FAC_NAME }}
                         </h5>
                         <small class="text-white-50">管制編號：{{ activeFac.C_NO || '-' }} | 行政區：{{ activeFac.TOWN || '-' }}</small>
                     </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- 寬度切換快速按鈕 -->
+                        <button type="button" class="btn btn-sm btn-outline-light font-weight-bold text-white mr-2" 
+                                v-on:click="toggleDrawerWidthMode" 
+                                :title="getDrawerWidthModeTitle">
+                            <i class="fas mr-1" :class="getDrawerWidthModeIcon"></i>
+                            <span class="d-none d-sm-inline">{{ drawerWidthLabel }}</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-light" v-on:click="closeFacDrawer">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
                     <button type="button" class="btn btn-sm btn-light" v-on:click="closeFacDrawer">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1267,35 +1362,42 @@
                         </div>
 
                         <div v-else class="table-responsive">
-                            <table class="table table-bordered table-hover">
+                            <table class="table table-bordered table-hover align-middle mb-0" style="min-width: 860px;">
                                 <thead class="thead-light">
                                     <tr>
-                                        <th style="width:40px;" class="text-center" title="勾選任兩筆進行比對">比對</th>
-                                        <th style="width:140px;">巡查時間 / 屬性</th>
-                                        <th style="width:100px;">運作狀態</th>
-                                        <th style="width:90px;" class="text-center">缺失記點</th>
-                                        <th>缺失項目內容</th>
-                                        <th style="width:100px;" class="text-center">審核狀態</th>
-                                        <th style="width:190px;" class="text-center">功能動作</th>
+                                        <th style="width: 44px;" class="text-center" title="勾選兩筆進行比對">比對</th>
+                                        <th style="width: 125px;">巡查時間 / 屬性</th>
+                                        <th style="width: 85px;" class="text-center">運作狀態</th>
+                                        <th style="width: 75px;" class="text-center">缺失記點</th>
+                                        <th style="min-width: 280px;">缺失項目內容</th>
+                                        <th style="width: 85px;" class="text-center">審核狀態</th>
+                                        <th style="width: 145px;" class="text-center">功能動作</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="inv in drawerInvs" :key="inv.INV_NO">
                                         <td class="text-center align-middle">
-                                            <input type="checkbox" :value="inv.INV_NO" v-model="selectedCompareInvNos" v-on:change="onCompareCheckboxChange(inv.INV_NO)" title="選擇此筆進行比對" />
+                                            <input type="checkbox" :value="inv.INV_NO" v-model="selectedCompareInvNos" v-on:change="onCompareCheckboxChange(inv.INV_NO)" title="選擇此筆" />
                                         </td>
                                         <td>
                                             <div class="font-weight-bold">{{ inv.INV_DATE }}</div>
                                             <span class="badge badge-secondary">{{ inv.INV_TYPE }}</span>
                                         </td>
-                                        <td>{{ inv.Work_State }}</td>
+                                        <td class="text-center">{{ inv.Work_State || '正常操作' }}</td>
                                         <td class="text-center">
                                             <span class="loss-badge" :class="inv.Total_Loss_Point > 0 ? 'loss-major' : 'loss-zero'">
                                                 {{ inv.Total_Loss_Point }} 點
                                             </span>
                                         </td>
                                         <td>
-                                            <div class="small" style="max-width: 250px;">{{ inv.Loss_Detail }}</div>
+                                            <div v-if="!inv.Loss_Detail || inv.Loss_Detail.trim() === '' || inv.Loss_Detail === '無缺失' || inv.Total_Loss_Point === 0" class="text-success small font-weight-bold">
+                                                <i class="fas fa-check-circle mr-1"></i>全項符合防制規範 (無缺失)
+                                            </div>
+                                            <div v-else class="d-flex flex-column align-items-start">
+                                                <span v-for="(item, idx) in parseLossDetails(inv.Loss_Detail)" :key="idx" class="loss-item-tag">
+                                                    <i class="fas fa-exclamation-circle text-danger"></i>{{ item }}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td class="text-center">
                                             <span class="badge font-weight-bold" :class="getInvStateBadgeClass(inv.INV_State)">
@@ -1304,22 +1406,22 @@
                                         </td>
                                         <td class="text-center">
                                             <div class="action-btn-group">
-                                                <button type="button" class="btn btn-sm btn-outline-dark btn-action" title="與相鄰紀錄歷程比對" v-on:click="quickCompareInv(inv)">
+                                                <button type="button" class="btn btn-sm btn-outline-dark btn-action drawer-action-btn" title="與相鄰歷程比對" v-on:click="quickCompareInv(inv)">
                                                     <i class="fas fa-exchange-alt"></i>
                                                 </button>
-                                                <button v-if="inv.CanEdit" type="button" class="btn btn-sm btn-outline-primary btn-action" title="修改資料" v-on:click="navigateEditCase(inv.INV_NO)">
+                                                <button v-if="inv.CanEdit" type="button" class="btn btn-sm btn-outline-primary btn-action drawer-action-btn" title="修改" v-on:click="navigateEditCase(inv.INV_NO)">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button v-if="inv.CanSubmit" type="button" class="btn btn-sm btn-outline-success btn-action" title="送出審核" v-on:click="submitUploadCheck(inv.INV_NO, inv.INV_DATE)">
+                                                <button v-if="inv.CanSubmit" type="button" class="btn btn-sm btn-outline-success btn-action drawer-action-btn" title="送出審查" v-on:click="submitUploadCheck(inv.INV_NO, inv.INV_DATE)">
                                                     <i class="fas fa-paper-plane"></i>
                                                 </button>
-                                                <button v-if="inv.CanSign" type="button" class="btn btn-sm btn-outline-warning btn-action text-dark" title="簽名確認" v-on:click="navigateResultCase(inv.INV_NO, false)">
+                                                <button v-if="inv.CanSign" type="button" class="btn btn-sm btn-outline-warning btn-action drawer-action-btn text-dark" title="簽名確認" v-on:click="navigateResultCase(inv.INV_NO, false)">
                                                     <i class="fas fa-signature"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-outline-info btn-action" title="檢視詳細資料" v-on:click="navigateResultCase(inv.INV_NO, true)">
+                                                <button type="button" class="btn btn-sm btn-outline-info btn-action drawer-action-btn" title="檢視詳細" v-on:click="navigateResultCase(inv.INV_NO, true)">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button v-if="inv.CanDelete" type="button" class="btn btn-sm btn-outline-danger btn-action" title="刪除記錄" v-on:click="deleteInvRecord(inv.INV_NO, inv.INV_DATE)">
+                                                <button v-if="inv.CanDelete" type="button" class="btn btn-sm btn-outline-danger btn-action drawer-action-btn" title="刪除紀錄" v-on:click="deleteInvRecord(inv.INV_NO, inv.INV_DATE)">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
@@ -1861,6 +1963,9 @@
 
                     // 抽屜面板控制
                     isDrawerOpen: false,
+                    drawerWidth: 1080,
+                    drawerWidthMode: 'wide',
+                    isResizingDrawer: false,
                     drawerTab: 'invs',
                     activeFac: {},
                     activeFacInfo: {},
@@ -1890,6 +1995,21 @@
                 };
             },
             computed: {
+                drawerWidthLabel: function () {
+                    if (this.drawerWidthMode === 'full') return '標準版';
+                    if (this.drawerWidthMode === 'wide') return '全螢幕';
+                    return '寬版';
+                },
+                getDrawerWidthModeIcon: function () {
+                    if (this.drawerWidthMode === 'full') return 'fa-compress-arrows-alt';
+                    if (this.drawerWidthMode === 'wide') return 'fa-expand';
+                    return 'fa-expand-arrows-alt';
+                },
+                getDrawerWidthModeTitle: function () {
+                    if (this.drawerWidthMode === 'full') return '切換為標準寬度 (880px)';
+                    if (this.drawerWidthMode === 'wide') return '切換為全螢幕模式 (96vw)';
+                    return '切換為寬版模式 (1180px)';
+                },
                 totalPages() {
                     return Math.ceil(this.totalCount / this.pageSize) || 1;
                 },
@@ -1919,6 +2039,21 @@
                 this.defFacId = params.get('id');
             },
             mounted() {
+                // 讀取抽屜寬度喜好
+                try {
+                    var savedWidth = localStorage.getItem('fec_drawer_width');
+                    if (savedWidth) {
+                        var parsedW = parseInt(savedWidth, 10);
+                        if (parsedW >= 540 && parsedW <= window.innerWidth * 0.96) {
+                            this.drawerWidth = parsedW;
+                        }
+                    }
+                    var savedMode = localStorage.getItem('fec_drawer_width_mode');
+                    if (savedMode) {
+                        this.drawerWidthMode = savedMode;
+                    }
+                } catch (e) {}
+
                 this.initMap();
                 this.loadTowns();
                 this.loadCounts();
@@ -2195,6 +2330,72 @@
                 },
                 closeFacDrawer() {
                     this.isDrawerOpen = false;
+                },
+
+                // 抽屜尺寸模式切換
+                toggleDrawerWidthMode() {
+                    if (this.drawerWidthMode === 'default') {
+                        this.drawerWidthMode = 'wide';
+                        this.drawerWidth = Math.min(1180, Math.floor(window.innerWidth * 0.92));
+                    } else if (this.drawerWidthMode === 'wide') {
+                        this.drawerWidthMode = 'full';
+                        this.drawerWidth = Math.floor(window.innerWidth * 0.96);
+                    } else {
+                        this.drawerWidthMode = 'default';
+                        this.drawerWidth = 880;
+                    }
+                    try {
+                        localStorage.setItem('fec_drawer_width_mode', this.drawerWidthMode);
+                        localStorage.setItem('fec_drawer_width', this.drawerWidth.toString());
+                    } catch (e) {}
+                },
+
+                // 抽屜滑鼠拖曳調整寬度
+                startDrawerResize(e) {
+                    this.isResizingDrawer = true;
+                    var self = this;
+                    var startX = e.clientX;
+                    var startWidth = self.drawerWidth;
+
+                    var onMouseMove = function (moveEvent) {
+                        if (!self.isResizingDrawer) return;
+                        var deltaX = startX - moveEvent.clientX;
+                        var newWidth = startWidth + deltaX;
+                        var minW = 540;
+                        var maxW = Math.floor(window.innerWidth * 0.96);
+                        if (newWidth < minW) newWidth = minW;
+                        if (newWidth > maxW) newWidth = maxW;
+                        self.drawerWidth = newWidth;
+                    };
+
+                    var onMouseUp = function () {
+                        if (self.isResizingDrawer) {
+                            self.isResizingDrawer = false;
+                            document.removeEventListener('mousemove', onMouseMove);
+                            document.removeEventListener('mouseup', onMouseUp);
+                            try {
+                                localStorage.setItem('fec_drawer_width', self.drawerWidth.toString());
+                            } catch (err) {}
+                        }
+                    };
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                    e.preventDefault();
+                },
+
+                // 解析缺失內容為陣列項目
+                parseLossDetails(lossDetailStr) {
+                    if (!lossDetailStr) return [];
+                    var items = lossDetailStr.split('；');
+                    var result = [];
+                    for (var i = 0; i < items.length; i++) {
+                        var s = items[i].trim();
+                        if (s.length > 0 && s !== '無缺失') {
+                            result.push(s);
+                        }
+                    }
+                    return result;
                 },
 
                 // 13. 儲存場所基本資料維護

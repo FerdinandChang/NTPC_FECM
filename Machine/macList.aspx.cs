@@ -8,6 +8,8 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Models;
+using NTPC_FEC.Services;
 
 namespace NTPC_FEC.Machine
 {
@@ -83,6 +85,23 @@ namespace NTPC_FEC.Machine
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 登入狀態前置檢查 (防止未授權存取機具清冊、審核與匯出)
+            if (Session["LoginUser"] == null && Session["User"] == null && (User == null || !User.Identity.IsAuthenticated))
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時或尚未登入，請重新登入！", NeedLogin = true }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -117,6 +136,45 @@ namespace NTPC_FEC.Machine
                 }
                 return;
             }
+        }
+
+        private bool IsManagerUser()
+        {
+            string uid = (Session != null && Session["LoginUser"] != null) ? Session["LoginUser"].ToString().Trim() : "";
+            if (string.IsNullOrEmpty(uid) && User != null && User.Identity != null) uid = User.Identity.Name;
+            if (string.IsNullOrEmpty(uid) || uid == "系統使用者") return false;
+
+            UserAccount acc = AuthService.GetCurrentUser(Context);
+            if (acc != null)
+            {
+                string fId = !string.IsNullOrEmpty(acc.FacID) ? acc.FacID.Trim() : "";
+                if ((acc.Lic & (1L << 9)) != 0 || (acc.Lic & (1L << 13)) != 0 || 
+                    (acc.Lic & (1L << 14)) != 0 || (acc.Lic & (1L << 63)) != 0 || 
+                    string.IsNullOrEmpty(fId))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                string queryUserSql = "SELECT FAC_ID, LIC FROM UserAcc WHERE UserID = @UserID";
+                var pList = new System.Data.SqlClient.SqlParameter[] { new System.Data.SqlClient.SqlParameter("@UserID", System.Data.SqlDbType.VarChar) { Value = uid } };
+                System.Data.DataTable userDt = DbHelper.ExecuteDataTable(queryUserSql, pList);
+                if (userDt != null && userDt.Rows.Count > 0)
+                {
+                    System.Data.DataRow uRow = userDt.Rows[0];
+                    string fId = uRow["FAC_ID"] != DBNull.Value ? uRow["FAC_ID"].ToString().Trim() : "";
+                    long licVal = 0L;
+                    if (uRow["LIC"] != DBNull.Value) long.TryParse(uRow["LIC"].ToString(), out licVal);
+                    if ((licVal & (1L << 9)) != 0 || (licVal & (1L << 13)) != 0 || 
+                        (licVal & (1L << 14)) != 0 || (licVal & (1L << 63)) != 0 || 
+                        string.IsNullOrEmpty(fId))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private string GetCurrentUser()
@@ -891,7 +949,7 @@ namespace NTPC_FEC.Machine
             }));
         }
 
-        // 6. 送出審核 (更新 Mac_State = 'A00')
+        // 6. 送出審核 (僅限草稿狀態方可提審 Mac_State = 'A00')
         private void SubmitCheck()
         {
             string facId = Request["facId"];
@@ -903,11 +961,39 @@ namespace NTPC_FEC.Machine
                 return;
             }
 
+            // 權限檢查：僅管理者或該場所業者可操作
+            bool isMgr = IsManagerUser();
+            string curUser = GetCurrentUser();
+            if (!isMgr)
+            {
+                UserAccount acc = AuthService.GetCurrentUser(Context);
+                if (acc == null || !string.Equals(acc.FacID, facId, StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您無權送審其他場所之機具資料！" }));
+                    return;
+                }
+            }
+
             try
             {
+                // 狀態機防護：僅允許草稿狀態（A00a、A00b 或 NULL）提審
+                string chkSql = "SELECT Mac_State FROM Machine_Main WHERE FAC_ID = @facId AND mac_ID = @macId";
+                object stObj = DbHelper.ExecuteScalar(chkSql, new SqlParameter("@facId", facId), new SqlParameter("@macId", macId));
+                if (stObj == null || stObj == DBNull.Value)
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "查無該筆機具資料！" }));
+                    return;
+                }
+                string curState = stObj.ToString().Trim();
+                if (curState != "A00a" && curState != "A00b" && !string.IsNullOrEmpty(curState))
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "該機具已進入初審或已成案（當前狀態：" + GetStateText(curState) + "），請勿重複送出！" }));
+                    return;
+                }
+
                 string sql = "UPDATE Machine_Main SET Mac_State = 'A00', Edit_User = @user, Edit_Date = GETDATE() WHERE FAC_ID = @facId AND mac_ID = @macId";
                 int rows = DbHelper.ExecuteNonQuery(sql,
-                    new SqlParameter("@user", GetCurrentUser()),
+                    new SqlParameter("@user", curUser),
                     new SqlParameter("@facId", facId),
                     new SqlParameter("@macId", macId));
 
@@ -926,7 +1012,7 @@ namespace NTPC_FEC.Machine
             }
         }
 
-        // 7. 軟刪除機具
+        // 7. 軟刪除機具 (加入身分防禦與狀態機生命週期防護)
         private void DeleteMac()
         {
             string facId = Request["facId"];
@@ -938,14 +1024,40 @@ namespace NTPC_FEC.Machine
                 return;
             }
 
+            // 權限檢查：僅管理者或該場所業者可操作
+            bool isMgr = IsManagerUser();
+            string curUser = GetCurrentUser();
+            if (!isMgr)
+            {
+                UserAccount acc = AuthService.GetCurrentUser(Context);
+                if (acc == null || !string.Equals(acc.FacID, facId, StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您無權刪除其他場所之機具資料！" }));
+                    return;
+                }
+            }
+
             try
             {
+                // 狀態防護：若機具已通過審核或列管成案，嚴禁刪除
+                string chkSql = "SELECT Mac_State FROM Machine_Main WHERE FAC_ID = @facId AND mac_ID = @macId";
+                object stObj = DbHelper.ExecuteScalar(chkSql, new SqlParameter("@facId", facId), new SqlParameter("@macId", macId));
+                if (stObj != null && stObj != DBNull.Value)
+                {
+                    string state = stObj.ToString().Trim();
+                    if (state == "A01" || state == "A02" || state == "A03")
+                    {
+                        Response.Write(json.Serialize(new { Success = false, Message = "該機具已通過審查或已列管成案，系統嚴禁刪除！" }));
+                        return;
+                    }
+                }
+
                 string sql = @"
                     UPDATE Machine_Main 
                     SET Deleted_mac = 'Y', Deleted_User = @user, Deleted_Date = GETDATE() 
                     WHERE FAC_ID = @facId AND mac_ID = @macId";
                 int rows = DbHelper.ExecuteNonQuery(sql,
-                    new SqlParameter("@user", GetCurrentUser()),
+                    new SqlParameter("@user", curUser),
                     new SqlParameter("@facId", facId),
                     new SqlParameter("@macId", macId));
 
@@ -964,12 +1076,36 @@ namespace NTPC_FEC.Machine
             }
         }
 
-        // 8. 匯出 CSV 報表
+        // 8. 匯出 CSV 報表 (落實身分檢驗與場所過濾)
         private void ExportCsv()
         {
+            if (Session["LoginUser"] == null && Session["User"] == null && (User == null || !User.Identity.IsAuthenticated))
+            {
+                Response.Write("未授權的操作：請先登入系統！");
+                Response.End();
+                return;
+            }
+
             SearchFilterModel filter = ParseFilter();
             List<SqlParameter> pars = new List<SqlParameter>();
             StringBuilder where = new StringBuilder(" WHERE (m.Deleted_mac IS NULL OR m.Deleted_mac <> 'Y') ");
+
+            if (!IsManagerUser())
+            {
+                UserAccount acc = AuthService.GetCurrentUser(Context);
+                string userFacId = acc != null && !string.IsNullOrEmpty(acc.FacID) ? acc.FacID.Trim() : "";
+                if (!string.IsNullOrEmpty(userFacId))
+                {
+                    where.Append(" AND m.FAC_ID = @userFacId ");
+                    pars.Add(new SqlParameter("@userFacId", userFacId));
+                }
+                else
+                {
+                    Response.Write("權限不足，無法匯出機具資料！");
+                    Response.End();
+                    return;
+                }
+            }
 
             if (filter.Mode == "reject")
             {

@@ -96,6 +96,24 @@ namespace NTPC_FEC.OwnReport
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 檢查登入狀態
+            if (Session["LoginUser"] == null && Session["UserAccount"] == null)
+            {
+                if (Request["action"] != null)
+                {
+                    Response.Clear();
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(jsonSerializer.Serialize(new ResponseModel { Success = false, Message = "登入逾時，請重新登入系統。" }));
+                    Response.End();
+                    return;
+                }
+                else
+                {
+                    Response.Redirect("~/Default.aspx");
+                    return;
+                }
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -451,6 +469,21 @@ namespace NTPC_FEC.OwnReport
                     Message = "工廠管制代碼不可為空"
                 }));
                 return;
+            }
+
+            // 業者帳號權限隔離：若為業者身分，強制校驗是否為自身場所
+            UserAccount loggedUser = AuthService.GetCurrentUser(Context);
+            if (loggedUser != null && !string.IsNullOrEmpty(loggedUser.FacID))
+            {
+                if (!string.Equals(model.FAC_ID.Trim(), loggedUser.FacID.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Write(jsonSerializer.Serialize(new ResponseModel
+                    {
+                        Success = false,
+                        Message = "權限不足：禁止回報非本場所之空品應變資料。"
+                    }));
+                    return;
+                }
             }
 
             if (string.IsNullOrEmpty(model.OverDate))

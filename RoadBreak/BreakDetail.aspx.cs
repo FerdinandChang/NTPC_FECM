@@ -69,7 +69,7 @@ namespace NTPC_FEC.RoadBreak
                 }
                 else
                 {
-                    Response.Redirect("../Login.aspx");
+                    Response.Redirect("~/Default.aspx");
                     return;
                 }
             }

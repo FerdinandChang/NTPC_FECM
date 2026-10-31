@@ -26,6 +26,22 @@ namespace NTPC_FEC.RoadBSC
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時，請重新登入！", NeedLogin = true }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -386,54 +402,77 @@ namespace NTPC_FEC.RoadBSC
 
             if (mode == "new")
             {
-                // 自動生成新案號 (防並行重號)
-                string prefix = DateTime.Now.ToString("yyyyMMddHHmmss");
-                int seq = 1;
-                try
-                {
-                    string sqlId = "SELECT TOP 1 BSC_ID FROM RoadBSC_CaseMain WHERE BSC_ID LIKE @prefix + '%' ORDER BY BSC_ID DESC";
-                    object scalar = DbHelper.ExecuteScalar(sqlId, new SqlParameter("@prefix", prefix));
-                    if (scalar != null && scalar != DBNull.Value)
-                    {
-                        string maxId = scalar.ToString().Trim();
-                        if (maxId.Length >= 17)
-                        {
-                            int parsedSeq = 0;
-                            if (int.TryParse(maxId.Substring(14, 3), out parsedSeq))
-                            {
-                                seq = parsedSeq + 1;
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // 若查詢失敗使用當前序號 1
-                }
-                bscId = prefix + seq.ToString("000");
-
                 string sqlInsert = @"INSERT INTO RoadBSC_CaseMain 
                     (BSC_ID, Show_ID, Report_Date, Report_User, S_UTME, S_UTMN, TOWN_CODE, ROAD_LV, ROAD_Name, Smooth, Cover_Soil, Memo)
                     VALUES
                     (@BSC_ID, @Show_ID, @Report_Date, @Report_User, @S_UTME, @S_UTMN, @TOWN_CODE, @ROAD_LV, @ROAD_Name, @Smooth, @Cover_Soil, @Memo)";
 
-                SqlParameter[] pars = new SqlParameter[]
-                {
-                    new SqlParameter("@BSC_ID", bscId),
-                    new SqlParameter("@Show_ID", bscId),
-                    new SqlParameter("@Report_Date", DateTime.Now),
-                    new SqlParameter("@Report_User", currentUser),
-                    new SqlParameter("@S_UTME", utmE),
-                    new SqlParameter("@S_UTMN", utmN),
-                    new SqlParameter("@TOWN_CODE", townCode),
-                    new SqlParameter("@ROAD_LV", roadLv),
-                    new SqlParameter("@ROAD_Name", roadName),
-                    new SqlParameter("@Smooth", smooth),
-                    new SqlParameter("@Cover_Soil", coverSoil),
-                    new SqlParameter("@Memo", memoFormatted)
-                };
+                int maxRetries = 5;
+                bool inserted = false;
 
-                DbHelper.ExecuteNonQuery(sqlInsert, pars);
+                for (int retry = 0; retry < maxRetries; retry++)
+                {
+                    string prefix = DateTime.Now.ToString("yyyyMMddHHmmss");
+                    int seq = 1;
+                    try
+                    {
+                        string sqlId = "SELECT TOP 1 BSC_ID FROM RoadBSC_CaseMain WITH (UPDLOCK, HOLDLOCK) WHERE BSC_ID LIKE @prefix + '%' ORDER BY BSC_ID DESC";
+                        object scalar = DbHelper.ExecuteScalar(sqlId, new SqlParameter("@prefix", prefix));
+                        if (scalar != null && scalar != DBNull.Value)
+                        {
+                            string maxId = scalar.ToString().Trim();
+                            if (maxId.Length >= 17)
+                            {
+                                int parsedSeq = 0;
+                                if (int.TryParse(maxId.Substring(14, 3), out parsedSeq))
+                                {
+                                    seq = parsedSeq + 1;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    bscId = prefix + seq.ToString("000");
+
+                    SqlParameter[] pars = new SqlParameter[]
+                    {
+                        new SqlParameter("@BSC_ID", bscId),
+                        new SqlParameter("@Show_ID", bscId),
+                        new SqlParameter("@Report_Date", DateTime.Now),
+                        new SqlParameter("@Report_User", currentUser),
+                        new SqlParameter("@S_UTME", utmE),
+                        new SqlParameter("@S_UTMN", utmN),
+                        new SqlParameter("@TOWN_CODE", townCode),
+                        new SqlParameter("@ROAD_LV", roadLv),
+                        new SqlParameter("@ROAD_Name", roadName),
+                        new SqlParameter("@Smooth", smooth),
+                        new SqlParameter("@Cover_Soil", coverSoil),
+                        new SqlParameter("@Memo", memoFormatted)
+                    };
+
+                    try
+                    {
+                        DbHelper.ExecuteNonQuery(sqlInsert, pars);
+                        inserted = true;
+                        break;
+                    }
+                    catch (SqlException ex)
+                    {
+                        if (ex.Number == 2627 || ex.Number == 2601)
+                        {
+                            System.Threading.Thread.Sleep(50 * (retry + 1));
+                            continue;
+                        }
+                        throw;
+                    }
+                }
+
+                if (!inserted)
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "目前通報併發取號繁忙，請稍候重試！" }));
+                    return;
+                }
             }
             else
             {
@@ -515,7 +554,7 @@ namespace NTPC_FEC.RoadBSC
             }));
         }
 
-        // 4. 刪除指定照片
+        // 4. 刪除指定照片 (嚴格防禦路徑遍歷與任意檔案刪除)
         private void DeletePhoto(string bscId, string fileName)
         {
             if (string.IsNullOrEmpty(bscId) || string.IsNullOrEmpty(fileName))
@@ -524,19 +563,26 @@ namespace NTPC_FEC.RoadBSC
                 return;
             }
 
-            // 防止路徑遍歷
-            string safeFileName = Path.GetFileName(fileName);
+            bscId = FileSecurityHelper.SanitizeFileName(bscId);
+            string safeFileName = FileSecurityHelper.SanitizeFileName(fileName);
+
+            if (string.IsNullOrEmpty(bscId) || string.IsNullOrEmpty(safeFileName) || !Regex.IsMatch(bscId, @"^[a-zA-Z0-9_\-]+$"))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "無效的案號或檔名參數" }));
+                return;
+            }
+
             string targetDir = Server.MapPath("~/Upload/RoadBSCPIC/" + bscId);
             string filePath = Path.Combine(targetDir, safeFileName);
 
-            if (File.Exists(filePath))
+            if (FileSecurityHelper.IsSafePath(targetDir, filePath) && File.Exists(filePath))
             {
-                File.Delete(filePath);
+                try { File.Delete(filePath); } catch { }
                 Response.Write(json.Serialize(new { Success = true, Message = "照片已刪除" }));
             }
             else
             {
-                Response.Write(json.Serialize(new { Success = false, Message = "檔案不存在" }));
+                Response.Write(json.Serialize(new { Success = false, Message = "檔案不存在或無權刪除" }));
             }
         }
 

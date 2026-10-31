@@ -45,8 +45,8 @@ namespace NTPC_FEC.Services
             AddSubItemIfAllowed(facItems, isAdmin || PermissionService.HasPermission(userId, lic, "FAC_LIST_READ", 41) || PermissionService.HasPermission(userId, lic, "FAC_LIST_READ", 2), "逸散源列管", "FAC/FAC_List.aspx?mode=read");
             AddSubItemIfAllowed(facItems, isAdmin || PermissionService.HasPermission(userId, lic, "FAC_LIST_EDIT", 2), "逸散源未列管", "FAC/FAC_List.aspx?mode=edit");
             AddSubItemIfAllowed(facItems, isAdmin || PermissionService.HasPermission(userId, lic, "FAC_LICENSE_QUERY", 10) || PermissionService.HasPermission(userId, lic, "FAC_LICENSE_QUERY", 41), "許可證資訊", "FAC/oFAC_List.aspx");
-            AddSubItemIfAllowed(facItems, isAdmin || PermissionService.HasPermission(userId, lic, "FAC_OUTLINK_QUERY", 11) || PermissionService.HasPermission(userId, lic, "FAC_OUTLINK_QUERY", 41), "其他資料查詢", "OutLink.aspx");
-            AddSubItemIfAllowed(facItems, isAdmin || PermissionService.HasPermission(userId, lic, "FAC_STATS", 41), "工廠統計", "FAC/Charts.aspx");
+            AddSubItemIfAllowed(facItems, isAdmin || PermissionService.HasPermission(userId, lic, "FAC_OUTLINK_QUERY", 11) || PermissionService.HasPermission(userId, lic, "FAC_OUTLINK_QUERY", 41), "相關外部系統連結", "OutLink.aspx");
+            AddSubItemIfAllowed(facItems, isAdmin || PermissionService.HasPermission(userId, lic, "FAC_STATS", 41), "公私場所逸散源統計分析", "FAC/Charts.aspx");
             AddSubItemIfAllowed(facItems, isAdmin || PermissionService.HasPermission(userId, lic, "FAC_BUFFER_MAP", 41), "環域查詢", "BufferAnalysis/BufferMap.aspx");
 
             if (facItems.Count > 0)
@@ -73,12 +73,12 @@ namespace NTPC_FEC.Services
             AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_INV2", 4), "案件複審", "Manager/managerList.aspx?INV_State=INV2", pending.CaseInv2, true);
             AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_INV3", 5), "案件三審", "Manager/managerList.aspx?INV_State=INV3", pending.CaseInv3, true);
             AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_SEARCH_LIST", 42), "查核成果列表", "Case/CaseList.aspx?mode=search");
-            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_PROJECT_ZONE", 42), "歷史建檔區", "Case/CaseList.aspx?mode=project", pending.CaseProject);
-            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_DISPATCH_SET", 0) || CheckLicense(lic, 10), "案件改派設定", "FAC/FAC_List.aspx?mode=mission");
-            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_MISSION_7DAY", 0), "技師派遣", "Case/CaseList.aspx?mode=mission7day", pending.CaseMission7Day);
-            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_MISSION_2TIMES", 0), "經緯複查", "Case/CaseList.aspx?mode=mission2times", pending.CaseMission2Times, true);
+            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_PROJECT_ZONE", 42), "臺北港專區", "Case/CaseList.aspx?mode=project", pending.CaseProject);
+            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_DISPATCH_SET", 0) || CheckLicense(lic, 10), "稽查派遣管理", "FAC/FAC_List.aspx?mode=mission");
+            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_MISSION_7DAY", 0), "巡查派遣", "Case/CaseList.aspx?mode=mission7day", pending.CaseMission7Day);
+            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_MISSION_2TIMES", 0), "提報稽查", "Case/CaseList.aspx?mode=mission2times", pending.CaseMission2Times, true);
             AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_SUM_STATS", 42), "查核統計", "Case/Case_Sum.aspx");
-            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_SUM_MANAGE", 42), "管轄狀況統計", "Case/Case_Sum_1.aspx");
+            AddSubItemIfAllowed(caseItems, isAdmin || PermissionService.HasPermission(userId, lic, "CASE_SUM_MANAGE", 42), "管辦改善歷程追蹤統計", "Case/Case_Sum_1.aspx");
 
             if (caseItems.Count > 0)
             {
@@ -111,8 +111,8 @@ namespace NTPC_FEC.Services
 
             // 分類二：調查成果列表
             AddSubItemIfAllowed(machineItems, isAdmin || PermissionService.HasPermission(userId, lic, "MAC_SEARCH_LIST", 43), "調查成果列表", "Machine/macList.aspx?mode=search", 0, false, "");
-            AddSubItemIfAllowed(machineItems, isAdmin || PermissionService.HasPermission(userId, lic, "MAC_SURVEY_FORM", 43), "固定污染源施工機具排查", "https://pollution.epd.ntpc.gov.tw/NTPCEPD_NEW/Questionnaire/EquipSurvey.aspx", 0, false, "");
-            AddSubItemIfAllowed(machineItems, isAdmin || PermissionService.HasPermission(userId, lic, "MAC_MOENV_ANALYSIS", 43) || CheckLicense(lic, 59), "事業部施工機具資料分析", "MoenvEquip/MoenvEquipment_List.aspx", 0, false, "");
+            AddSubItemIfAllowed(machineItems, isAdmin || PermissionService.HasPermission(userId, lic, "MAC_SURVEY_FORM", 43), "固定污染源施工機具普查", "https://pollution.epd.ntpc.gov.tw/NTPCEPD_NEW/Questionnaire/EquipSurvey.aspx", 0, false, "");
+            AddSubItemIfAllowed(machineItems, isAdmin || PermissionService.HasPermission(userId, lic, "MAC_MOENV_ANALYSIS", 43) || CheckLicense(lic, 59), "環境部施工機具資料分析", "MoenvEquip/MoenvEquipment_List.aspx", 0, false, "");
 
             if (machineItems.Count > 0)
             {
@@ -186,7 +186,8 @@ namespace NTPC_FEC.Services
 
             // 分類二：車輛洗掃設備管理
             AddSubItemIfAllowed(ownItems, isAdmin || PermissionService.HasPermission(userId, lic, "OWN_WASH_INPUT", 12), "車輛洗掃回報", washInputUrl, 0, false, "車輛洗掃設備管理");
-            AddSubItemIfAllowed(ownItems, isAdmin || PermissionService.HasPermission(userId, lic, "OWN_WASH_UPLOAD", 13), "洗掃規管回傳", "Wash/ReportUpload.aspx", 0, false, "車輛洗掃設備管理");
+            AddSubItemIfAllowed(ownItems, isAdmin || PermissionService.HasPermission(userId, lic, "OWN_WASH_RECORD_LIST", 14), "洗車水電紀錄列表", "Wash/WashList.aspx", 0, false, "車輛洗掃設備管理");
+            AddSubItemIfAllowed(ownItems, isAdmin || PermissionService.HasPermission(userId, lic, "OWN_WASH_UPLOAD", 13), "洗掃報表回傳", "Wash/ReportUpload.aspx", 0, false, "車輛洗掃設備管理");
             AddSubItemIfAllowed(ownItems, isAdmin || PermissionService.HasPermission(userId, lic, "OWN_WASH_LIST", 14), "洗掃紀錄列表", "Wash/ReportUpload_List.aspx", 0, false, "車輛洗掃設備管理");
 
             // 分類三：防制設施缺失改善管理
@@ -221,7 +222,7 @@ namespace NTPC_FEC.Services
 
             // 6. 空間資訊整合 (酒紅色)
             var mapItems = new List<MenuSubItem>();
-            AddSubItemIfAllowed(mapItems, isAdmin || PermissionService.HasPermission(userId, lic, "MAP_WASH_GIS", 41) || CheckLicense(lic, 12) || CheckLicense(lic, 14), "道路洗掃排程地圖 (GIS)", "Wash/WashMap.aspx");
+            AddSubItemIfAllowed(mapItems, isAdmin || PermissionService.HasPermission(userId, lic, "MAP_WASH_GIS", 41) || CheckLicense(lic, 12) || CheckLicense(lic, 14), "道路洗掃路段與現場查核地圖", "Wash/WashMap.aspx");
             AddSubItemIfAllowed(mapItems, isAdmin || PermissionService.HasPermission(userId, lic, "MAP_NDVI_SAT", 41), "NDVI 植被衛星影像", "NDVI/NdviMap.aspx");
 
             if (mapItems.Count > 0)
@@ -242,7 +243,7 @@ namespace NTPC_FEC.Services
             // 7. 道路潔淨巡檢 (亮橘色)
             var roadItems = new List<MenuSubItem>();
             // 分類一：道路潔淨巡檢
-            AddSubItemIfAllowed(roadItems, isAdmin || PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_NEW", 21) || CheckLicense(lic, 22), "道路潔淨查核 (新增)", "RoadClean/NewCleanChk.aspx?mode=new", 0, false, "道路潔淨巡檢");
+            AddSubItemIfAllowed(roadItems, isAdmin || PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_NEW", 21) || CheckLicense(lic, 22), "道路潔淨現場查核", "RoadClean/NewCleanChk.aspx?mode=new", 0, false, "道路潔淨巡檢");
             AddSubItemIfAllowed(roadItems, isAdmin || PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_DRAFT", 22), "查核紀錄暫存", "RoadClean/Clean_List.aspx?mode=apply", pending.RoadCleanDraft, false, "道路潔淨巡檢");
             AddSubItemIfAllowed(roadItems, isAdmin || PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_BACK", 22), "返回修正案件", "RoadClean/Clean_List.aspx?mode=back", pending.RoadCleanBack, true, "道路潔淨巡檢");
             AddSubItemIfAllowed(roadItems, isAdmin || PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_EXAM", 22), "案件審核", "RoadClean/Clean_List.aspx?mode=examine", pending.RoadCleanExamine, false, "道路潔淨巡檢");

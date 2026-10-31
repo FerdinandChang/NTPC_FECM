@@ -9,6 +9,8 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Models;
+using NTPC_FEC.Services;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 
@@ -77,6 +79,58 @@ namespace NTPC_FEC.BareGround
             base.Render(writer);
         }
 
+
+        private string GetCurrentUser()
+        {
+            if (Session != null && Session["LoginUser"] != null && !string.IsNullOrEmpty(Session["LoginUser"].ToString()))
+            {
+                return Session["LoginUser"].ToString().Trim();
+            }
+            if (User != null && User.Identity != null && !string.IsNullOrEmpty(User.Identity.Name))
+            {
+                return User.Identity.Name;
+            }
+            return "系統使用者";
+        }
+
+        private bool IsManagerUser()
+        {
+            string uid = (Session != null && Session["LoginUser"] != null) ? Session["LoginUser"].ToString().Trim() : "";
+            if (string.IsNullOrEmpty(uid) && User != null && User.Identity != null) uid = User.Identity.Name;
+            if (string.IsNullOrEmpty(uid) || uid == "系統使用者") return false;
+
+            UserAccount acc = AuthService.GetCurrentUser(Context);
+            if (acc != null)
+            {
+                string fId = !string.IsNullOrEmpty(acc.FacID) ? acc.FacID.Trim() : "";
+                if ((acc.Lic & (1L << 9)) != 0 || (acc.Lic & (1L << 13)) != 0 || 
+                    (acc.Lic & (1L << 14)) != 0 || (acc.Lic & (1L << 63)) != 0 || 
+                    string.IsNullOrEmpty(fId))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                string queryUserSql = "SELECT FAC_ID, LIC FROM UserAcc WHERE UserID = @UserID";
+                var pList = new System.Data.SqlClient.SqlParameter[] { new System.Data.SqlClient.SqlParameter("@UserID", System.Data.SqlDbType.VarChar) { Value = uid } };
+                System.Data.DataTable userDt = DbHelper.ExecuteDataTable(queryUserSql, pList);
+                if (userDt != null && userDt.Rows.Count > 0)
+                {
+                    System.Data.DataRow uRow = userDt.Rows[0];
+                    string fId = uRow["FAC_ID"] != DBNull.Value ? uRow["FAC_ID"].ToString().Trim() : "";
+                    long licVal = 0L;
+                    if (uRow["LIC"] != DBNull.Value) long.TryParse(uRow["LIC"].ToString(), out licVal);
+                    if ((licVal & (1L << 9)) != 0 || (licVal & (1L << 13)) != 0 || 
+                        (licVal & (1L << 14)) != 0 || (licVal & (1L << 63)) != 0 || 
+                        string.IsNullOrEmpty(fId))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
 
         protected void Page_Load(object sender, EventArgs e)
         {

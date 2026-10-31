@@ -24,6 +24,22 @@ namespace NTPC_FEC.BareGround
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null && string.IsNullOrEmpty(Request["id1"]))
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(jsonSerializer.Serialize(new { Success = false, Message = "登入已逾時，請重新登入！", NeedLogin = true }));
+                    AjaxResponseHelper.CompleteRequest(Response, Context);
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -342,6 +358,12 @@ namespace NTPC_FEC.BareGround
 
         private void SaveSignature()
         {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                Response.Write(jsonSerializer.Serialize(new { Success = false, Message = "未授權的操作：請先登入系統後再執行簽章儲存！" }));
+                return;
+            }
+
             string rawJson = GetPostRawData();
             if (string.IsNullOrEmpty(rawJson))
             {

@@ -13,6 +13,7 @@ using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NTPC_FEC.Manager;
 using NTPC_FEC.Services;
+using NTPC_FEC.Models;
 
 namespace NTPC_FEC.Case
 {
@@ -158,6 +159,45 @@ namespace NTPC_FEC.Case
                 }
                 return;
             }
+        }
+
+        private bool IsManagerUser()
+        {
+            string uid = (Session != null && Session["LoginUser"] != null) ? Session["LoginUser"].ToString().Trim() : "";
+            if (string.IsNullOrEmpty(uid) && User != null && User.Identity != null) uid = User.Identity.Name;
+            if (string.IsNullOrEmpty(uid) || uid == "系統使用者") return false;
+
+            UserAccount acc = AuthService.GetCurrentUser(Context);
+            if (acc != null)
+            {
+                string fId = !string.IsNullOrEmpty(acc.FacID) ? acc.FacID.Trim() : "";
+                if ((acc.Lic & (1L << 9)) != 0 || (acc.Lic & (1L << 13)) != 0 || 
+                    (acc.Lic & (1L << 14)) != 0 || (acc.Lic & (1L << 63)) != 0 || 
+                    string.IsNullOrEmpty(fId))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                string queryUserSql = "SELECT FAC_ID, LIC FROM UserAcc WHERE UserID = @UserID";
+                var pList = new System.Data.SqlClient.SqlParameter[] { new System.Data.SqlClient.SqlParameter("@UserID", System.Data.SqlDbType.VarChar) { Value = uid } };
+                System.Data.DataTable userDt = DbHelper.ExecuteDataTable(queryUserSql, pList);
+                if (userDt != null && userDt.Rows.Count > 0)
+                {
+                    System.Data.DataRow uRow = userDt.Rows[0];
+                    string fId = uRow["FAC_ID"] != DBNull.Value ? uRow["FAC_ID"].ToString().Trim() : "";
+                    long licVal = 0L;
+                    if (uRow["LIC"] != DBNull.Value) long.TryParse(uRow["LIC"].ToString(), out licVal);
+                    if ((licVal & (1L << 9)) != 0 || (licVal & (1L << 13)) != 0 || 
+                        (licVal & (1L << 14)) != 0 || (licVal & (1L << 63)) != 0 || 
+                        string.IsNullOrEmpty(fId))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private string GetCurrentUser()
@@ -943,6 +983,11 @@ namespace NTPC_FEC.Case
         #region 9. 移除/取消派遣任務 (填寫 Cancel_Reason 並更新 Cancel_Date)
         private void CancelMission()
         {
+            if (!IsManagerUser())
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "僅有管理者或審查員具備取消派遣任務權限！" }));
+                return;
+            }
             string reqJson = "";
             using (var reader = new StreamReader(Request.InputStream, Encoding.UTF8))
             {
@@ -1401,7 +1446,7 @@ namespace NTPC_FEC.Case
             string appPath = HttpContext.Current.Request.ApplicationPath;
             if (string.IsNullOrEmpty(appPath) || appPath == "/")
             {
-                appPath = "/NTPC_FECM";
+                appPath = "";
             }
             else
             {

@@ -24,6 +24,23 @@ namespace NTPC_FEC.RoadClean
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 檢查登入狀態
+            if (Session["LoginUser"] == null)
+            {
+                if (Request["action"] != null)
+                {
+                    Response.Clear();
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入逾時，請重新登入系統。", NeedLogin = true }));
+                    Response.End();
+                    return;
+                }
+                else
+                {
+                    Response.Redirect("~/Default.aspx");
+                    return;
+                }
+            }
             // Ajax API 請求處理
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
@@ -800,5 +817,4 @@ namespace NTPC_FEC.RoadClean
         }
     }
 }
-
 

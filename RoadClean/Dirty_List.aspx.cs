@@ -54,8 +54,63 @@ namespace NTPC_FEC.RoadClean
             public string DirtyId { get; set; }
         }
 
+        private bool CheckLoginGuard()
+        {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string action = Request["action"];
+                if (!string.IsNullOrEmpty(action))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時或尚未登入，請重新登入系統！", NeedLogin = true }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return false;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return false;
+            }
+            return true;
+        }
+
+        private string GetCurrentUserId()
+        {
+            if (Session["LoginUser"] != null && !string.IsNullOrEmpty(Session["LoginUser"].ToString()))
+            {
+                return Session["LoginUser"].ToString().Trim();
+            }
+            if (Session["User"] != null && !string.IsNullOrEmpty(Session["User"].ToString()))
+            {
+                return Session["User"].ToString().Trim();
+            }
+            return "";
+        }
+
+        private bool IsAdminOrManager()
+        {
+            string uid = GetCurrentUserId();
+            if (string.IsNullOrEmpty(uid)) return false;
+            if (uid.Equals("Admin", StringComparison.OrdinalIgnoreCase)) return true;
+            try
+            {
+                var user = NTPC_FEC.Services.AuthService.GetCurrentUser(Context);
+                if (user != null)
+                {
+                    return string.Equals(user.UserID, "Admin", StringComparison.OrdinalIgnoreCase) || NTPC_FEC.Services.MenuService.CheckLicense(user.Lic, 63) || NTPC_FEC.Services.MenuService.CheckLicense(user.Lic, 41);
+                }
+            }
+            catch { }
+            return false;
+        }
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (!CheckLoginGuard())
+            {
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -981,6 +1036,29 @@ namespace NTPC_FEC.RoadClean
             if (req == null || string.IsNullOrEmpty(req.DirtyId))
             {
                 Response.Write(json.Serialize(new { Success = false, Message = "缺少通報案號" }));
+                return;
+            }
+
+            string checkSql = "SELECT Report_User, SetCOM_Date, Improve_Date FROM RoadDirty_CaseMain WHERE Dirty_ID = @id";
+            DataTable dtCase = DbHelper.ExecuteDataTable(checkSql, new SqlParameter("@id", req.DirtyId));
+            if (dtCase == null || dtCase.Rows.Count == 0)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "查無此通報案件！" }));
+                return;
+            }
+
+            DataRow rCase = dtCase.Rows[0];
+            if (rCase["SetCOM_Date"] != DBNull.Value || rCase["Improve_Date"] != DBNull.Value)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "此案件已成案指派改善或已結案，系統嚴禁刪除！" }));
+                return;
+            }
+
+            string reportU = rCase["Report_User"] != DBNull.Value ? rCase["Report_User"].ToString().Trim() : "";
+            string curU = GetCurrentUserId();
+            if (!IsAdminOrManager() && !string.Equals(reportU, curU, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：僅本通報建立者或管理員方可刪除此紀錄！" }));
                 return;
             }
 

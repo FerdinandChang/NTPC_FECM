@@ -420,30 +420,53 @@ namespace NTPC_FEC.BareGround
             // A. 處理場址主檔 Bare_Main
             if (isNewSite)
             {
-                // 自動取號 Bare + yyyyMMdd + 4位流水號
                 string dayPrefix = "Bare" + DateTime.Now.ToString("yyyyMMdd");
-                int maxSeq = 0;
-                string sqlSeq = "SELECT MAX(SUBSTRING(Bare_ID, 13, 4)) FROM Bare_Main WHERE Bare_ID LIKE @prefix + '%'";
-                object scalarSeq = DbHelper.ExecuteScalar(sqlSeq, new SqlParameter("@prefix", dayPrefix));
-                if (scalarSeq != null && scalarSeq != DBNull.Value)
-                {
-                    int.TryParse(scalarSeq.ToString(), out maxSeq);
-                }
-                maxSeq++;
-                bareId = dayPrefix + maxSeq.ToString("0000");
-
                 string sqlInsertMain = @"INSERT INTO Bare_Main 
                     (Bare_ID, BareGroundNo, ADDR, Land_USE, Latitude, Longtitude) 
                     VALUES 
                     (@Bare_ID, @BareGroundNo, @ADDR, @Land_USE, @Latitude, @Longtitude)";
 
-                DbHelper.ExecuteNonQuery(sqlInsertMain,
-                    new SqlParameter("@Bare_ID", bareId),
-                    new SqlParameter("@BareGroundNo", bareGroundNo),
-                    new SqlParameter("@ADDR", addr),
-                    new SqlParameter("@Land_USE", landUse),
-                    new SqlParameter("@Latitude", lat > 0 ? (object)lat : DBNull.Value),
-                    new SqlParameter("@Longtitude", lon > 0 ? (object)lon : DBNull.Value));
+                int maxRetries = 5;
+                bool inserted = false;
+                for (int retry = 0; retry < maxRetries; retry++)
+                {
+                    int maxSeq = 0;
+                    string sqlSeq = "SELECT MAX(SUBSTRING(Bare_ID, 13, 4)) FROM Bare_Main WITH (UPDLOCK, HOLDLOCK) WHERE Bare_ID LIKE @prefix + '%'";
+                    object scalarSeq = DbHelper.ExecuteScalar(sqlSeq, new SqlParameter("@prefix", dayPrefix));
+                    if (scalarSeq != null && scalarSeq != DBNull.Value)
+                    {
+                        int.TryParse(scalarSeq.ToString(), out maxSeq);
+                    }
+                    maxSeq++;
+                    bareId = dayPrefix + maxSeq.ToString("0000");
+
+                    try
+                    {
+                        DbHelper.ExecuteNonQuery(sqlInsertMain,
+                            new SqlParameter("@Bare_ID", bareId),
+                            new SqlParameter("@BareGroundNo", bareGroundNo),
+                            new SqlParameter("@ADDR", addr),
+                            new SqlParameter("@Land_USE", landUse),
+                            new SqlParameter("@Latitude", lat > 0 ? (object)lat : DBNull.Value),
+                            new SqlParameter("@Longtitude", lon > 0 ? (object)lon : DBNull.Value));
+                        inserted = true;
+                        break;
+                    }
+                    catch (SqlException ex)
+                    {
+                        if (ex.Number == 2627 || ex.Number == 2601)
+                        {
+                            System.Threading.Thread.Sleep(50 * (retry + 1));
+                            continue;
+                        }
+                        throw;
+                    }
+                }
+                if (!inserted)
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "場址取號併發繁忙，請重試！" }));
+                    return;
+                }
             }
             else
             {

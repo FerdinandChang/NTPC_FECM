@@ -48,6 +48,23 @@ namespace NTPC_FEC.OwnReport
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 登入狀態前置檢查 (防止未經授權批次拖取自主回報名冊與機敏缺失照片)
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string actCheck = Request["action"];
+                if (!string.IsNullOrEmpty(actCheck))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時或尚未登入，請重新登入！", NeedLogin = true }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -141,7 +158,7 @@ namespace NTPC_FEC.OwnReport
 
         private bool IsAdminUser(string userId)
         {
-            if (string.IsNullOrEmpty(userId)) return true; // 開發測試預設放行
+            if (string.IsNullOrEmpty(userId)) return false; // 嚴格封堵未登入訪客或空帳號越權
             try
             {
                 string sql = "SELECT TOP 1 LIC, LIC2, FAC_ID FROM UserAcc WHERE UserID = @UserID";
@@ -169,7 +186,7 @@ namespace NTPC_FEC.OwnReport
             catch
             {
             }
-            return true;
+            return false;
         }
 
         private void GetUserInfo()

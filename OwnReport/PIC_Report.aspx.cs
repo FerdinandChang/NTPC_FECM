@@ -150,6 +150,28 @@ namespace NTPC_FEC.OwnReport
             }
         }
 
+        private string GetCurrentUserFacId()
+        {
+            if (Session["UserAccount"] != null)
+            {
+                NTPC_FEC.Models.UserAccount u = Session["UserAccount"] as NTPC_FEC.Models.UserAccount;
+                if (u != null && !string.IsNullOrEmpty(u.FacID))
+                {
+                    return u.FacID.Trim();
+                }
+            }
+            if (Session["LoginUser"] != null)
+            {
+                string uId = Session["LoginUser"].ToString();
+                DataTable dtU = DbHelper.ExecuteDataTable("SELECT FAC_ID FROM UserAcc WHERE UserID = @u", new SqlParameter("@u", uId));
+                if (dtU != null && dtU.Rows.Count > 0 && dtU.Rows[0]["FAC_ID"] != DBNull.Value)
+                {
+                    return dtU.Rows[0]["FAC_ID"].ToString().Trim();
+                }
+            }
+            return "";
+        }
+
         #region AJAX: 取得案件資料 (GetData)
 
         private void GetData()
@@ -159,6 +181,8 @@ namespace NTPC_FEC.OwnReport
             mode = mode.ToLower().Trim();
 
             string facId = Request["id"];
+            string loggedFacId = GetCurrentUserFacId();
+            if (!string.IsNullOrEmpty(loggedFacId)) facId = loggedFacId;
             if (facId != null) facId = facId.Trim();
 
             // 1. 若未帶入 id 或 id 為空字串，自動由當前登入者 Session 提取所屬公私場所 (相容工廠業者登入)
@@ -216,7 +240,7 @@ namespace NTPC_FEC.OwnReport
 
             // 安全校驗 Token 驗證 (容錯：今日與前後一小時，或登入狀態則通行)
             string token = Request["id1"];
-            if (!ValidateSecurityToken(facId, token))
+            if (Session["LoginUser"] == null && !ValidateSecurityToken(facId, token))
             {
                 Response.Write(json.Serialize(new ResponseModel
                 {
@@ -400,6 +424,24 @@ namespace NTPC_FEC.OwnReport
         private void SaveReport()
         {
             string facId = Request["FAC_ID"];
+            string saveLoggedFac = GetCurrentUserFacId();
+            if (!string.IsNullOrEmpty(saveLoggedFac))
+            {
+                if (!string.Equals(facId, saveLoggedFac, StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Write(json.Serialize(new ResponseModel { Success = false, Message = "權限不足：禁止回報非本場所資料。" }));
+                    return;
+                }
+            }
+            else if (Session["LoginUser"] == null)
+            {
+                string token = Request["id1"];
+                if (Session["LoginUser"] == null && !ValidateSecurityToken(facId, token))
+                {
+                    Response.Write(json.Serialize(new ResponseModel { Success = false, Message = "安全校驗碼錯誤或已逾期，無法送出回報。" }));
+                    return;
+                }
+            }
             if (facId != null) facId = facId.Trim();
             if (string.IsNullOrEmpty(facId))
             {
@@ -1193,7 +1235,7 @@ namespace NTPC_FEC.OwnReport
         private bool ValidateSecurityToken(string facId, string token)
         {
             // 若為已登入使用者，容許直接檢視
-            if (Session["LoginUser"] != null) return true;
+            if (string.IsNullOrEmpty(facId)) return false;
 
             if (string.IsNullOrEmpty(token)) return false;
 

@@ -442,7 +442,7 @@
             <!-- 1. 頂部導覽列 -->
             <header class="top-navbar no-print">
                 <div class="brand-title">
-                    <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                    <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
                         <i class="fas fa-home"></i>
                         <span class="d-none d-sm-inline">回首頁</span>
                     </a>

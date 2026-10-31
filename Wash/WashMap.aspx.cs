@@ -74,6 +74,14 @@ namespace NTPC_FEC.Wash
         public void ProcessRequest(HttpContext context)
         {
             context.Response.ContentType = "application/json; charset=utf-8";
+            // 驗證登入狀態 (防止未經授權讀取或批次匯入覆寫洗掃資料庫)
+            if (context.Session == null || context.Session["LoginUser"] == null)
+            {
+                context.Response.StatusCode = 401;
+                context.Response.Write(json.Serialize(new { Success = false, Message = "登入逾時或尚未登入，請重新登入系統。", NeedLogin = true }));
+                return;
+            }
+
             string action = context.Request["action"];
             if (string.IsNullOrEmpty(action))
             {

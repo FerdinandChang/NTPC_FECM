@@ -129,6 +129,22 @@ namespace NTPC_FEC.LINE
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(jsonSerializer.Serialize(new ResponseModel { Success = false, Message = "登入已逾時，請重新登入！" }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {

@@ -24,6 +24,22 @@ namespace NTPC_FEC.RoadBreak
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時，請重新登入！", NeedLogin = true }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -403,56 +419,79 @@ namespace NTPC_FEC.RoadBreak
 
             if (mode == "new")
             {
-                // 自動生成新案號
-                string prefix = DateTime.Now.ToString("yyyyMMddHHmmss");
-                int seq = 1;
-                try
-                {
-                    string sqlId = "SELECT TOP 1 Break_ID FROM RoadBreak_CaseMain WHERE Break_ID LIKE @prefix + '%' ORDER BY Break_ID DESC";
-                    object scalar = DbHelper.ExecuteScalar(sqlId, new SqlParameter("@prefix", prefix));
-                    if (scalar != null && scalar != DBNull.Value)
-                    {
-                        string maxId = scalar.ToString().Trim();
-                        if (maxId.Length >= 17)
-                        {
-                            int parsedSeq = 0;
-                            if (int.TryParse(maxId.Substring(14, 3), out parsedSeq))
-                            {
-                                seq = parsedSeq + 1;
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // 若查詢失敗使用當前序號 1
-                }
-                breakId = prefix + seq.ToString("000");
-
                 string sqlInsert = @"INSERT INTO RoadBreak_CaseMain 
                     (Break_ID, Show_ID, Report_Date, Report_User, S_UTME, S_UTMN, Lat, Lon, TOWN_CODE, ROAD_LV, ROAD_Name, Smooth, Hole_Conn_St, Memo)
                     VALUES
                     (@Break_ID, @Show_ID, @Report_Date, @Report_User, @S_UTME, @S_UTMN, @Lat, @Lon, @TOWN_CODE, @ROAD_LV, @ROAD_Name, @Smooth, @Hole_Conn_St, @Memo)";
 
-                SqlParameter[] pars = new SqlParameter[]
-                {
-                    new SqlParameter("@Break_ID", breakId),
-                    new SqlParameter("@Show_ID", breakId),
-                    new SqlParameter("@Report_Date", DateTime.Now),
-                    new SqlParameter("@Report_User", currentUser),
-                    new SqlParameter("@S_UTME", utmE),
-                    new SqlParameter("@S_UTMN", utmN),
-                    new SqlParameter("@Lat", lat > 0 ? (object)lat : DBNull.Value),
-                    new SqlParameter("@Lon", lon > 0 ? (object)lon : DBNull.Value),
-                    new SqlParameter("@TOWN_CODE", townCode),
-                    new SqlParameter("@ROAD_LV", roadLv),
-                    new SqlParameter("@ROAD_Name", roadName),
-                    new SqlParameter("@Smooth", smooth),
-                    new SqlParameter("@Hole_Conn_St", holeSt),
-                    new SqlParameter("@Memo", memoFormatted)
-                };
+                int maxRetries = 5;
+                bool inserted = false;
 
-                DbHelper.ExecuteNonQuery(sqlInsert, pars);
+                for (int retry = 0; retry < maxRetries; retry++)
+                {
+                    string prefix = DateTime.Now.ToString("yyyyMMddHHmmss");
+                    int seq = 1;
+                    try
+                    {
+                        string sqlId = "SELECT TOP 1 Break_ID FROM RoadBreak_CaseMain WITH (UPDLOCK, HOLDLOCK) WHERE Break_ID LIKE @prefix + '%' ORDER BY Break_ID DESC";
+                        object scalar = DbHelper.ExecuteScalar(sqlId, new SqlParameter("@prefix", prefix));
+                        if (scalar != null && scalar != DBNull.Value)
+                        {
+                            string maxId = scalar.ToString().Trim();
+                            if (maxId.Length >= 17)
+                            {
+                                int parsedSeq = 0;
+                                if (int.TryParse(maxId.Substring(14, 3), out parsedSeq))
+                                {
+                                    seq = parsedSeq + 1;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    breakId = prefix + seq.ToString("000");
+
+                    SqlParameter[] pars = new SqlParameter[]
+                    {
+                        new SqlParameter("@Break_ID", breakId),
+                        new SqlParameter("@Show_ID", breakId),
+                        new SqlParameter("@Report_Date", DateTime.Now),
+                        new SqlParameter("@Report_User", currentUser),
+                        new SqlParameter("@S_UTME", utmE),
+                        new SqlParameter("@S_UTMN", utmN),
+                        new SqlParameter("@Lat", lat > 0 ? (object)lat : DBNull.Value),
+                        new SqlParameter("@Lon", lon > 0 ? (object)lon : DBNull.Value),
+                        new SqlParameter("@TOWN_CODE", townCode),
+                        new SqlParameter("@ROAD_LV", roadLv),
+                        new SqlParameter("@ROAD_Name", roadName),
+                        new SqlParameter("@Smooth", smooth),
+                        new SqlParameter("@Hole_Conn_St", holeSt),
+                        new SqlParameter("@Memo", memoFormatted)
+                    };
+
+                    try
+                    {
+                        DbHelper.ExecuteNonQuery(sqlInsert, pars);
+                        inserted = true;
+                        break;
+                    }
+                    catch (SqlException ex)
+                    {
+                        if (ex.Number == 2627 || ex.Number == 2601)
+                        {
+                            System.Threading.Thread.Sleep(50 * (retry + 1));
+                            continue;
+                        }
+                        throw;
+                    }
+                }
+
+                if (!inserted)
+                {
+                    Response.Write(json.Serialize(new { Success = false, Message = "目前通報併發取號繁忙，請稍候重試！" }));
+                    return;
+                }
             }
             else
             {
@@ -538,7 +577,7 @@ namespace NTPC_FEC.RoadBreak
             }));
         }
 
-        // 4. 刪除指定照片
+        // 4. 刪除指定照片 (嚴格防禦路徑遍歷與任意檔案刪除)
         private void DeletePhoto(string breakId, string fileName)
         {
             if (string.IsNullOrEmpty(breakId) || string.IsNullOrEmpty(fileName))
@@ -547,19 +586,26 @@ namespace NTPC_FEC.RoadBreak
                 return;
             }
 
-            // 防止路徑遍歷
-            string safeFileName = Path.GetFileName(fileName);
+            breakId = FileSecurityHelper.SanitizeFileName(breakId);
+            string safeFileName = FileSecurityHelper.SanitizeFileName(fileName);
+
+            if (string.IsNullOrEmpty(breakId) || string.IsNullOrEmpty(safeFileName) || !Regex.IsMatch(breakId, @"^[a-zA-Z0-9_\-]+$"))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "無效的案號或檔名參數" }));
+                return;
+            }
+
             string targetDir = Server.MapPath("~/Upload/RoadBreakPIC/" + breakId);
             string filePath = Path.Combine(targetDir, safeFileName);
 
-            if (File.Exists(filePath))
+            if (FileSecurityHelper.IsSafePath(targetDir, filePath) && File.Exists(filePath))
             {
-                File.Delete(filePath);
+                try { File.Delete(filePath); } catch { }
                 Response.Write(json.Serialize(new { Success = true, Message = "照片已刪除" }));
             }
             else
             {
-                Response.Write(json.Serialize(new { Success = false, Message = "檔案不存在" }));
+                Response.Write(json.Serialize(new { Success = false, Message = "檔案不存在或無權刪除" }));
             }
         }
 

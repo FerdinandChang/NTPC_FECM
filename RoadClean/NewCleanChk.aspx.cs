@@ -587,10 +587,10 @@ namespace NTPC_FEC.RoadClean
             }
 
             string mode = Request["mode"] ?? "new";
-            string tempDir = Request["tempDir"] ?? "";
-            string chkId = Request["chkId"] ?? "";
-            string pointId = Request["pointId"] ?? "";
-            string photoType = Request["photoType"] ?? "";
+            string tempDir = FileSecurityHelper.SanitizeFileName(Request["tempDir"] ?? "");
+            string chkId = FileSecurityHelper.SanitizeFileName(Request["chkId"] ?? "");
+            string pointId = FileSecurityHelper.SanitizeFileName(Request["pointId"] ?? "");
+            string photoType = FileSecurityHelper.SanitizeFileName(Request["photoType"] ?? "");
 
             if (string.IsNullOrEmpty(pointId) || string.IsNullOrEmpty(photoType))
             {
@@ -662,10 +662,10 @@ namespace NTPC_FEC.RoadClean
         {
             Response.ContentType = "application/json";
             string mode = Request["mode"] ?? "new";
-            string tempDir = Request["tempDir"] ?? "";
-            string chkId = Request["chkId"] ?? "";
-            string pointId = Request["pointId"] ?? "";
-            string photoType = Request["photoType"] ?? "";
+            string tempDir = FileSecurityHelper.SanitizeFileName(Request["tempDir"] ?? "");
+            string chkId = FileSecurityHelper.SanitizeFileName(Request["chkId"] ?? "");
+            string pointId = FileSecurityHelper.SanitizeFileName(Request["pointId"] ?? "");
+            string photoType = FileSecurityHelper.SanitizeFileName(Request["photoType"] ?? "");
 
             string fileSuffix = "";
             switch (photoType.ToLower())

@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Text;
+using System.Web;
 using NTPC_FEC.Helpers;
 using NTPC_FEC.Models;
 
@@ -49,46 +52,152 @@ namespace NTPC_FEC.Services
     }
 
     /// <summary>
-    /// 首頁待辦統計核心服務 (連線資料庫提供真實統計數據)
+    /// 首頁待辦統計核心服務 (連線資料庫提供真實統計數據，支援30秒快取與轄區過濾)
     /// </summary>
     public static class PendingTaskService
     {
+        private const string CachePrefix = "PENDING_COUNTS_";
+
         /// <summary>
-        /// 取得當前使用者的全模組待辦計數
+        /// 清除待辦統計快取 (特定使用者或全體)
+        /// </summary>
+        public static void ClearPendingCountsCache(string userId = null)
+        {
+            try
+            {
+                if (HttpRuntime.Cache == null) return;
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    System.Collections.IDictionaryEnumerator enumerator = HttpRuntime.Cache.GetEnumerator();
+                    List<string> keysToRemove = new List<string>();
+                    while (enumerator.MoveNext())
+                    {
+                        string key = enumerator.Key.ToString();
+                        if (key.StartsWith(CachePrefix))
+                        {
+                            keysToRemove.Add(key);
+                        }
+                    }
+                    foreach (string k in keysToRemove)
+                    {
+                        HttpRuntime.Cache.Remove(k);
+                    }
+                }
+                else
+                {
+                    HttpRuntime.Cache.Remove(CachePrefix + userId.Trim().ToUpper());
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// 取得當前使用者的全模組待辦計數 (含30秒記憶體快取與鄉鎮轄區分流)
         /// </summary>
         public static PendingTaskCounts GetPendingCounts(UserAccount user)
         {
+            string userId = (user != null && !string.IsNullOrEmpty(user.UserID)) ? user.UserID.Trim().ToUpper() : "ANON";
+            string cacheKey = CachePrefix + userId;
+
+            // 1. 嘗試從快取讀取
+            if (HttpRuntime.Cache != null)
+            {
+                var cached = HttpRuntime.Cache[cacheKey] as PendingTaskCounts;
+                if (cached != null)
+                {
+                    return cached;
+                }
+            }
+
             var counts = new PendingTaskCounts();
             string facId = (user != null && !string.IsNullOrEmpty(user.FacID)) ? user.FacID.Trim() : "";
 
-            // 1. 查詢道路潔淨巡檢四大業務表待辦 (單一彙總 SQL，毫秒級響應)
-            QueryRoadCleanCounts(counts);
+            // 取得轄區過濾代碼與鄉鎮名稱 (若為空清單代表具全市全部權限)
+            List<string> townNos = new List<string>();
+            List<string> townNames = new List<string>();
+            if (user != null && !string.IsNullOrEmpty(user.UserID) && !user.UserID.Equals("admin", StringComparison.OrdinalIgnoreCase))
+            {
+                townNos = PermissionService.GetUserTownNos(user.UserID);
+                townNames = PermissionService.GetUserTowns(user.UserID);
+            }
+
+            // 1. 查詢道路潔淨巡檢四大業務表待辦
+            QueryRoadCleanCounts(counts, townNos, townNames);
 
             // 2. 查詢工廠現場稽查與任務派遣待辦 (INV_DATA, INV_Mission)
-            QueryCaseCounts(counts);
+            QueryCaseCounts(counts, townNos);
 
             // 3. 查詢作業機具與裸露地待辦 (Machine_Main, Bare_INV)
-            QueryMachineAndBareCounts(counts);
+            QueryMachineAndBareCounts(counts, townNos);
 
             // 4. 查詢自主管理回報待辦 (INV_Report)
             QueryOwnReportCounts(counts, facId);
 
+            // 5. 存入記憶體快取 (30秒絕對過期)
+            if (HttpRuntime.Cache != null)
+            {
+                HttpRuntime.Cache.Insert(
+                    cacheKey,
+                    counts,
+                    null,
+                    DateTime.Now.AddSeconds(30),
+                    System.Web.Caching.Cache.NoSlidingExpiration
+                );
+            }
+
             return counts;
         }
 
-        // 1. 道路四大巡檢統計
-        private static void QueryRoadCleanCounts(PendingTaskCounts counts)
+        // 輔助方法：生成 SQL IN 條件字串
+        private static string BuildSqlInList(List<string> items)
+        {
+            if (items == null || items.Count == 0) return "";
+            var escaped = new List<string>();
+            foreach (var item in items)
+            {
+                if (!string.IsNullOrEmpty(item))
+                {
+                    escaped.Add("'" + item.Replace("'", "''") + "'");
+                }
+            }
+            return string.Join(",", escaped.ToArray());
+        }
+
+        // 1. 道路四大巡檢統計 (支援鄉鎮名稱與代號過濾)
+        private static void QueryRoadCleanCounts(PendingTaskCounts counts, List<string> townNos, List<string> townNames)
         {
             try
             {
-                string sql = @"
+                string inNos = BuildSqlInList(townNos);
+                string inNames = BuildSqlInList(townNames);
+
+                string whereRc = "";
+                string whereDirty = "";
+                string whereBreak = "";
+                string whereBsc = "";
+
+                if (!string.IsNullOrEmpty(inNames))
+                {
+                    whereRc = string.Format(" AND R.TOWN IN ({0})", inNames);
+                }
+
+                if (!string.IsNullOrEmpty(inNos))
+                {
+                    whereDirty = string.Format(" AND TOWN_CODE IN ({0})", inNos);
+                    whereBreak = string.Format(" AND TOWN_CODE IN ({0})", inNos);
+                    whereBsc = string.Format(" AND TOWN_CODE IN ({0})", inNos);
+                }
+
+                string sql = string.Format(@"
                     SELECT 
-                        ISNULL((SELECT COUNT(1) FROM RoadClean_ChkRecord_Main WHERE Case_State IN (1001, 2201)), 0) AS RoadCleanDraft,
-                        ISNULL((SELECT COUNT(1) FROM RoadClean_ChkRecord_Main WHERE Case_State = 2301), 0) AS RoadCleanBack,
-                        ISNULL((SELECT COUNT(1) FROM RoadClean_ChkRecord_Main WHERE Case_State = 2001), 0) AS RoadCleanExamine,
-                        ISNULL((SELECT COUNT(1) FROM RoadDirty_CaseMain WHERE SetCOM_Date IS NOT NULL AND Improve_Date IS NULL), 0) AS RoadDirtyImprove,
-                        ISNULL((SELECT COUNT(1) FROM RoadBreak_CaseMain WHERE SetCOM_Date IS NOT NULL AND Improve_Date IS NULL), 0) AS RoadBreakImprove,
-                        ISNULL((SELECT COUNT(1) FROM RoadBSC_CaseMain WHERE SetCOM_Date IS NOT NULL AND Improve_Date IS NULL), 0) AS RoadBSCImprove";
+                        ISNULL((SELECT COUNT(1) FROM RoadClean_ChkRecord_Main M LEFT JOIN RoadClean_CheckPointMain R ON M.ChkRoadID = R.RDID WHERE M.Case_State IN (1001, 2201){0}), 0) AS RoadCleanDraft,
+                        ISNULL((SELECT COUNT(1) FROM RoadClean_ChkRecord_Main M LEFT JOIN RoadClean_CheckPointMain R ON M.ChkRoadID = R.RDID WHERE M.Case_State = 2301{0}), 0) AS RoadCleanBack,
+                        ISNULL((SELECT COUNT(1) FROM RoadClean_ChkRecord_Main M LEFT JOIN RoadClean_CheckPointMain R ON M.ChkRoadID = R.RDID WHERE M.Case_State = 2001{0}), 0) AS RoadCleanExamine,
+                        ISNULL((SELECT COUNT(1) FROM RoadDirty_CaseMain WHERE SetCOM_Date IS NOT NULL AND Improve_Date IS NULL{1}), 0) AS RoadDirtyImprove,
+                        ISNULL((SELECT COUNT(1) FROM RoadBreak_CaseMain WHERE SetCOM_Date IS NOT NULL AND Improve_Date IS NULL{2}), 0) AS RoadBreakImprove,
+                        ISNULL((SELECT COUNT(1) FROM RoadBSC_CaseMain WHERE SetCOM_Date IS NOT NULL AND Improve_Date IS NULL{3}), 0) AS RoadBSCImprove",
+                    whereRc, whereDirty, whereBreak, whereBsc);
 
                 DataTable dt = DbHelper.ExecuteDataTable(sql);
                 if (dt != null && dt.Rows.Count > 0)
@@ -108,23 +217,38 @@ namespace NTPC_FEC.Services
             }
         }
 
-        // 2. 工廠巡查任務派遣統計
-        private static void QueryCaseCounts(PendingTaskCounts counts)
+        // 2. 工廠巡查任務派遣統計 (支援鄉鎮過濾)
+        private static void QueryCaseCounts(PendingTaskCounts counts, List<string> townNos)
         {
             // 查詢工廠巡查待審件數 (與審查平台 Get_Check_INV_FAC_Main_BySearch 100% 同源同標準)
-            counts.CaseInv1 = QueryInvCasesBySp("A00"); // 初審待審 (INV1)
-            counts.CaseInv2 = QueryInvCasesBySp("A01"); // 複審待審 (INV2)
-            counts.CaseInv3 = QueryInvCasesBySp("A02"); // 三審待審 (INV3)
+            counts.CaseInv1 = QueryInvCasesBySp("A00", townNos); // 初審待審 (INV1)
+            counts.CaseInv2 = QueryInvCasesBySp("A01", townNos); // 複審待審 (INV2)
+            counts.CaseInv3 = QueryInvCasesBySp("A02", townNos); // 三審待審 (INV3)
 
             try
             {
-                string sql = @"
+                string inNos = BuildSqlInList(townNos);
+                string filterFac = "";
+                string filterBali = "";
+
+                if (!string.IsNullOrEmpty(inNos))
+                {
+                    filterFac = string.Format(" AND f.TOWN_NO IN ({0})", inNos);
+                    // 八里區代號為 24
+                    if (!townNos.Contains("24"))
+                    {
+                        filterBali = " AND 1=0"; // 非八里轄區承辦人不計入八里專案
+                    }
+                }
+
+                string sql = string.Format(@"
                     SELECT 
-                        ISNULL((SELECT COUNT(1) FROM INV_DATA WHERE INV_State = 'A00a'), 0) AS CaseDraft,
-                        ISNULL((SELECT COUNT(1) FROM INV_DATA WHERE INV_State = 'A00b'), 0) AS CaseBack,
-                        ISNULL((SELECT COUNT(1) FROM INV_Mission WHERE Cancel_Date IS NULL AND (pReason LIKE '%7天內未完成改善回報%' OR pReason LIKE '%7天%')), 0) AS CaseMission7Day,
-                        ISNULL((SELECT COUNT(1) FROM INV_Mission WHERE Cancel_Date IS NULL AND pReason LIKE '%稽查列管%'), 0) AS CaseMission2Times,
-                        ISNULL((SELECT COUNT(1) FROM FAC_Main WHERE TOWN LIKE '%八里%' OR ADDR LIKE '%八里%'), 0) AS CaseProject";
+                        ISNULL((SELECT COUNT(1) FROM INV_DATA d INNER JOIN FAC_Main f ON d.FAC_ID = f.FAC_ID WHERE d.INV_State = 'A00a'{0}), 0) AS CaseDraft,
+                        ISNULL((SELECT COUNT(1) FROM INV_DATA d INNER JOIN FAC_Main f ON d.FAC_ID = f.FAC_ID WHERE d.INV_State = 'A00b'{0}), 0) AS CaseBack,
+                        ISNULL((SELECT COUNT(1) FROM INV_Mission m INNER JOIN FAC_Main f ON m.FAC_ID = f.FAC_ID WHERE m.Cancel_Date IS NULL AND (m.pReason LIKE '%7天內未完成改善回報%' OR m.pReason LIKE '%7天%'){0}), 0) AS CaseMission7Day,
+                        ISNULL((SELECT COUNT(1) FROM INV_Mission m INNER JOIN FAC_Main f ON m.FAC_ID = f.FAC_ID WHERE m.Cancel_Date IS NULL AND m.pReason LIKE '%稽查列管%'{0}), 0) AS CaseMission2Times,
+                        ISNULL((SELECT COUNT(1) FROM FAC_Main WHERE (TOWN LIKE '%八里%' OR ADDR LIKE '%八里%'){1}), 0) AS CaseProject",
+                    filterFac, filterBali);
 
                 DataTable dt = DbHelper.ExecuteDataTable(sql);
                 if (dt != null && dt.Rows.Count > 0)
@@ -143,12 +267,14 @@ namespace NTPC_FEC.Services
         }
 
         // 輔助方法：呼叫與 managerList.aspx 完全一致之預存程序統計有效場所營建巡查待審案件數
-        private static int QueryInvCasesBySp(string stateCode)
+        private static int QueryInvCasesBySp(string stateCode, List<string> townNos)
         {
             int totalCases = 0;
             string colName = "初審件數";
             if (stateCode == "A01") colName = "複審件數";
             else if (stateCode == "A02") colName = "三審件數";
+
+            HashSet<string> townSet = (townNos != null && townNos.Count > 0) ? new HashSet<string>(townNos) : null;
 
             try
             {
@@ -169,6 +295,15 @@ namespace NTPC_FEC.Services
                         da.Fill(dt);
                         foreach (DataRow row in dt.Rows)
                         {
+                            if (townSet != null && row.Table.Columns.Contains("TOWN_CODE") && row["TOWN_CODE"] != DBNull.Value)
+                            {
+                                string tcode = row["TOWN_CODE"].ToString().Trim();
+                                if (!townSet.Contains(tcode))
+                                {
+                                    continue;
+                                }
+                            }
+
                             int c = 0;
                             if (row.Table.Columns.Contains("Case_Count") && row["Case_Count"] != DBNull.Value)
                             {
@@ -191,11 +326,21 @@ namespace NTPC_FEC.Services
             {
                 try
                 {
-                    string sql = @"
+                    string whereTown = "";
+                    if (townSet != null)
+                    {
+                        string inNos = BuildSqlInList(townNos);
+                        if (!string.IsNullOrEmpty(inNos))
+                        {
+                            whereTown = string.Format(" AND f.TOWN_NO IN ({0})", inNos);
+                        }
+                    }
+
+                    string sql = string.Format(@"
                         SELECT COUNT(d.INV_NO) 
                         FROM INV_DATA d
                         INNER JOIN FAC_Main f ON d.FAC_ID = f.FAC_ID
-                        WHERE d.INV_State = @StateCode";
+                        WHERE d.INV_State = @StateCode{0}", whereTown);
                     object obj = DbHelper.ExecuteScalar(sql, new SqlParameter("@StateCode", stateCode));
                     if (obj != null && obj != DBNull.Value)
                     {
@@ -207,26 +352,36 @@ namespace NTPC_FEC.Services
             return totalCases;
         }
 
-        // 3. 作業機具與裸露地統計
-        private static void QueryMachineAndBareCounts(PendingTaskCounts counts)
+        // 3. 作業機具與裸露地統計 (支援鄉鎮過濾)
+        private static void QueryMachineAndBareCounts(PendingTaskCounts counts, List<string> townNos)
         {
             // 查詢施工機具待審件數 (與審查平台 Get_Check_Mac_FAC_Main_BySearch 100% 同源同標準)
-            counts.MachineInv1 = QueryMachineCasesBySp("A00"); // 初審待審 (MAC1)
-            counts.MachineInv2 = QueryMachineCasesBySp("A01"); // 複審待審 (MAC2)
-            counts.MachineInv3 = QueryMachineCasesBySp("A02"); // 三審待審 (MAC3)
+            counts.MachineInv1 = QueryMachineCasesBySp("A00", townNos); // 初審待審 (MAC1)
+            counts.MachineInv2 = QueryMachineCasesBySp("A01", townNos); // 複審待審 (MAC2)
+            counts.MachineInv3 = QueryMachineCasesBySp("A02", townNos); // 三審待審 (MAC3)
             counts.MachineExamine = counts.MachineInv1;
 
             try
             {
-                // 機具暫存草稿與裸露地統計
-                string sql = @"
+                string inNos = BuildSqlInList(townNos);
+                string filterMac = "";
+                string filterBare = "";
+
+                if (!string.IsNullOrEmpty(inNos))
+                {
+                    filterMac = string.Format(" AND f.TOWN_NO IN ({0})", inNos);
+                    filterBare = string.Format(" AND TOWN_NO IN ({0})", inNos);
+                }
+
+                string sql = string.Format(@"
                     SELECT 
-                        ISNULL((SELECT COUNT(1) FROM Machine_Main WHERE (Mac_State IN ('A00a', 'A00b') OR Mac_State IS NULL) AND (Deleted_mac IS NULL OR Deleted_mac <> 'Y')), 0) AS MachineDraft,
-                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00a'), 0) AS BareDraft,
-                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00b'), 0) AS BareBack,
-                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00'), 0) AS BareInv1,
-                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A01'), 0) AS BareInv2,
-                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A02'), 0) AS BareInv3";
+                        ISNULL((SELECT COUNT(1) FROM Machine_Main m INNER JOIN FAC_Main f ON m.FAC_ID = f.FAC_ID WHERE (m.Mac_State IN ('A00a', 'A00b') OR m.Mac_State IS NULL) AND (m.Deleted_mac IS NULL OR m.Deleted_mac <> 'Y'){0}), 0) AS MachineDraft,
+                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00a'{1}), 0) AS BareDraft,
+                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00b'{1}), 0) AS BareBack,
+                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A00'{1}), 0) AS BareInv1,
+                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A01'{1}), 0) AS BareInv2,
+                        ISNULL((SELECT COUNT(1) FROM Bare_INV WHERE INV_State = 'A02'{1}), 0) AS BareInv3",
+                    filterMac, filterBare);
 
                 DataTable dt = DbHelper.ExecuteDataTable(sql);
                 if (dt != null && dt.Rows.Count > 0)
@@ -246,12 +401,14 @@ namespace NTPC_FEC.Services
         }
 
         // 輔助方法：呼叫與 managerList.aspx 完全一致之預存程序統計有效場所待審機具數
-        private static int QueryMachineCasesBySp(string stateCode)
+        private static int QueryMachineCasesBySp(string stateCode, List<string> townNos)
         {
             int totalCases = 0;
             string colName = "初審件數";
             if (stateCode == "A01") colName = "複審件數";
             else if (stateCode == "A02") colName = "三審件數";
+
+            HashSet<string> townSet = (townNos != null && townNos.Count > 0) ? new HashSet<string>(townNos) : null;
 
             try
             {
@@ -272,6 +429,15 @@ namespace NTPC_FEC.Services
                         da.Fill(dt);
                         foreach (DataRow row in dt.Rows)
                         {
+                            if (townSet != null && row.Table.Columns.Contains("TOWN_CODE") && row["TOWN_CODE"] != DBNull.Value)
+                            {
+                                string tcode = row["TOWN_CODE"].ToString().Trim();
+                                if (!townSet.Contains(tcode))
+                                {
+                                    continue;
+                                }
+                            }
+
                             int c = 0;
                             if (row.Table.Columns.Contains("Case_Count") && row["Case_Count"] != DBNull.Value)
                             {
@@ -294,12 +460,22 @@ namespace NTPC_FEC.Services
             {
                 try
                 {
-                    string sql = @"
+                    string whereTown = "";
+                    if (townSet != null)
+                    {
+                        string inNos = BuildSqlInList(townNos);
+                        if (!string.IsNullOrEmpty(inNos))
+                        {
+                            whereTown = string.Format(" AND f.TOWN_NO IN ({0})", inNos);
+                        }
+                    }
+
+                    string sql = string.Format(@"
                         SELECT COUNT(m.mac_ID) 
                         FROM Machine_Main m
                         INNER JOIN FAC_Main f ON m.FAC_ID = f.FAC_ID
                         WHERE m.Mac_State = @StateCode 
-                          AND (m.Deleted_mac IS NULL OR m.Deleted_mac <> 'Y')";
+                          AND (m.Deleted_mac IS NULL OR m.Deleted_mac <> 'Y'){0}", whereTown);
                     object obj = DbHelper.ExecuteScalar(sql, new SqlParameter("@StateCode", stateCode));
                     if (obj != null && obj != DBNull.Value)
                     {

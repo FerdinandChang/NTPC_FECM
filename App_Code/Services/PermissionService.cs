@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Web;
 using NTPC_FEC.Helpers;
 
 namespace NTPC_FEC.Services
@@ -55,12 +56,38 @@ namespace NTPC_FEC.Services
             return GetAllDefinedAuthItems();
         }
 
+        // 清除指定使用者之 Request 級別權限快取
+        public static void ClearUserAuthCache(string userId)
+        {
+            if (string.IsNullOrEmpty(userId)) return;
+            HttpContext ctx = HttpContext.Current;
+            if (ctx != null)
+            {
+                string cacheKey = "AUTH_CODES_" + userId.ToUpper();
+                if (ctx.Items.Contains(cacheKey))
+                {
+                    ctx.Items.Remove(cacheKey);
+                }
+            }
+        }
+
         // 取得使用者所有授權代碼 (優先讀取 UserAuthPermission，舊帳號自動由 LIC/LIC2 映射備援)
         public static HashSet<string> GetUserAuthCodes(string userId, long fallbackLic, long fallbackLic2)
         {
-            EnsureAuthPermissionTableExists();
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(userId)) return set;
+
+            // 1. Request 級別快取：單一 HTTP 請求生命週期內不重複查庫
+            string cacheKey = "AUTH_CODES_" + userId.ToUpper();
+            HttpContext ctx = HttpContext.Current;
+            if (ctx != null && ctx.Items.Contains(cacheKey))
+            {
+                var cached = ctx.Items[cacheKey] as HashSet<string>;
+                if (cached != null) return cached;
+            }
+
+            EnsureAuthPermissionTableExists();
+            bool foundInDb = false;
 
             try
             {
@@ -72,6 +99,7 @@ namespace NTPC_FEC.Services
                 DataTable dt = DbHelper.ExecuteDataTable(sql, parameters);
                 if (dt != null && dt.Rows.Count > 0)
                 {
+                    foundInDb = true;
                     foreach (DataRow row in dt.Rows)
                     {
                         if (row["AuthCode"] != null && row["AuthCode"] != DBNull.Value)
@@ -80,35 +108,43 @@ namespace NTPC_FEC.Services
                             if (!string.IsNullOrEmpty(code)) set.Add(code);
                         }
                     }
-                    return set;
                 }
             }
             catch { }
 
-            // 若 UserAuthPermission 尚未有此使用者記錄，自動以舊版 LIC / LIC2 位元遮罩反向映射
-            var allItems = GetAllDefinedAuthItems();
-            foreach (var item in allItems)
+            // 2. 若 UserAuthPermission 資料表中尚未有該使用者之精確記錄，才由舊版 LIC / LIC2 位元遮罩反向映射 (舊帳號相容)
+            if (!foundInDb)
             {
-                bool hasPerm = false;
-                if (item.FieldName.Equals("LIC2", StringComparison.OrdinalIgnoreCase))
+                var allItems = GetAllDefinedAuthItems();
+                foreach (var item in allItems)
                 {
-                    if (item.LicID >= 0 && item.LicID < 64)
+                    bool hasPerm = false;
+                    if (item.FieldName.Equals("LIC2", StringComparison.OrdinalIgnoreCase))
                     {
-                        hasPerm = (fallbackLic2 & (1L << item.LicID)) != 0;
+                        if (item.LicID >= 0 && item.LicID < 64)
+                        {
+                            hasPerm = (fallbackLic2 & (1L << item.LicID)) != 0;
+                        }
                     }
-                }
-                else
-                {
-                    if (item.LicID >= 0 && item.LicID < 64)
+                    else
                     {
-                        hasPerm = (fallbackLic & (1L << item.LicID)) != 0;
+                        if (item.LicID >= 0 && item.LicID < 64)
+                        {
+                            hasPerm = (fallbackLic & (1L << item.LicID)) != 0;
+                        }
                     }
-                }
 
-                if (hasPerm && !string.IsNullOrEmpty(item.AuthCode))
-                {
-                    set.Add(item.AuthCode);
+                    if (hasPerm && !string.IsNullOrEmpty(item.AuthCode))
+                    {
+                        set.Add(item.AuthCode);
+                    }
                 }
+            }
+
+            // 存入 Request 級別快取
+            if (ctx != null)
+            {
+                ctx.Items[cacheKey] = set;
             }
 
             return set;
@@ -121,14 +157,7 @@ namespace NTPC_FEC.Services
             if (userId.ToLower() == "admin") return true;
 
             var userCodes = GetUserAuthCodes(userId, fallbackLic, 0L);
-            if (userCodes.Contains(authCode)) return true;
-
-            if (legacyBit >= 0 && legacyBit < 64)
-            {
-                return (fallbackLic & (1L << legacyBit)) != 0;
-            }
-
-            return false;
+            return userCodes.Contains(authCode);
         }
 
         // 取得使用者群組化之權限摘要 (供清單顯示)
@@ -305,8 +334,8 @@ namespace NTPC_FEC.Services
             AddAuth(list, ref sort, "FAC_LIST_READ", 41, "逸散源列管", "工廠基本資料", "", "LIC", false);
             AddAuth(list, ref sort, "FAC_LIST_EDIT", 2, "逸散源未列管", "工廠基本資料", "", "LIC", false);
             AddAuth(list, ref sort, "FAC_LICENSE_QUERY", 10, "許可證資訊", "工廠基本資料", "", "LIC", false);
-            AddAuth(list, ref sort, "FAC_OUTLINK_QUERY", 11, "其他資料查詢", "工廠基本資料", "", "LIC", false);
-            AddAuth(list, ref sort, "FAC_STATS", 41, "工廠統計", "工廠基本資料", "", "LIC", false);
+            AddAuth(list, ref sort, "FAC_OUTLINK_QUERY", 11, "相關外部系統連結", "工廠基本資料", "", "LIC", false);
+            AddAuth(list, ref sort, "FAC_STATS", 41, "公私場所逸散源統計分析", "工廠基本資料", "", "LIC", false);
             AddAuth(list, ref sort, "FAC_BUFFER_MAP", 41, "環域查詢", "工廠基本資料", "", "LIC", false);
 
             // ==========================================
@@ -319,12 +348,12 @@ namespace NTPC_FEC.Services
             AddAuth(list, ref sort, "CASE_INV2", 4, "案件複審", "巡查任務派遣", "", "LIC", false);
             AddAuth(list, ref sort, "CASE_INV3", 5, "案件三審", "巡查任務派遣", "", "LIC", false);
             AddAuth(list, ref sort, "CASE_SEARCH_LIST", 42, "查核成果列表", "巡查任務派遣", "", "LIC", false);
-            AddAuth(list, ref sort, "CASE_PROJECT_ZONE", 42, "歷史建檔區", "巡查任務派遣", "", "LIC", false);
-            AddAuth(list, ref sort, "CASE_DISPATCH_SET", 0, "案件改派設定", "巡查任務派遣", "", "LIC", false);
-            AddAuth(list, ref sort, "CASE_MISSION_7DAY", 0, "技師派遣", "巡查任務派遣", "", "LIC", false);
-            AddAuth(list, ref sort, "CASE_MISSION_2TIMES", 0, "經緯複查", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_PROJECT_ZONE", 42, "臺北港專區", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_DISPATCH_SET", 0, "稽查派遣管理", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_MISSION_7DAY", 0, "巡查派遣", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_MISSION_2TIMES", 0, "提報稽查", "巡查任務派遣", "", "LIC", false);
             AddAuth(list, ref sort, "CASE_SUM_STATS", 42, "查核統計", "巡查任務派遣", "", "LIC", false);
-            AddAuth(list, ref sort, "CASE_SUM_MANAGE", 42, "管轄狀況統計", "巡查任務派遣", "", "LIC", false);
+            AddAuth(list, ref sort, "CASE_SUM_MANAGE", 42, "管辦改善歷程追蹤統計", "巡查任務派遣", "", "LIC", false);
 
             // ==========================================
             // 模組 3. 作業機具調查 (MACHINE)
@@ -334,8 +363,8 @@ namespace NTPC_FEC.Services
             AddAuth(list, ref sort, "MAC_INV2", 6, "案件複審", "作業機具調查", "作業機具調查", "LIC", false);
             AddAuth(list, ref sort, "MAC_INV3", 6, "案件三審", "作業機具調查", "作業機具調查", "LIC", false);
             AddAuth(list, ref sort, "MAC_SEARCH_LIST", 43, "調查成果列表", "作業機具調查", "", "LIC", false);
-            AddAuth(list, ref sort, "MAC_SURVEY_FORM", 43, "固定污染源施工機具排查", "作業機具調查", "", "LIC", false);
-            AddAuth(list, ref sort, "MAC_MOENV_ANALYSIS", 43, "事業部施工機具資料分析", "作業機具調查", "", "LIC", false);
+            AddAuth(list, ref sort, "MAC_SURVEY_FORM", 43, "固定污染源施工機具普查", "作業機具調查", "", "LIC", false);
+            AddAuth(list, ref sort, "MAC_MOENV_ANALYSIS", 43, "環境部施工機具資料分析", "作業機具調查", "", "LIC", false);
 
             // ==========================================
             // 模組 4. 裸露地調查 (BARE)
@@ -355,8 +384,9 @@ namespace NTPC_FEC.Services
             AddAuth(list, ref sort, "OWN_REPORT_LIST", 8, "維護紀錄列表", "自主管理回報", "自主管理控管", "LIC", false);
 
             AddAuth(list, ref sort, "OWN_WASH_INPUT", 12, "車輛洗掃回報", "自主管理回報", "車輛洗掃設備管理", "LIC", false);
-            AddAuth(list, ref sort, "OWN_WASH_UPLOAD", 13, "洗掃規管回傳", "自主管理回報", "車輛洗掃設備管理", "LIC", false);
+            AddAuth(list, ref sort, "OWN_WASH_UPLOAD", 13, "洗掃報表回傳", "自主管理回報", "車輛洗掃設備管理", "LIC", false);
             AddAuth(list, ref sort, "OWN_WASH_LIST", 14, "洗掃紀錄列表", "自主管理回報", "車輛洗掃設備管理", "LIC", false);
+            AddAuth(list, ref sort, "OWN_WASH_RECORD_LIST", 14, "洗車水電紀錄列表", "自主管理回報", "車輛洗掃設備管理", "LIC", false);
 
             AddAuth(list, ref sort, "OWN_DEFECT_INPUT", 15, "缺失改善回報", "自主管理回報", "防制設施缺失改善管理", "LIC", false);
             AddAuth(list, ref sort, "OWN_DEFECT_LIST", 15, "改善紀錄列表", "自主管理回報", "防制設施缺失改善管理", "LIC", false);
@@ -368,13 +398,13 @@ namespace NTPC_FEC.Services
             // ==========================================
             // 模組 6. 空間資訊整合 (MAP)
             // ==========================================
-            AddAuth(list, ref sort, "MAP_WASH_GIS", 41, "道路洗掃排程地圖(GIS)", "空間資訊整合", "", "LIC", false);
+            AddAuth(list, ref sort, "MAP_WASH_GIS", 41, "道路洗掃路段與現場查核地圖", "空間資訊整合", "", "LIC", false);
             AddAuth(list, ref sort, "MAP_NDVI_SAT", 41, "NDVI 植被衛星影像", "空間資訊整合", "", "LIC", false);
 
             // ==========================================
             // 模組 7. 道路潔淨巡檢 (ROAD)
             // ==========================================
-            AddAuth(list, ref sort, "ROAD_CLEAN_NEW", 21, "道路潔淨查核 (新增)", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
+            AddAuth(list, ref sort, "ROAD_CLEAN_NEW", 21, "道路潔淨現場查核", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
             AddAuth(list, ref sort, "ROAD_CLEAN_DRAFT", 22, "查核紀錄暫存", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
             AddAuth(list, ref sort, "ROAD_CLEAN_BACK", 22, "返回修正案件", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);
             AddAuth(list, ref sort, "ROAD_CLEAN_EXAM", 22, "案件審核", "道路潔淨巡檢", "道路潔淨巡檢", "LIC", false);

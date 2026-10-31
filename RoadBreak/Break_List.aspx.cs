@@ -59,6 +59,22 @@ namespace NTPC_FEC.RoadBreak
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時或尚未登入，請重新登入系統！", NeedLogin = true }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -619,6 +635,30 @@ namespace NTPC_FEC.RoadBreak
             if (string.IsNullOrEmpty(breakId))
             {
                 Response.Write(json.Serialize(new { Success = false, Message = "未提供通報案號" }));
+                return;
+            }
+
+            string checkSql = "SELECT Report_User, SetCOM_Date, Improve_Date FROM RoadBreak_CaseMain WHERE Break_ID = @id";
+            DataTable dtCase = DbHelper.ExecuteDataTable(checkSql, new SqlParameter("@id", breakId));
+            if (dtCase == null || dtCase.Rows.Count == 0)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "查無此通報案件！" }));
+                return;
+            }
+
+            DataRow rCase = dtCase.Rows[0];
+            if (rCase["SetCOM_Date"] != DBNull.Value || rCase["Improve_Date"] != DBNull.Value)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "此案件已成案指派改善或已結案，系統嚴禁刪除！" }));
+                return;
+            }
+
+            string reportU = rCase["Report_User"] != DBNull.Value ? rCase["Report_User"].ToString().Trim() : "";
+            string curU = GetCurrentUser();
+            bool isAdmin = curU.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+            if (!isAdmin && !string.Equals(reportU, curU, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：僅本通報建立者或管理員方可刪除此紀錄！" }));
                 return;
             }
 

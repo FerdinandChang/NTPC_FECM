@@ -534,24 +534,27 @@ namespace NTPC_FEC.Machine
         // 4. 刪除照片
         private void DeletePhoto()
         {
-            string facId = Request["id"] != null ? Request["id"].ToString().Trim() : "";
-            string macId = Request["id2"] != null ? Request["id2"].ToString().Trim() : "";
-            string cat = Request["cat"] != null ? Request["cat"].ToString().Trim() : "";
+            string facId = FileSecurityHelper.SanitizeFileName(Request["id"] != null ? Request["id"].ToString().Trim() : "");
+            string macId = FileSecurityHelper.SanitizeFileName(Request["id2"] != null ? Request["id2"].ToString().Trim() : "");
+            string cat = FileSecurityHelper.SanitizeFileName(Request["cat"] != null ? Request["cat"].ToString().Trim() : "");
 
-            if (string.IsNullOrEmpty(facId) || string.IsNullOrEmpty(macId) || string.IsNullOrEmpty(cat))
+            if (string.IsNullOrEmpty(facId) || string.IsNullOrEmpty(macId) || string.IsNullOrEmpty(cat) || !Regex.IsMatch(cat, @"^[a-zA-Z0-9_\-]+$"))
             {
-                Response.Write(json.Serialize(new { Success = false, Message = "缺少必要參數" }));
+                Response.Write(json.Serialize(new { Success = false, Message = "參數不完整或格式不符規範" }));
                 return;
             }
 
             string targetDir = Server.MapPath("~/Upload/MAC/" + facId + "/" + macId);
-            if (Directory.Exists(targetDir))
+            if (Directory.Exists(targetDir) && FileSecurityHelper.IsSafePath(Server.MapPath("~/Upload/MAC/"), targetDir))
             {
                 DirectoryInfo dir = new DirectoryInfo(targetDir);
                 FileInfo[] files = dir.GetFiles(cat + ".*");
                 foreach (FileInfo f in files)
                 {
-                    f.Delete();
+                    if (FileSecurityHelper.IsSafePath(targetDir, f.FullName))
+                    {
+                        try { f.Delete(); } catch { }
+                    }
                 }
             }
 

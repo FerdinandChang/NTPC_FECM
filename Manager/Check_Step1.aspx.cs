@@ -33,6 +33,24 @@ namespace NTPC_FEC.Manager
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 檢查登入狀態
+            if (Session["LoginUser"] == null && Session["UserAccount"] == null)
+            {
+                if (Request["action"] != null)
+                {
+                    Response.Clear();
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入逾時，請重新登入系統。", NeedLogin = true }));
+                    Response.End();
+                    return;
+                }
+                else
+                {
+                    Response.Redirect("~/Default.aspx");
+                    return;
+                }
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -870,42 +888,67 @@ namespace NTPC_FEC.Manager
 
             try
             {
-                // 1. 寫入歷次審核紀錄 INV_Chk_Result
-                string sqlInsertReview = @"
-                    INSERT INTO INV_Chk_Result (FAC_ID, INV_NO, Chk_Date, Chk_Result, Chk_Memo, INV_State, Chk_User)
-                    VALUES (@FAC_ID, @INV_NO, GETDATE(), @Chk_Result, @Chk_Memo, @INV_State, @Chk_User)";
-
-                DbHelper.ExecuteNonQuery(sqlInsertReview,
-                    new SqlParameter("@FAC_ID", facId),
-                    new SqlParameter("@INV_NO", invNo),
-                    new SqlParameter("@Chk_Result", resultText),
-                    new SqlParameter("@Chk_Memo", memo),
-                    new SqlParameter("@INV_State", stateId),
-                    new SqlParameter("@Chk_User", currentUser));
-
-                // 2. 查詢該階段之 Next_State 與 Back_State
-                string sqlState = "SELECT * FROM INV_State_List WHERE State_ID = @State_ID";
-                DataTable dtState = DbHelper.ExecuteDataTable(sqlState, new SqlParameter("@State_ID", stateId));
-
-                string nextState = "";
-                string backState = "";
-                if (dtState != null && dtState.Rows.Count > 0)
+                using (SqlConnection conn = DbHelper.GetOpenConnection())
+                using (SqlTransaction trans = conn.BeginTransaction())
                 {
-                    nextState = dtState.Rows[0]["Next_State"].ToString();
-                    backState = dtState.Rows[0]["Back_State"].ToString();
+                    try
+                    {
+                        // 1. 寫入歷次審核紀錄 INV_Chk_Result
+                        string sqlInsertReview = @"
+                            INSERT INTO INV_Chk_Result (FAC_ID, INV_NO, Chk_Date, Chk_Result, Chk_Memo, INV_State, Chk_User)
+                            VALUES (@FAC_ID, @INV_NO, GETDATE(), @Chk_Result, @Chk_Memo, @INV_State, @Chk_User)";
+
+                        using (SqlCommand cmdReview = new SqlCommand(sqlInsertReview, conn, trans))
+                        {
+                            cmdReview.Parameters.AddWithValue("@FAC_ID", facId);
+                            cmdReview.Parameters.AddWithValue("@INV_NO", invNo);
+                            cmdReview.Parameters.AddWithValue("@Chk_Result", resultText);
+                            cmdReview.Parameters.AddWithValue("@Chk_Memo", memo);
+                            cmdReview.Parameters.AddWithValue("@INV_State", stateId);
+                            cmdReview.Parameters.AddWithValue("@Chk_User", currentUser);
+                            cmdReview.ExecuteNonQuery();
+                        }
+
+                        // 2. 查詢該階段之 Next_State 與 Back_State
+                        string nextState = "";
+                        string backState = "";
+                        string sqlState = "SELECT * FROM INV_State_List WHERE State_ID = @State_ID";
+                        using (SqlCommand cmdState = new SqlCommand(sqlState, conn, trans))
+                        {
+                            cmdState.Parameters.AddWithValue("@State_ID", stateId);
+                            using (SqlDataReader rdrState = cmdState.ExecuteReader())
+                            {
+                                if (rdrState.Read())
+                                {
+                                    nextState = rdrState["Next_State"].ToString();
+                                    backState = rdrState["Back_State"].ToString();
+                                }
+                            }
+                        }
+
+                        string targetState = (result == "PASS") ? nextState : backState;
+
+                        // 3. 更新 INV_DATA 狀態
+                        string sqlUpdateInv = "UPDATE INV_DATA SET INV_State = @TargetState WHERE FAC_ID = @FAC_ID AND INV_NO = @INV_NO";
+                        using (SqlCommand cmdUpdate = new SqlCommand(sqlUpdateInv, conn, trans))
+                        {
+                            cmdUpdate.Parameters.AddWithValue("@TargetState", targetState);
+                            cmdUpdate.Parameters.AddWithValue("@FAC_ID", facId);
+                            cmdUpdate.Parameters.AddWithValue("@INV_NO", invNo);
+                            cmdUpdate.ExecuteNonQuery();
+                        }
+
+                        trans.Commit();
+                    }
+                    catch
+                    {
+                        try { trans.Rollback(); } catch { }
+                        throw;
+                    }
                 }
 
-                string targetState = (result == "PASS") ? nextState : backState;
-
-                // 3. 更新 INV_DATA 狀態
-                string sqlUpdateInv = "UPDATE INV_DATA SET INV_State = @TargetState WHERE FAC_ID = @FAC_ID AND INV_NO = @INV_NO";
-                DbHelper.ExecuteNonQuery(sqlUpdateInv,
-                    new SqlParameter("@TargetState", targetState),
-                    new SqlParameter("@FAC_ID", facId),
-                    new SqlParameter("@INV_NO", invNo));
-
-                // 4. 複審通過 (targetState == "A01") 時與 INV_Mission 任務派遣連動
-                if (targetState == "A01")
+                // 4. 僅在「複審作業 (INV2)」且「審查通過 (PASS)」時，才與 INV_Mission 任務派遣連動更新
+                if (mode == "INV2" && result == "PASS")
                 {
                     UpdateMissionAfterDoubleReview(facId, invNo);
                 }

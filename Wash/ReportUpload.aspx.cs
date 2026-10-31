@@ -27,7 +27,43 @@ namespace NTPC_FEC.Wash
         {
             jsonSerializer.MaxJsonLength = int.MaxValue;
 
+            // Session Guard：未登入者阻斷
+            string currentUserId = Session["LoginUser"] != null ? Session["LoginUser"].ToString().Trim() : "";
             string action = Request["action"];
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                if (!string.IsNullOrEmpty(action))
+                {
+                    if (string.Equals(action, "download", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(action, "download_template", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Response.ContentType = "text/html; charset=utf-8";
+                        Response.Write("<script>alert('登入已逾期，請重新登入！'); window.close();</script>");
+                        Response.End();
+                        return;
+                    }
+                    else
+                    {
+                        Response.Clear();
+                        Response.ContentType = "application/json; charset=utf-8";
+                        Response.Write(jsonSerializer.Serialize(new
+                        {
+                            Success = false,
+                            NeedLogin = true,
+                            Message = "登入已逾期，請重新登入系統！"
+                        }));
+                        Response.End();
+                        return;
+                    }
+                }
+                else
+                {
+                    Response.Redirect("~/Default.aspx", true);
+                    return;
+                }
+            }
+
             if (!string.IsNullOrEmpty(action))
             {
                 Response.Clear();
@@ -35,6 +71,10 @@ namespace NTPC_FEC.Wash
                 try
                 {
                     HandleAjaxAction(action);
+                }
+                catch (System.Threading.ThreadAbortException)
+                {
+                    return;
                 }
                 catch (Exception ex)
                 {
@@ -44,9 +84,69 @@ namespace NTPC_FEC.Wash
                         Message = "系統處理失敗：" + ex.Message
                     }));
                 }
-                Response.End();
+                try
+                {
+                    Response.End();
+                }
+                catch (System.Threading.ThreadAbortException)
+                {
+                    return;
+                }
                 return;
             }
+        }
+
+        private bool GetUserInfo(out string userId, out string userFacId, out bool isManager, out string userName)
+        {
+            userId = Session["LoginUser"] != null ? Session["LoginUser"].ToString().Trim() : "";
+            userFacId = "";
+            isManager = false;
+            userName = userId;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return false;
+            }
+
+            UserAccount user = AuthService.GetCurrentUser(Context);
+            if (user != null)
+            {
+                userName = !string.IsNullOrEmpty(user.Name) ? user.Name : userId;
+                userFacId = !string.IsNullOrEmpty(user.FacID) ? user.FacID.Trim() : "";
+
+                // 檢查是否具有管理者或審查權限 (Lic 包含 9, 13, 14, 63 或無 FacID)
+                if ((user.Lic & (1L << 9)) != 0 || (user.Lic & (1L << 13)) != 0 || 
+                    (user.Lic & (1L << 14)) != 0 || (user.Lic & (1L << 63)) != 0 || 
+                    string.IsNullOrEmpty(userFacId))
+                {
+                    isManager = true;
+                }
+            }
+            else
+            {
+                string queryUserSql = "SELECT Name, FAC_ID, LIC FROM UserAcc WHERE UserID = @UserID";
+                var pList = new SqlParameter[] { new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId } };
+                DataTable userDt = DbHelper.ExecuteDataTable(queryUserSql, pList);
+                if (userDt != null && userDt.Rows.Count > 0)
+                {
+                    DataRow uRow = userDt.Rows[0];
+                    userName = uRow["Name"] != DBNull.Value ? uRow["Name"].ToString() : userId;
+                    userFacId = uRow["FAC_ID"] != DBNull.Value ? uRow["FAC_ID"].ToString().Trim() : "";
+                    long licVal = 0L;
+                    if (uRow["LIC"] != DBNull.Value)
+                    {
+                        long.TryParse(uRow["LIC"].ToString(), out licVal);
+                    }
+                    if ((licVal & (1L << 9)) != 0 || (licVal & (1L << 13)) != 0 || 
+                        (licVal & (1L << 14)) != 0 || (licVal & (1L << 63)) != 0 || 
+                        string.IsNullOrEmpty(userFacId))
+                    {
+                        isManager = true;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private void HandleAjaxAction(string action)
@@ -87,8 +187,9 @@ namespace NTPC_FEC.Wash
         // 1. 取得初始化資料：使用者身分、場所清單、年度與月份
         private void GetInitData()
         {
-            string userId = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "";
-            if (string.IsNullOrEmpty(userId))
+            string userId, userFacId, userName;
+            bool isManager;
+            if (!GetUserInfo(out userId, out userFacId, out isManager, out userName))
             {
                 Response.Write(jsonSerializer.Serialize(new
                 {
@@ -99,49 +200,7 @@ namespace NTPC_FEC.Wash
                 return;
             }
 
-            UserAccount user = AuthService.GetCurrentUser(Context);
-            bool isManager = false;
-            string userFacId = "";
             string userFacName = "";
-            string userName = userId;
-
-            if (user != null)
-            {
-                userName = !string.IsNullOrEmpty(user.Name) ? user.Name : userId;
-                userFacId = !string.IsNullOrEmpty(user.FacID) ? user.FacID.Trim() : "";
-
-                // 檢查是否具有管理者或審查權限 (Lic 包含 9, 13, 14, 63 或無 FacID)
-                if ((user.Lic & (1L << 9)) != 0 || (user.Lic & (1L << 13)) != 0 || 
-                    (user.Lic & (1L << 14)) != 0 || (user.Lic & (1L << 63)) != 0 || 
-                    string.IsNullOrEmpty(userFacId))
-                {
-                    isManager = true;
-                }
-            }
-            else
-            {
-                // 從資料庫查尋備援
-                string queryUserSql = "SELECT Name, FAC_ID, LIC FROM UserAcc WHERE UserID = @UserID";
-                var pList = new SqlParameter[] { new SqlParameter("@UserID", SqlDbType.VarChar) { Value = userId } };
-                DataTable userDt = DbHelper.ExecuteDataTable(queryUserSql, pList);
-                if (userDt != null && userDt.Rows.Count > 0)
-                {
-                    DataRow uRow = userDt.Rows[0];
-                    userName = uRow["Name"] != DBNull.Value ? uRow["Name"].ToString() : userId;
-                    userFacId = uRow["FAC_ID"] != DBNull.Value ? uRow["FAC_ID"].ToString().Trim() : "";
-                    long licVal = 0L;
-                    if (uRow["LIC"] != DBNull.Value)
-                    {
-                        long.TryParse(uRow["LIC"].ToString(), out licVal);
-                    }
-                    if ((licVal & (1L << 9)) != 0 || (licVal & (1L << 13)) != 0 || 
-                        (licVal & (1L << 14)) != 0 || (licVal & (1L << 63)) != 0 || 
-                        string.IsNullOrEmpty(userFacId))
-                    {
-                        isManager = true;
-                    }
-                }
-            }
 
             // 取得場所清單
             var facList = new List<FacOptionItem>();
@@ -256,12 +315,27 @@ namespace NTPC_FEC.Wash
             }));
         }
 
-        // 2. 檢查指定場所與年月是否已有上傳紀錄
+        // 2. 檢查指定場所與年月是否已有上傳紀錄 (IDOR 防護)
         private void CheckRecordExists()
         {
+            string userId, userFacId, userName;
+            bool isManager;
+            if (!GetUserInfo(out userId, out userFacId, out isManager, out userName))
+            {
+                Response.Write(jsonSerializer.Serialize(new { Success = false, NeedLogin = true, Message = "登入已逾時，請重新登入！" }));
+                return;
+            }
+
             string facId = Request["facId"];
             string yearStr = Request["year"];
             string monthStr = Request["month"];
+
+            // IDOR 隔離：非管理者不可查詢其他場所
+            if (!isManager && !string.Equals(facId, userFacId, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(jsonSerializer.Serialize(new { Success = false, Message = "您無權限查詢其他場所之申報紀錄！" }));
+                return;
+            }
 
             int year = 0, month = 0;
             int.TryParse(yearStr, out year);
@@ -335,9 +409,17 @@ namespace NTPC_FEC.Wash
             }));
         }
 
-        // 3. 取得歷史報表清單
+        // 3. 取得歷史報表清單 (IDOR 防護)
         private void GetHistoryRecords()
         {
+            string userId, userFacId, userName;
+            bool isManager;
+            if (!GetUserInfo(out userId, out userFacId, out isManager, out userName))
+            {
+                Response.Write(jsonSerializer.Serialize(new { Success = false, NeedLogin = true, Message = "登入已逾時，請重新登入！" }));
+                return;
+            }
+
             string facId = Request["facId"];
             string yearStr = Request["year"];
 
@@ -348,6 +430,13 @@ namespace NTPC_FEC.Wash
                     Success = false,
                     Message = "請先選擇公私場所！"
                 }));
+                return;
+            }
+
+            // IDOR 隔離：非管理者不可查詢其他場所
+            if (!isManager && !string.Equals(facId, userFacId, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(jsonSerializer.Serialize(new { Success = false, Message = "您無權限查詢其他場所之申報紀錄！" }));
                 return;
             }
 
@@ -430,15 +519,17 @@ namespace NTPC_FEC.Wash
             }));
         }
 
-        // 4. 執行上傳作業
+        // 4. 執行上傳作業 (IDOR 防護)
         private void UploadReportFile()
         {
-            string userId = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "";
-            if (string.IsNullOrEmpty(userId))
+            string userId, userFacId, userName;
+            bool isManager;
+            if (!GetUserInfo(out userId, out userFacId, out isManager, out userName))
             {
                 Response.Write(jsonSerializer.Serialize(new
                 {
                     Success = false,
+                    NeedLogin = true,
                     Message = "登入已逾期，請重新登入！"
                 }));
                 return;
@@ -457,6 +548,12 @@ namespace NTPC_FEC.Wash
             string facId = Request["facId"];
             string yearStr = Request["year"];
             string monthStr = Request["month"];
+
+            // IDOR 隔離：非管理者只能為自己場所上傳月報
+            if (!isManager)
+            {
+                facId = userFacId;
+            }
 
             int year = 0, month = 0;
             int.TryParse(yearStr, out year);
@@ -585,15 +682,17 @@ namespace NTPC_FEC.Wash
             }));
         }
 
-        // 5. 刪除上傳紀錄與檔案
+        // 5. 刪除上傳紀錄與檔案 (IDOR 防護)
         private void DeleteRecord()
         {
-            string userId = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "";
-            if (string.IsNullOrEmpty(userId))
+            string userId, userFacId, userName;
+            bool isManager;
+            if (!GetUserInfo(out userId, out userFacId, out isManager, out userName))
             {
                 Response.Write(jsonSerializer.Serialize(new
                 {
                     Success = false,
+                    NeedLogin = true,
                     Message = "登入已逾期，請重新登入！"
                 }));
                 return;
@@ -629,13 +728,27 @@ namespace NTPC_FEC.Wash
             }
 
             DataRow row = dt.Rows[0];
-            string facId = row["FAC_ID"].ToString();
+            string facId = row["FAC_ID"] != DBNull.Value ? row["FAC_ID"].ToString().Trim() : "";
+
+            // IDOR 防護：非管理員只能刪除自己場所的月報
+            if (!isManager && !string.Equals(facId, userFacId, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(jsonSerializer.Serialize(new
+                {
+                    Success = false,
+                    Message = "您無權限刪除其他場所的申報紀錄！"
+                }));
+                return;
+            }
+
             int year = Convert.ToInt32(row["uploadyear"]);
             int month = Convert.ToInt32(row["uploadmonth"]);
 
             // 刪除實體檔案
-            string dirPath = Server.MapPath(string.Format("~/Upload/WashPIC/{0}/月報", facId));
-            if (Directory.Exists(dirPath))
+            string cleanFacId = FileSecurityHelper.SanitizeFileName(facId);
+            string washPicBase = Server.MapPath("~/Upload/WashPIC");
+            string dirPath = Path.Combine(washPicBase, cleanFacId, "月報");
+            if (FileSecurityHelper.IsSafePath(washPicBase, dirPath) && Directory.Exists(dirPath))
             {
                 string searchPattern = string.Format("{0}年{1}月.*", year, month);
                 string[] files = Directory.GetFiles(dirPath, searchPattern);
@@ -657,12 +770,34 @@ namespace NTPC_FEC.Wash
             }));
         }
 
-        // 6. 下載報表檔案
+        // 6. 下載報表檔案 (IDOR 與路徑防護)
         private void DownloadReportFile()
         {
+            string userId, userFacId, userName;
+            bool isManager;
+            if (!GetUserInfo(out userId, out userFacId, out isManager, out userName))
+            {
+                Response.Clear();
+                Response.ContentType = "text/html; charset=utf-8";
+                Response.Write("<script>alert('登入已逾期，請重新登入！'); window.close();</script>");
+                Response.End();
+                return;
+            }
+
             string facId = Request["facId"];
             string yearStr = Request["year"];
             string monthStr = Request["month"];
+
+            // IDOR 防護：非管理員不可下載其他場所報表
+            if (!isManager && !string.Equals(facId, userFacId, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Clear();
+                Response.StatusCode = 403;
+                Response.ContentType = "text/html; charset=utf-8";
+                Response.Write("<script>alert('您無權限下載其他場所之月報！'); window.close();</script>");
+                Response.End();
+                return;
+            }
 
             int year = 0, month = 0;
             int.TryParse(yearStr, out year);
@@ -721,6 +856,17 @@ namespace NTPC_FEC.Wash
         // 下載空白範本 (洗掃街里程日誌(空白範本).pdf)
         private void DownloadTemplateFile()
         {
+            string userId, userFacId, userName;
+            bool isManager;
+            if (!GetUserInfo(out userId, out userFacId, out isManager, out userName))
+            {
+                Response.Clear();
+                Response.ContentType = "text/html; charset=utf-8";
+                Response.Write("<script>alert('登入已逾期，請重新登入！'); window.close();</script>");
+                Response.End();
+                return;
+            }
+
             string fileName = "洗掃街里程日誌(空白範本).pdf";
             string filePath = Server.MapPath("~/" + fileName);
             if (!File.Exists(filePath))

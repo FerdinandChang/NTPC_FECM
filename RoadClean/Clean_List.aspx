@@ -522,7 +522,7 @@
         <!-- 頂部品牌導覽列 (全站標準左側導航、右側主操作) -->
         <header class="top-navbar">
             <div class="d-flex align-items-center">
-                <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
                     <i class="fas fa-home"></i>
                     <span class="d-none d-sm-inline">回首頁</span>
                 </a>

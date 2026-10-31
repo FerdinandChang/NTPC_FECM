@@ -66,7 +66,36 @@ namespace NTPC_FEC.Wash
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Session Guard：最頂部登入驗證，全面攔截未授權之檔案下載、Excel匯出與Ajax請求
+            string uid = GetCurrentUserId();
             string action = Request["action"];
+
+            if (string.IsNullOrEmpty(uid))
+            {
+                if (!string.IsNullOrEmpty(action))
+                {
+                    if (string.Equals(action, "export", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(action, "exportexcel", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(action, "download", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Response.ContentType = "text/html; charset=utf-8";
+                        Response.Write("<script>alert('尚未登入或登入逾時，請重新登入！'); window.close();</script>");
+                        Response.End();
+                        return;
+                    }
+                    else
+                    {
+                        Response.Clear();
+                        Response.ContentType = "application/json; charset=utf-8";
+                        Response.Write(json.Serialize(new { Success = false, NeedLogin = true, Message = "尚未登入或登入逾時，請重新登入！" }));
+                        Response.End();
+                        return;
+                    }
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             if (!string.IsNullOrEmpty(action))
             {
                 if (string.Equals(action, "export", StringComparison.OrdinalIgnoreCase) ||
@@ -145,13 +174,6 @@ namespace NTPC_FEC.Wash
                 {
                 }
                 return;
-            }
-
-            // 一般頁面存取：檢查是否登入
-            string uid = GetCurrentUserId();
-            if (string.IsNullOrEmpty(uid))
-            {
-                Response.Redirect("~/Default.aspx", true);
             }
         }
 

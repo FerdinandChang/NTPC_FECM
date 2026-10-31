@@ -187,21 +187,12 @@
         }
 
         .module-main-title {
-            font-size: 1.35rem;
+            font-size: 1.55rem;
             font-weight: 800;
             letter-spacing: 0.8px;
             margin: 0;
+            line-height: 1.3;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .module-main-subtitle {
-            font-size: 0.82rem;
-            opacity: 0.9;
-            margin-top: 3px;
-            margin-bottom: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -468,11 +459,7 @@
             }
 
             .module-main-title {
-                font-size: 1.25rem;
-            }
-
-            .module-main-subtitle {
-                font-size: 0.78rem;
+                font-size: 1.38rem;
             }
 
             .module-card-body {
@@ -550,7 +537,6 @@
                         <div class="module-header-icon" v-html="mod.IconSvg"></div>
                         <div class="module-header-text">
                             <h3 class="module-main-title">{{ mod.Title }}</h3>
-                            <p class="module-main-subtitle">{{ mod.SubTitle }}</p>
                         </div>
                     </div>
 

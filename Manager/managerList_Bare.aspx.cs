@@ -33,6 +33,22 @@ namespace NTPC_FEC.Manager
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["LoginUser"] == null && Session["User_ID"] == null && Session["User"] == null)
+            {
+                string action0 = Request["action"];
+                if (!string.IsNullOrEmpty(action0))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時或尚未登入，請重新登入！", NeedLogin = true }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -79,7 +95,7 @@ namespace NTPC_FEC.Manager
             {
                 return Session["User_ID"].ToString();
             }
-            return "系統管理員";
+            return Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "Admin";
         }
 
         private void HandleAjaxAction(string action)

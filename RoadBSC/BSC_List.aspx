@@ -544,13 +544,13 @@
                 <!-- 頂部品牌導覽列 (全站標準左側導航、右側主操作) -->
         <header class="top-navbar">
             <div class="d-flex align-items-center">
-                <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
+                <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
                     <i class="fas fa-home"></i>
                     <span class="d-none d-sm-inline">回首頁</span>
                 </a>
                 <a href="BSC_List.aspx" class="navbar-brand-title">
                     <i class="fas fa-seedling text-white"></i>
-                    <span>車行路段翻轉空污防制管理</span>
+                    <span>人行道與交通島防制管理</span>
                     <span class="badge badge-light text-dark font-weight-bold ml-1">
                         {{ counts.Total || 0 }} 筆
                     </span>
@@ -559,7 +559,7 @@
             <div class="d-flex align-items-center gap-2">
                 <a href="NewBSC.aspx?mode=new" class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2">
                     <i class="fas fa-plus-circle mr-1"></i>
-                    <span class="d-none d-sm-inline">新增路段巡查</span>
+                    <span class="d-none d-sm-inline">新增現場通報</span>
                 </a>
             </div>
         </header>

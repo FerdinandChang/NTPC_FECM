@@ -624,7 +624,7 @@
             <!-- 頂部導覽列 (左上角返回首頁，清爽專業無雜訊) -->
             <div class="top-navbar">
                 <div class="d-flex align-items-center" style="min-width: 0;">
-                    <a href="/NTPC_FECM/MainPage.aspx" class="nav-btn mr-2 mr-md-3">
+                    <a href="../MainPage.aspx" class="nav-btn mr-2 mr-md-3">
                         <i class="fas fa-chevron-left mr-1"></i><span class="d-none d-sm-inline">返回首頁</span><span class="d-inline d-sm-none">首頁</span>
                     </a>
                     <div class="brand-title text-truncate">

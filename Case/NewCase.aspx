@@ -1,22 +1,20 @@
 ﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="NewCase.aspx.cs" Inherits="NTPC_FEC.Case.NewCase" %>
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
     <title>新北市固定逸散源管理平台 - 固定污染源逸散防制設施巡查記錄表</title>
-
-    <!-- 專屬 Favicon -->
+    
+<!-- 專屬 Favicon -->
     <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon" />
-
-    <!-- Bootstrap 4 & FontAwesome 本地化樣式 -->
+    
+<!-- Bootstrap 4 & FontAwesome 本地化樣式 -->
     <link rel="stylesheet" href="../Content/bootstrap.min.css" />
     <link rel="stylesheet" href="../Content/fontawesome/css/all.min.css" />
-
-    <!-- Leaflet.js 本地化樣式 -->
+    
+<!-- Leaflet.js 本地化樣式 -->
     <link rel="stylesheet" href="../Content/leaflet/leaflet.css" />
-
     <style>
         :root {
             --brand-primary: #0099e5;
@@ -29,12 +27,10 @@
             --text-main: #0f172a;
             --text-muted: #64748b;
         }
-
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", "微軟正黑體", sans-serif;
             background-color: var(--bg-canvas);
@@ -43,11 +39,9 @@
             color: var(--text-main);
             overflow-x: hidden;
         }
-
         [v-cloak] {
             display: none !important;
         }
-
         /* 置頂導覽列 */
         .top-navbar {
             background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
@@ -62,7 +56,6 @@
             top: 0;
             z-index: 1020;
         }
-
         .nav-btn {
             background: rgba(255, 255, 255, 0.18);
             border: none;
@@ -80,13 +73,11 @@
             transition: all 0.2s;
             text-decoration: none;
         }
-
         .nav-btn:hover {
             background-color: rgba(255, 255, 255, 0.32);
             color: #ffffff;
             text-decoration: none;
         }
-
         .brand-title {
             font-size: 1.05rem;
             font-weight: 700;
@@ -94,15 +85,27 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
         }
-
+        @media (max-width: 576px) {
+            .brand-title {
+                font-size: 0.95rem;
+                gap: 6px;
+            }
+            .top-navbar {
+                padding: 0 10px;
+            }
+            .nav-btn {
+                padding: 0 10px;
+                font-size: 0.88rem;
+            }
+        }
         /* 主容器佈局 */
         .container-fluid-custom {
             max-width: 1560px;
             margin: 0 auto;
             padding: 16px;
         }
-
         /* 現代卡片 */
         .card-modern {
             background: var(--surface);
@@ -113,7 +116,6 @@
             overflow: hidden;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-
         .card-modern-header {
             padding: 12px 16px;
             background: #ffffff;
@@ -122,7 +124,6 @@
             align-items: center;
             justify-content: space-between;
         }
-
         .card-modern-title {
             font-size: 1rem;
             font-weight: 700;
@@ -132,11 +133,9 @@
             align-items: center;
             gap: 8px;
         }
-
         .card-modern-body {
             padding: 16px;
         }
-
         /* 桌面端左欄固頂 */
         @media screen and (min-width: 1200px) {
             .sticky-sidebar {
@@ -147,7 +146,6 @@
                 padding-right: 4px;
             }
         }
-
         /* 地圖控制與收合 */
         #map {
             width: 100%;
@@ -156,18 +154,15 @@
             z-index: 10;
             transition: height 0.3s ease;
         }
-
         #map.map-collapsed {
             height: 80px !important;
         }
-
         /* 記點晶片儀表板 */
         .loss-badge-score {
             font-size: 1.6rem;
             font-weight: 800;
             line-height: 1;
         }
-
         /* 項目記點切換晶片 (Score Chips) */
         .chip-group {
             display: flex;
@@ -175,7 +170,6 @@
             gap: 8px;
             margin-bottom: 12px;
         }
-
         .score-chip-btn {
             border: 1px solid #cbd5e1;
             background: #ffffff;
@@ -191,12 +185,10 @@
             min-height: 40px;
             transition: all 0.15s ease;
         }
-
         .score-chip-btn:hover {
             border-color: #94a3b8;
             background-color: #f8fafc;
         }
-
         .score-chip-btn.active-0 {
             background: #ecfdf5;
             border-color: #10b981;
@@ -204,7 +196,6 @@
             font-weight: 700;
             box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
         }
-
         .score-chip-btn.active-4 {
             background: #fffbeb;
             border-color: #f59e0b;
@@ -212,7 +203,6 @@
             font-weight: 700;
             box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
         }
-
         .score-chip-btn.active-10 {
             background: #fef2f2;
             border-color: #ef4444;
@@ -220,7 +210,6 @@
             font-weight: 700;
             box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
         }
-
         /* 缺失細項勾選面板 */
         .subitem-box {
             background: #f8fafc;
@@ -229,7 +218,6 @@
             padding: 12px 14px;
             margin-bottom: 12px;
         }
-
         .custom-chk-row {
             display: flex;
             align-items: flex-start;
@@ -237,11 +225,9 @@
             padding: 6px 0;
             border-bottom: 1px dashed #e2e8f0;
         }
-
         .custom-chk-row:last-child {
             border-bottom: none;
         }
-
         .custom-chk-row input[type="checkbox"] {
             width: 18px;
             height: 18px;
@@ -249,7 +235,6 @@
             cursor: pointer;
             accent-color: #0284c7;
         }
-
         .custom-chk-label {
             font-size: 13.5px;
             color: #334155;
@@ -258,12 +243,10 @@
             line-height: 1.5;
             flex: 1;
         }
-
         .child-chk-group {
             padding-left: 28px;
             margin-top: 4px;
         }
-
         /* 照片上傳卡片與預覽 */
         .photo-upload-section {
             display: grid;
@@ -271,7 +254,6 @@
             gap: 12px;
             margin-top: 10px;
         }
-
         .photo-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -281,7 +263,6 @@
             flex-direction: column;
             gap: 6px;
         }
-
         .photo-card-title {
             font-size: 12.5px;
             font-weight: 700;
@@ -290,7 +271,6 @@
             align-items: center;
             justify-content: space-between;
         }
-
         .photo-thumb-box {
             width: 100%;
             height: 140px;
@@ -304,26 +284,22 @@
             overflow: hidden;
             cursor: pointer;
         }
-
         .photo-thumb-img {
             width: 100%;
             height: 140px;
             object-fit: cover;
             border-radius: 6px;
         }
-
         .photo-btn-group {
             display: flex;
             gap: 6px;
             margin-top: 4px;
         }
-
         .photo-btn-group .btn {
             flex: 1;
             font-size: 11px;
             padding: 4px 6px;
         }
-
         /* 現場狀況開關 (Segmented Yes/No) */
         .status-toggle-row {
             display: flex;
@@ -335,7 +311,6 @@
             padding: 8px 12px;
             margin-bottom: 8px;
         }
-
         .segmented-group {
             display: inline-flex;
             background: #e2e8f0;
@@ -343,7 +318,6 @@
             border-radius: 8px;
             gap: 2px;
         }
-
         .segment-btn {
             border: none;
             background: transparent;
@@ -355,25 +329,21 @@
             cursor: pointer;
             min-height: 32px;
         }
-
         .segment-btn.active-blue {
             background: #0284c7;
             color: #ffffff;
             box-shadow: 0 1px 4px rgba(2, 132, 199, 0.35);
         }
-
         .segment-btn.active-yes {
             background: #10b981;
             color: #ffffff;
             box-shadow: 0 1px 4px rgba(16, 185, 129, 0.35);
         }
-
         .segment-btn.active-no {
             background: #64748b;
             color: #ffffff;
             box-shadow: 0 1px 4px rgba(100, 116, 139, 0.35);
         }
-
         /* 全螢幕平滑手寫簽名板 */
         .sig-modal-backdrop {
             position: fixed;
@@ -389,7 +359,6 @@
             justify-content: center;
             padding: 12px;
         }
-
         .sig-modal-container {
             background: #ffffff;
             border-radius: 12px;
@@ -400,7 +369,6 @@
             display: flex;
             flex-direction: column;
         }
-
         .sig-canvas-wrapper {
             background: #f8fafc;
             border: 2px dashed #94a3b8;
@@ -410,20 +378,17 @@
             touch-action: none;
             position: relative;
         }
-
         #sigCanvas {
             width: 100%;
             height: 100%;
             display: block;
             cursor: crosshair;
         }
-
         /* 手機底部懸浮列 */
         @media screen and (max-width: 991px) {
             body {
                 padding-bottom: 76px;
             }
-
             .mobile-bottom-bar {
                 display: flex;
                 position: fixed;
@@ -438,7 +403,6 @@
                 padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
                 gap: 10px;
             }
-
             .mobile-bottom-bar .btn {
                 flex: 1;
                 font-weight: 700;
@@ -446,7 +410,6 @@
                 border-radius: 8px;
             }
         }
-
         /* 模態彈窗 (設備/製程清單) */
         .modal-custom-backdrop {
             position: fixed;
@@ -461,7 +424,6 @@
             justify-content: center;
             padding: 16px;
         }
-
         .modal-custom-box {
             background: #ffffff;
             border-radius: 12px;
@@ -473,12 +435,10 @@
             overflow: hidden;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
-
         .modal-custom-body {
             padding: 16px;
             overflow-y: auto;
         }
-
         /* 燈箱大圖預覽 */
         .lightbox-modal {
             position: fixed;
@@ -494,18 +454,20 @@
             padding: 16px;
             cursor: zoom-out;
         }
-
         .lightbox-img {
             max-width: 95vw;
             max-height: 90vh;
             border-radius: 8px;
             box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
         }
-    </style>
+    
+</style>
 </head>
+
 <body>
     <div id="newCaseApp" v-cloak>
-        <!-- 1. 置頂深青藍漸層導覽列 -->
+        
+<!-- 1. 置頂深青藍漸層導覽列 -->
         <header class="top-navbar no-print">
             <div class="d-flex align-items-center">
                 <a href="javascript:void(0)" class="nav-btn mr-2" v-on:click="goBack">
@@ -515,15 +477,8 @@
                 <h1 class="brand-title">
                     <i class="fas fa-industry text-white"></i>
                     <span>公私場所現場巡查記錄表</span>
-                    <span v-if="facInfo.C_NO" class="badge badge-light text-dark font-weight-bold ml-1" style="font-size: 0.82rem;">
-                        {{ facInfo.C_NO }}
-                    </span>
-                    <span class="badge ml-1" :class="mode === 'new_re' ? 'badge-warning' : (mode === 'edit' ? 'badge-info' : 'badge-primary')" style="font-size: 0.78rem;">
-                        {{ mode === 'new_re' ? '改善複查' : (mode === 'edit' ? ('編輯查核 #' + invNo) : '例行巡查') }}
-                    </span>
                 </h1>
             </div>
-
             <div class="d-flex align-items-center gap-2">
                 <button type="button" class="nav-btn d-none d-md-inline-flex" v-on:click="quickPassAll" title="一鍵全部合格">
                     <i class="fas fa-bolt text-warning"></i>
@@ -535,26 +490,29 @@
                 </button>
             </div>
         </header>
-
-        <!-- 主作業容器 -->
+        
+<!-- 主作業容器 -->
         <main class="container-fluid-custom">
-            <!-- 載入中骨架屏遮罩 -->
+            
+<!-- 載入中骨架屏遮罩 -->
             <div v-if="loading" class="text-center py-5">
                 <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
                 <div class="text-muted mt-2 font-weight-bold">正在載入公私場所查核資料，請稍候...</div>
             </div>
-
-            <!-- 錯誤提示 -->
+            
+<!-- 錯誤提示 -->
             <div v-if="errorMessage" class="alert alert-danger shadow-sm mb-3">
                 <i class="fas fa-exclamation-triangle mr-2"></i> {{ errorMessage }}
             </div>
-
-            <!-- 主雙欄內容 -->
+            
+<!-- 主雙欄內容 -->
             <div v-if="!loading" class="row">
-                <!-- 左欄 (40% 寬度，Sticky 固頂側欄) -->
+                
+<!-- 左欄 (40% 寬度，Sticky 固頂側欄) -->
                 <div class="col-xl-5 col-lg-5 col-md-12 mb-3">
                     <div class="sticky-sidebar">
-                        <!-- A. 場所基本資料卡片 -->
+                        
+<!-- A. 場所基本資料卡片 -->
                         <div class="card-modern">
                             <div class="card-modern-header">
                                 <h3 class="card-modern-title">
@@ -591,8 +549,8 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- B. 智慧現場地圖卡片 (Leaflet.js) -->
+                        
+<!-- B. 智慧現場地圖卡片 (Leaflet.js) -->
                         <div class="card-modern">
                             <div class="card-modern-header">
                                 <h3 class="card-modern-title">
@@ -622,8 +580,8 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- C. 即時計點儀表板 (Loss Point Dashboard) -->
+                        
+<!-- C. 即時計點儀表板 (Loss Point Dashboard) -->
                         <div class="card-modern border-top-primary">
                             <div class="card-modern-header bg-light">
                                 <h3 class="card-modern-title">
@@ -657,8 +615,8 @@
                                         </span>
                                     </div>
                                 </div>
-
-                                <!-- 各大項記點微縮膠囊 -->
+                                
+<!-- 各大項記點微縮膠囊 -->
                                 <div class="d-flex flex-wrap gap-1">
                                     <div v-for="sec in sectionLossList" :key="sec.id" class="badge p-1 px-2 font-weight-normal border"
                                          :class="sec.loss > 0 ? (sec.loss >= 10 ? 'badge-danger' : 'badge-warning text-dark') : 'badge-light text-muted'">
@@ -667,8 +625,8 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- D. 電子簽名板卡片 -->
+                        
+<!-- D. 電子簽名板卡片 -->
                         <div class="card-modern">
                             <div class="card-modern-header">
                                 <h3 class="card-modern-title">
@@ -700,10 +658,11 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- 右欄 (60% 寬度，主檢核作業區) -->
+                
+<!-- 右欄 (60% 寬度，主檢核作業區) -->
                 <div class="col-xl-7 col-lg-7 col-md-12">
-                    <!-- 1. 查核基本設定卡片 -->
+                    
+<!-- 1. 查核基本設定卡片 -->
                     <div class="card-modern">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -746,8 +705,8 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- 2. 審查意見歷程卡片 (若有退回或審查紀錄) -->
+                    
+<!-- 2. 審查意見歷程卡片 (若有退回或審查紀錄) -->
                     <div v-if="reviewList.length > 0" class="card-modern border-warning">
                         <div class="card-modern-header bg-warning text-dark py-2">
                             <h3 class="card-modern-title font-weight-bold" style="font-size: 0.95rem;">
@@ -777,10 +736,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- 3. 十一大項防制措施卡片清單 -->
-
-                    <!-- 項目一：堆置逸散性粒狀污染物質 (第4條) -->
+                    
+<!-- 3. 十一大項防制措施卡片清單 -->
+                    
+<!-- 項目一：堆置逸散性粒狀污染物質 (第4條) -->
                     <div class="card-modern" :id="'sec-01'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -806,8 +765,8 @@
                                     <i class="fas fa-times-circle"></i> 未設置防制設施 (10點)
                                 </button>
                             </div>
-
-                            <!-- 替代方法說明 (若勾選 01_03) -->
+                            
+<!-- 替代方法說明 (若勾選 01_03) -->
                             <div class="custom-chk-row">
                                 <input type="checkbox" id="chk_01_03" v-model="chkForm.INV_01_03" v-on:change="onChkChange('INV_01_03')" />
                                 <label for="chk_01_03" class="custom-chk-label">
@@ -815,8 +774,8 @@
                                 </label>
                             </div>
                             <input v-if="chkForm.INV_01_03" type="text" class="form-control form-control-sm mb-2" placeholder="請輸入核定替代方法說明..." v-model="form.INV_01_03_Memo" />
-
-                            <!-- 10點缺失選項 -->
+                            
+<!-- 10點缺失選項 -->
                             <div v-if="getSectionLoss(1) === 10" class="subitem-box border-danger">
                                 <strong class="text-danger small d-block mb-1">重大缺失 (10點)：</strong>
                                 <div class="custom-chk-row">
@@ -828,8 +787,8 @@
                                     <label for="chk_01_05" class="custom-chk-label">B2 未依直轄市、主管機關同意後之替代方法執行</label>
                                 </div>
                             </div>
-
-                            <!-- 4點缺失選項 -->
+                            
+<!-- 4點缺失選項 -->
                             <div v-if="getSectionLoss(1) === 4" class="subitem-box border-warning">
                                 <strong class="text-warning small d-block mb-1">規格缺失原因 (4點)：</strong>
                                 <div class="custom-chk-row">
@@ -846,7 +805,6 @@
                                     <div class="custom-chk-row"><input type="checkbox" id="chk_01_09c" v-model="chkForm.INV_01_09c" v-on:change="onSubChk('INV_01_09', 'INV_01_09c')" /><label for="chk_01_09c" class="custom-chk-label">3. 破損面積達百分之十以上</label></div>
                                     <div class="custom-chk-row"><input type="checkbox" id="chk_01_09d" v-model="chkForm.INV_01_09d" v-on:change="onSubChk('INV_01_09', 'INV_01_09d')" /><label for="chk_01_09d" class="custom-chk-label">4. 體積3000立方公尺以上未符規定</label></div>
                                 </div>
-
                                 <div class="custom-chk-row">
                                     <input type="checkbox" id="chk_01_10" v-model="chkForm.INV_01_10" v-on:change="toggleGroup('INV_01_10', ['INV_01_10a', 'INV_01_10b'])" />
                                     <label for="chk_01_10" class="custom-chk-label font-weight-bold">C3 採覆蓋防塵布或防塵網者：</label>
@@ -855,7 +813,6 @@
                                     <div class="custom-chk-row"><input type="checkbox" id="chk_01_10a" v-model="chkForm.INV_01_10a" v-on:change="onSubChk('INV_01_10', 'INV_01_10a')" /><label for="chk_01_10a" class="custom-chk-label">1. 覆蓋面積未達 80%</label></div>
                                     <div class="custom-chk-row"><input type="checkbox" id="chk_01_10b" v-model="chkForm.INV_01_10b" v-on:change="onSubChk('INV_01_10', 'INV_01_10b')" /><label for="chk_01_10b" class="custom-chk-label">2. 三級防制區未達 90%</label></div>
                                 </div>
-
                                 <div class="custom-chk-row">
                                     <input type="checkbox" id="chk_01_11" v-model="chkForm.INV_01_11" v-on:change="toggleGroup('INV_01_11', ['INV_01_11a', 'INV_01_11b', 'INV_01_11c'])" />
                                     <label for="chk_01_11" class="custom-chk-label font-weight-bold">C4 採噴灑化學穩定劑者：</label>
@@ -865,7 +822,6 @@
                                     <div class="custom-chk-row"><input type="checkbox" id="chk_01_11c" v-model="chkForm.INV_01_11c" v-on:change="onSubChk('INV_01_11', 'INV_01_11c')" /><label for="chk_01_11c" class="custom-chk-label">2. 三級防制區未達 90%</label></div>
                                     <div class="custom-chk-row"><input type="checkbox" id="chk_01_11b" v-model="chkForm.INV_01_11b" v-on:change="onSubChk('INV_01_11', 'INV_01_11b')" /><label for="chk_01_11b" class="custom-chk-label">3. 未依第十條記錄施作與保存憑證</label></div>
                                 </div>
-
                                 <div class="custom-chk-row">
                                     <input type="checkbox" id="chk_01_12" v-model="chkForm.INV_01_12" v-on:change="toggleGroup('INV_01_12', ['INV_01_12a', 'INV_01_12b', 'INV_01_12c'])" />
                                     <label for="chk_01_12" class="custom-chk-label font-weight-bold">C5 採設置自動灑水設備者：</label>
@@ -875,7 +831,6 @@
                                     <div class="custom-chk-row"><input type="checkbox" id="chk_01_12b" v-model="chkForm.INV_01_12b" v-on:change="onSubChk('INV_01_12', 'INV_01_12b')" /><label for="chk_01_12b" class="custom-chk-label">2. 需人工操作無法自動灑水</label></div>
                                     <div class="custom-chk-row"><input type="checkbox" id="chk_01_12c" v-model="chkForm.INV_01_12c" v-on:change="onSubChk('INV_01_12', 'INV_01_12c')" /><label for="chk_01_12c" class="custom-chk-label">3. 未設水表每日記錄用水量</label></div>
                                 </div>
-
                                 <div class="custom-chk-row">
                                     <input type="checkbox" id="chk_01_14" v-model="chkForm.INV_01_14" v-on:change="onChkChange('INV_01_14')" />
                                     <label for="chk_01_14" class="custom-chk-label">C6 效果優於設施但未依同意方式完整執行</label>
@@ -885,8 +840,8 @@
                                     <label for="chk_01_13" class="custom-chk-label">C7 四周未設置阻隔防溢座或物料掉落溢流至區外</label>
                                 </div>
                             </div>
-
-                            <!-- 項目一現場照片拍攝與上傳 -->
+                            
+<!-- 項目一現場照片拍攝與上傳 -->
                             <div class="photo-upload-section">
                                 <photo-box title="堆置逸散照片 1" photo-key="堆罝逸散性粒狀污染物質" memo-key="FileMemo_1" :parent="this"></photo-box>
                                 <photo-box title="堆置逸散照片 2" photo-key="堆罝逸散性粒狀污染物質_2" memo-key="FileMemo_1a" :parent="this"></photo-box>
@@ -896,8 +851,8 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目二：輸送逸散性粒狀污染物質 (第5條) -->
+                    
+<!-- 項目二：輸送逸散性粒狀污染物質 (第5條) -->
                     <div class="card-modern" :id="'sec-02'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -926,18 +881,15 @@
                                     <i class="fas fa-times-circle"></i> 未設置 (10點)
                                 </button>
                             </div>
-
                             <div class="custom-chk-row">
                                 <input type="checkbox" id="chk_02_04" v-model="chkForm.INV_02_04" v-on:change="onChkChange('INV_02_04')" />
                                 <label for="chk_02_04" class="custom-chk-label">A3 依替代方法設置或採行防制設施</label>
                             </div>
                             <input v-if="chkForm.INV_02_04" type="text" class="form-control form-control-sm mb-2" placeholder="請輸入核定替代方法說明..." v-model="form.INV_02_04_Memo" />
-
                             <div v-if="getSectionLoss(2) === 10" class="subitem-box border-danger">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_02_05" v-model="chkForm.INV_02_05" v-on:change="onChkChange('INV_02_05')" /><label for="chk_02_05" class="custom-chk-label">B1 未設置防制設施之一</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_02_06" v-model="chkForm.INV_02_06" v-on:change="onChkChange('INV_02_06')" /><label for="chk_02_06" class="custom-chk-label">B2 未依同意替代方法執行</label></div>
                             </div>
-
                             <div v-if="getSectionLoss(2) === 4" class="subitem-box border-warning">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_02_07" v-model="chkForm.INV_02_07" v-on:change="onChkChange('INV_02_07')" /><label for="chk_02_07" class="custom-chk-label">C1 於封閉式建築物內操作未符規定</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_02_08" v-model="chkForm.INV_02_08" v-on:change="onChkChange('INV_02_08')" /><label for="chk_02_08" class="custom-chk-label">C2 密閉式輸送系統未完全密閉或破損</label></div>
@@ -953,15 +905,14 @@
                                     <div class="custom-chk-row"><input type="checkbox" id="chk_02_10c" v-model="chkForm.INV_02_10c" v-on:change="onSubChk('INV_02_10', 'INV_02_10c')" /><label for="chk_02_10c" class="custom-chk-label">3. 未設水表每日記錄用水量</label></div>
                                 </div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="輸送逸散照片 1" photo-key="輸送逸散性粒狀污染物質" memo-key="FileMemo_2" :parent="this"></photo-box>
                                 <photo-box title="輸送逸散照片 2" photo-key="輸送逸散性粒狀污染物質_2" memo-key="FileMemo_2a" :parent="this"></photo-box>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目三：車輛運輸逸散性粒狀污染物質-運輸車輛 (第6條第1款) -->
+                    
+<!-- 項目三：車輛運輸逸散性粒狀污染物質-運輸車輛 (第6條第1款) -->
                     <div class="card-modern" :id="'sec-03'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -987,32 +938,28 @@
                                     <i class="fas fa-times-circle"></i> 未設置 (10點)
                                 </button>
                             </div>
-
                             <div class="custom-chk-row">
                                 <input type="checkbox" id="chk_03_03" v-model="chkForm.INV_03_03" v-on:change="onChkChange('INV_03_03')" />
                                 <label for="chk_03_03" class="custom-chk-label">A2 依替代方法設置或採行防制設施</label>
                             </div>
                             <input v-if="chkForm.INV_03_03" type="text" class="form-control form-control-sm mb-2" placeholder="請輸入替代方法說明..." v-model="form.INV_03_03_Memo" />
-
                             <div v-if="getSectionLoss(3) === 10" class="subitem-box border-danger">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_03_04" v-model="chkForm.INV_03_04" v-on:change="onChkChange('INV_03_04')" /><label for="chk_03_04" class="custom-chk-label">B1 運輸車輛未使用密閉式貨箱或未緊密覆蓋</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_03_05" v-model="chkForm.INV_03_05" v-on:change="onChkChange('INV_03_05')" /><label for="chk_03_05" class="custom-chk-label">B2 貨箱未具防滴落污水污泥之功能或設施</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_03_06" v-model="chkForm.INV_03_06" v-on:change="onChkChange('INV_03_06')" /><label for="chk_03_06" class="custom-chk-label">B3 未依主管機關同意替代方法執行</label></div>
                             </div>
-
                             <div v-if="getSectionLoss(3) === 4" class="subitem-box border-warning">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_03_07" v-model="chkForm.INV_03_07" v-on:change="onChkChange('INV_03_07')" /><label for="chk_03_07" class="custom-chk-label">C1 封蓋未緊密覆蓋 (邊緣未延伸覆蓋至貨箱上緣15公分以下)</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_03_08" v-model="chkForm.INV_03_08" v-on:change="onChkChange('INV_03_08')" /><label for="chk_03_08" class="custom-chk-label">C2 具有設施但運輸過程仍滴落污水、污泥或掉落物料於地面</label></div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="運輸車輛照片 1" photo-key="運輸車輛" memo-key="FileMemo_3" :parent="this"></photo-box>
                                 <photo-box title="運輸車輛照片 2" photo-key="運輸車輛_2" memo-key="FileMemo_3a" :parent="this"></photo-box>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目四：車輛通行路徑及區域 (第6條第2款) -->
+                    
+<!-- 項目四：車輛通行路徑及區域 (第6條第2款) -->
                     <div class="card-modern" :id="'sec-04'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -1038,32 +985,28 @@
                                     <i class="fas fa-times-circle"></i> 未設置 (10點)
                                 </button>
                             </div>
-
                             <div class="custom-chk-row">
                                 <input type="checkbox" id="chk_04_03" v-model="chkForm.INV_04_03" v-on:change="onChkChange('INV_04_03')" />
                                 <label for="chk_04_03" class="custom-chk-label">A2 依替代方法設置或採行防制設施</label>
                             </div>
                             <input v-if="chkForm.INV_04_03" type="text" class="form-control form-control-sm mb-2" placeholder="請輸入替代方法說明..." v-model="form.INV_04_03_Memo" />
-
                             <div v-if="getSectionLoss(4) === 10" class="subitem-box border-danger">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_04_04" v-model="chkForm.INV_04_04" v-on:change="onChkChange('INV_04_04')" /><label for="chk_04_04" class="custom-chk-label">B1 通行路徑及區域未依規定設置防制設施</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_04_05" v-model="chkForm.INV_04_05" v-on:change="onChkChange('INV_04_05')" /><label for="chk_04_05" class="custom-chk-label">B2 未依同意替代方法執行</label></div>
                             </div>
-
                             <div v-if="getSectionLoss(4) === 4" class="subitem-box border-warning">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_04_06" v-model="chkForm.INV_04_06" v-on:change="onChkChange('INV_04_06')" /><label for="chk_04_06" class="custom-chk-label">C1 設置或採行防制設施面積不足</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_04_07" v-model="chkForm.INV_04_07" v-on:change="onChkChange('INV_04_07')" /><label for="chk_04_07" class="custom-chk-label">C2 舖設混凝土瀝青鋼板惟有路面色差</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_04_08" v-model="chkForm.INV_04_08" v-on:change="onChkChange('INV_04_08')" /><label for="chk_04_08" class="custom-chk-label">C3 粗級配粒料厚度不足或未灑水保持濕潤</label></div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="通行路徑照片 1" photo-key="車輛通行路徑" memo-key="FileMemo_4" :parent="this"></photo-box>
                                 <photo-box title="通行路徑照片 2" photo-key="車輛通行路徑_2" memo-key="FileMemo_4a" :parent="this"></photo-box>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目五：車輛清洗 (第6條第3款) 與洗車設備規格 -->
+                    
+<!-- 項目五：車輛清洗 (第6條第3款) 與洗車設備規格 -->
                     <div class="card-modern" :id="'sec-05'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -1089,27 +1032,24 @@
                                     <i class="fas fa-times-circle"></i> 未設置 (10點)
                                 </button>
                             </div>
-
                             <div class="custom-chk-row">
                                 <input type="checkbox" id="chk_05_03" v-model="chkForm.INV_05_03" v-on:change="onChkChange('INV_05_03')" />
                                 <label for="chk_05_03" class="custom-chk-label">A2 依替代方法設置或採行防制設施</label>
                             </div>
                             <input v-if="chkForm.INV_05_03" type="text" class="form-control form-control-sm mb-2" placeholder="請輸入替代方法說明..." v-model="form.INV_05_03_Memo" />
-
                             <div v-if="getSectionLoss(5) === 10" class="subitem-box border-danger">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_05_04" v-model="chkForm.INV_05_04" v-on:change="onChkChange('INV_05_04')" /><label for="chk_05_04" class="custom-chk-label">B1 未依規定以加壓沖洗設備清洗車體及輪胎</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_05_06" v-model="chkForm.INV_05_06" v-on:change="onChkChange('INV_05_06')" /><label for="chk_05_06" class="custom-chk-label">B2 未依同意替代方法執行</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_05_05" v-model="chkForm.INV_05_05" v-on:change="onChkChange('INV_05_05')" /><label for="chk_05_05" class="custom-chk-label">B3 須洗掃鄰接道路並設自動洗車設備而未依規定洗掃或設置</label></div>
                             </div>
-
                             <div v-if="getSectionLoss(5) === 4" class="subitem-box border-warning">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_05_07" v-model="chkForm.INV_05_07" v-on:change="onChkChange('INV_05_07')" /><label for="chk_05_07" class="custom-chk-label">C1 運輸車輛未清洗乾淨致門口路面有帶出污泥物料</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_05_08" v-model="chkForm.INV_05_08" v-on:change="onChkChange('INV_05_08')" /><label for="chk_05_08" class="custom-chk-label">C2 洗車設備無加壓沖洗功能</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_05_09" v-model="chkForm.INV_05_09" v-on:change="onChkChange('INV_05_09')" /><label for="chk_05_09" class="custom-chk-label">C3 自動洗車設備規格未符附表二規定</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_05_10" v-model="chkForm.INV_05_10" v-on:change="onChkChange('INV_05_10')" /><label for="chk_05_10" class="custom-chk-label">C4 未設水表電表並記錄用水或用電度數</label></div>
                             </div>
-
-                            <!-- 洗車設備規格面板 -->
+                            
+<!-- 洗車設備規格面板 -->
                             <div class="card bg-light border p-3 mt-3">
                                 <h6 class="font-weight-bold text-dark mb-2">
                                     <i class="fas fa-tools text-primary mr-1"></i> 洗車設備規格與查核填報
@@ -1126,7 +1066,6 @@
                                             </button>
                                         </div>
                                     </div>
-
                                     <div class="col-md-3 col-6 mb-2">
                                         <label class="small text-muted font-weight-bold">洗車台長度 (公尺)</label>
                                         <input type="number" step="0.1" class="form-control form-control-sm" v-model="form.WashCar_Length" placeholder="長度" />
@@ -1151,7 +1090,6 @@
                                         <label class="small text-muted font-weight-bold">加壓馬達 (馬力)</label>
                                         <input type="number" step="0.1" class="form-control form-control-sm" v-model="form.MotorHP" placeholder="HP" />
                                     </div>
-
                                     <div class="col-md-6 col-12 mb-2">
                                         <label class="small text-muted font-weight-bold">提醒駕駛人停等洗車警語</label>
                                         <div class="segmented-group d-flex w-100">
@@ -1159,7 +1097,6 @@
                                             <button type="button" class="segment-btn flex-fill" :class="{ 'active-no': form.WarningWashCar === '無' }" v-on:click="form.WarningWashCar = '無'">無</button>
                                         </div>
                                     </div>
-
                                     <div class="col-md-6 col-12 mb-2">
                                         <label class="small text-muted font-weight-bold">洗車設備操作方式及時間告示</label>
                                         <div class="segmented-group d-flex w-100">
@@ -1169,7 +1106,6 @@
                                     </div>
                                 </div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="車輛清洗照片 1" photo-key="車輛清洗" memo-key="FileMemo_5" :parent="this"></photo-box>
                                 <photo-box title="車輛清洗照片 2" photo-key="車輛清洗_2" memo-key="FileMemo_5a" :parent="this"></photo-box>
@@ -1186,8 +1122,8 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目六：易致粒狀污染物逸散之製程、操作或裝卸作業 (第7條) -->
+                    
+<!-- 項目六：易致粒狀污染物逸散之製程、操作或裝卸作業 (第7條) -->
                     <div class="card-modern" :id="'sec-06'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -1216,18 +1152,15 @@
                                     <i class="fas fa-times-circle"></i> 未設置 (10點)
                                 </button>
                             </div>
-
                             <div class="custom-chk-row">
                                 <input type="checkbox" id="chk_06_04" v-model="chkForm.INV_06_04" v-on:change="onChkChange('INV_06_04')" />
                                 <label for="chk_06_04" class="custom-chk-label">A3 依替代方法設置或採行防制設施</label>
                             </div>
                             <input v-if="chkForm.INV_06_04" type="text" class="form-control form-control-sm mb-2" placeholder="請輸入替代方法說明..." v-model="form.INV_06_04_Memo" />
-
                             <div v-if="getSectionLoss(6) === 10" class="subitem-box border-danger">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_06_05" v-model="chkForm.INV_06_05" v-on:change="onChkChange('INV_06_05')" /><label for="chk_06_05" class="custom-chk-label">B1 未設置或採行第七條防制設施之一</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_06_06" v-model="chkForm.INV_06_06" v-on:change="onChkChange('INV_06_06')" /><label for="chk_06_06" class="custom-chk-label">B2 未依同意替代方法執行</label></div>
                             </div>
-
                             <div v-if="getSectionLoss(6) === 4" class="subitem-box border-warning">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_06_07" v-model="chkForm.INV_06_07" v-on:change="toggleGroup('INV_06_07', ['INV_06_07a', 'INV_06_07b'])" /><label for="chk_06_07" class="custom-chk-label font-weight-bold">C1 圍封式集氣系統：</label></div>
                                 <div v-if="chkForm.INV_06_07" class="child-chk-group">
@@ -1243,7 +1176,6 @@
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_06_10" v-model="chkForm.INV_06_10" v-on:change="onChkChange('INV_06_10')" /><label for="chk_06_10" class="custom-chk-label">C4 封閉式建築未符合規定</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_06_11" v-model="chkForm.INV_06_11" v-on:change="onChkChange('INV_06_11')" /><label for="chk_06_11" class="custom-chk-label">C5 灑水設施噴灑範圍水量及頻率不足</label></div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="製程作業照片 1" photo-key="易致粒狀污染物逸散之製程、操作或裝卸作業_1" memo-key="FileMemo_6" :parent="this"></photo-box>
                                 <photo-box title="製程作業照片 2" photo-key="易致粒狀污染物逸散之製程、操作或裝卸作業_2" memo-key="FileMemo_6a" :parent="this"></photo-box>
@@ -1253,8 +1185,8 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目七：公私場所管理之裸露區域 (第8條) -->
+                    
+<!-- 項目七：公私場所管理之裸露區域 (第8條) -->
                     <div class="card-modern" :id="'sec-07'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -1280,18 +1212,15 @@
                                     <i class="fas fa-times-circle"></i> 未設置 (10點)
                                 </button>
                             </div>
-
                             <div class="custom-chk-row">
                                 <input type="checkbox" id="chk_07_03" v-model="chkForm.INV_07_03" v-on:change="onChkChange('INV_07_03')" />
                                 <label for="chk_07_03" class="custom-chk-label">A2 依替代方法設置或採行防制設施</label>
                             </div>
                             <input v-if="chkForm.INV_07_03" type="text" class="form-control form-control-sm mb-2" placeholder="請輸入替代方法說明..." v-model="form.INV_07_03_Memo" />
-
                             <div v-if="getSectionLoss(7) === 10" class="subitem-box border-danger">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_07_04" v-model="chkForm.INV_07_04" v-on:change="onChkChange('INV_07_04')" /><label for="chk_07_04" class="custom-chk-label">B1 未設置或採行第八條防制設施之一</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_07_05" v-model="chkForm.INV_07_05" v-on:change="onChkChange('INV_07_05')" /><label for="chk_07_05" class="custom-chk-label">B2 未依同意替代方法執行</label></div>
                             </div>
-
                             <div v-if="getSectionLoss(7) === 4" class="subitem-box border-warning">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_07_06" v-model="chkForm.INV_07_06" v-on:change="onChkChange('INV_07_06')" /><label for="chk_07_06" class="custom-chk-label">C1 防制設施實施面積未完整涵蓋裸露區域</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_07_07" v-model="chkForm.INV_07_07" v-on:change="onChkChange('INV_07_07')" /><label for="chk_07_07" class="custom-chk-label">C2 植生綠化覆蓋稻草蓆碎木厚度不足</label></div>
@@ -1299,15 +1228,14 @@
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_07_09" v-model="chkForm.INV_07_09" v-on:change="onChkChange('INV_07_09')" /><label for="chk_07_09" class="custom-chk-label">C4 噴灑化學穩定劑或灑水量及頻率不足</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_07_10" v-model="chkForm.INV_07_10" v-on:change="onChkChange('INV_07_10')" /><label for="chk_07_10" class="custom-chk-label">C5 噴灑穩定劑未記錄保存購買證明</label></div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="裸露區域照片 1" photo-key="公私場所管理之裸露區域" memo-key="FileMemo_7" :parent="this"></photo-box>
                                 <photo-box title="裸露區域照片 2" photo-key="公私場所管理之裸露區域_2" memo-key="FileMemo_7a" :parent="this"></photo-box>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目八：公私場所管理之道路 (第9條) -->
+                    
+<!-- 項目八：公私場所管理之道路 (第9條) -->
                     <div class="card-modern" :id="'sec-08'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -1333,33 +1261,29 @@
                                     <i class="fas fa-times-circle"></i> 未設置 (10點)
                                 </button>
                             </div>
-
                             <div class="custom-chk-row">
                                 <input type="checkbox" id="chk_08_03" v-model="chkForm.INV_08_03" v-on:change="onChkChange('INV_08_03')" />
                                 <label for="chk_08_03" class="custom-chk-label">A2 依替代方法設置或採行防制設施</label>
                             </div>
                             <input v-if="chkForm.INV_08_03" type="text" class="form-control form-control-sm mb-2" placeholder="請輸入替代方法說明..." v-model="form.INV_08_03_Memo" />
-
                             <div v-if="getSectionLoss(8) === 10" class="subitem-box border-danger">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_08_04" v-model="chkForm.INV_08_04" v-on:change="onChkChange('INV_08_04')" /><label for="chk_08_04" class="custom-chk-label">B1 交通島及人行道裸露區域未設置防制設施之一</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_08_05" v-model="chkForm.INV_08_05" v-on:change="onChkChange('INV_08_05')" /><label for="chk_08_05" class="custom-chk-label">B2 未依同意替代方法執行</label></div>
                             </div>
-
                             <div v-if="getSectionLoss(8) === 4" class="subitem-box border-warning">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_08_06" v-model="chkForm.INV_08_06" v-on:change="onChkChange('INV_08_06')" /><label for="chk_08_06" class="custom-chk-label">C1 路面有破損、髒污致路面色差</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_08_07" v-model="chkForm.INV_08_07" v-on:change="onChkChange('INV_08_07')" /><label for="chk_08_07" class="custom-chk-label">C2 交通島及人行道裸露區域面積或厚度不足</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_08_08" v-model="chkForm.INV_08_08" v-on:change="onChkChange('INV_08_08')" /><label for="chk_08_08" class="custom-chk-label">C3 植生綠化覆蓋稻草蓆碎木厚度不足</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_08_09" v-model="chkForm.INV_08_09" v-on:change="onChkChange('INV_08_09')" /><label for="chk_08_09" class="custom-chk-label">C4 舖設粗級配粒徑厚度不足或未灑水</label></div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="管理道路照片 1" photo-key="公私場所管理之道路_1" memo-key="FileMemo_8" :parent="this"></photo-box>
                                 <photo-box title="管理道路照片 2" photo-key="公私場所管理之道路_2" memo-key="FileMemo_8a" :parent="this"></photo-box>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目九：攝錄影監視系統 (第11條) -->
+                    
+<!-- 項目九：攝錄影監視系統 (第11條) -->
                     <div class="card-modern" :id="'sec-09'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -1385,32 +1309,28 @@
                                     <i class="fas fa-times-circle"></i> 未設置 (10點)
                                 </button>
                             </div>
-
                             <div class="custom-chk-row">
                                 <input type="checkbox" id="chk_09_03" v-model="chkForm.INV_09_03" v-on:change="onChkChange('INV_09_03')" />
                                 <label for="chk_09_03" class="custom-chk-label">A2 依替代方法設置或採行防制設施</label>
                             </div>
                             <input v-if="chkForm.INV_09_03" type="text" class="form-control form-control-sm mb-2" placeholder="請輸入替代方法說明..." v-model="form.INV_09_03_Memo" />
-
                             <div v-if="getSectionLoss(9) === 10" class="subitem-box border-danger">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_09_04" v-model="chkForm.INV_09_04" v-on:change="onChkChange('INV_09_04')" /><label for="chk_09_04" class="custom-chk-label">B1 須設置攝錄影監視系統而未設置</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_09_05" v-model="chkForm.INV_09_05" v-on:change="onChkChange('INV_09_05')" /><label for="chk_09_05" class="custom-chk-label">B2 監視系統故障未於次日起算七日內修復完成</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_09_06" v-model="chkForm.INV_09_06" v-on:change="onChkChange('INV_09_06')" /><label for="chk_09_06" class="custom-chk-label">B3 未依主管機關同意替代方法執行</label></div>
                             </div>
-
                             <div v-if="getSectionLoss(9) === 4" class="subitem-box border-warning">
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_09_07" v-model="chkForm.INV_09_07" v-on:change="onChkChange('INV_09_07')" /><label for="chk_09_07" class="custom-chk-label">C1 未符合附表四規定或記錄影像資料未保存一個月</label></div>
                                 <div class="custom-chk-row"><input type="checkbox" id="chk_09_08" v-model="chkForm.INV_09_08" v-on:change="onChkChange('INV_09_08')" /><label for="chk_09_08" class="custom-chk-label">C2 監視系統故障未即時通報主管機關</label></div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="監視系統照片 1" photo-key="攝錄影監視系統_1" memo-key="FileMemo_9" :parent="this"></photo-box>
                                 <photo-box title="監視系統照片 2" photo-key="攝錄影監視系統_2" memo-key="FileMemo_9a" :parent="this"></photo-box>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目十：全景照片與其他查核照片 -->
+                    
+<!-- 項目十：全景照片與其他查核照片 -->
                     <div class="card-modern" :id="'sec-10'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -1431,8 +1351,8 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目十一：環境潛勢調查及許可不符項目 -->
+                    
+<!-- 項目十一：環境潛勢調查及許可不符項目 -->
                     <div class="card-modern" :id="'sec-11'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -1449,7 +1369,6 @@
                                 </div>
                             </div>
                             <input v-if="envCheckSelected.indexOf('其他') !== -1" type="text" class="form-control form-control-sm mb-3" placeholder="請填寫其他潛勢調查說明..." v-model="form.EnvirCheck_Other" />
-
                             <div class="row">
                                 <div class="col-md-6 col-12 mb-2">
                                     <label class="small text-muted font-weight-bold">狀態</label>
@@ -1473,15 +1392,14 @@
                                     <textarea class="form-control form-control-sm" rows="2" placeholder="請輸入潛勢調查說明..." v-model="form.OtherChkMemo"></textarea>
                                 </div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="潛勢調查照片 1" photo-key="其他潛勢調查照片1" memo-key="FileMemo_10a" :parent="this"></photo-box>
                                 <photo-box title="潛勢調查照片 2" photo-key="其他潛勢調查照片2" memo-key="FileMemo_10b" :parent="this"></photo-box>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 項目十二：執行道路髒污抽查 -->
+                    
+<!-- 項目十二：執行道路髒污抽查 -->
                     <div class="card-modern" :id="'sec-12'">
                         <div class="card-modern-header">
                             <h3 class="card-modern-title">
@@ -1503,7 +1421,6 @@
                                     <input type="text" class="form-control form-control-sm" placeholder="請輸入道路名稱" v-model="form.CleanRoad_Ans2_RoadName" />
                                 </div>
                             </div>
-
                             <div v-if="form.CleanRoad_Ans1 === '是'" class="card bg-light border p-3 mb-3">
                                 <h6 class="font-weight-bold text-dark mb-2">認養道路路段清潔狀況評估</h6>
                                 <div class="row">
@@ -1517,7 +1434,6 @@
                                             <div class="input-group-append"><span class="input-group-text">公尺</span></div>
                                         </div>
                                     </div>
-
                                     <div class="col-md-4 col-12 mb-2">
                                         <div class="custom-control custom-checkbox mb-1">
                                             <input type="checkbox" class="custom-control-input" id="chk_clean_b" v-model="chkForm.CleanRoad_Ans2_CleanLV_B" v-on:change="onCleanChkChange('B')" />
@@ -1528,7 +1444,6 @@
                                             <div class="input-group-append"><span class="input-group-text">公尺</span></div>
                                         </div>
                                     </div>
-
                                     <div class="col-md-4 col-12 mb-2">
                                         <div class="custom-control custom-checkbox mb-1">
                                             <input type="checkbox" class="custom-control-input" id="chk_clean_c" v-model="chkForm.CleanRoad_Ans2_CleanLV_C" v-on:change="onCleanChkChange('C')" />
@@ -1542,7 +1457,6 @@
                                             <div class="input-group-append"><span class="input-group-text">公尺</span></div>
                                         </div>
                                     </div>
-
                                     <div class="col-12 mt-2">
                                         <label class="small text-muted font-weight-bold">認養道路旁水溝是否保持暢通</label>
                                         <div class="segmented-group d-flex w-100">
@@ -1550,14 +1464,12 @@
                                             <button type="button" class="segment-btn flex-fill" :class="{ 'active-no': form.CleanRoad_Ans3 === '否' }" v-on:click="form.CleanRoad_Ans3 = '否'">否</button>
                                         </div>
                                     </div>
-
                                     <div class="col-12 mt-2">
                                         <label class="small text-muted font-weight-bold">說明</label>
                                         <textarea class="form-control form-control-sm" rows="2" placeholder="道路清潔狀況補充說明..." v-model="form.CleanRoad_Ans4"></textarea>
                                     </div>
                                 </div>
                             </div>
-
                             <div class="photo-upload-section">
                                 <photo-box title="道路抽查照片 1" photo-key="執行道路髒污抽查照片1" memo-key="FileMemo_11a" :parent="this"></photo-box>
                                 <photo-box title="道路抽查照片 2" photo-key="執行道路髒污抽查照片2" memo-key="FileMemo_11b" :parent="this"></photo-box>
@@ -1567,8 +1479,8 @@
                 </div>
             </div>
         </main>
-
-        <!-- 手機端常駐浮動動作列 (Sticky Bottom Bar) -->
+        
+<!-- 手機端常駐浮動動作列 (Sticky Bottom Bar) -->
         <div class="mobile-bottom-bar d-lg-none no-print">
             <button type="button" class="btn btn-outline-primary" v-on:click="openSignatureModal">
                 <i class="fas fa-signature mr-1"></i> 手寫簽名
@@ -1578,8 +1490,8 @@
                 <span>{{ saving ? '儲存中...' : '儲存巡查' }}</span>
             </button>
         </div>
-
-        <!-- 全螢幕觸控電子簽名 Modal -->
+        
+<!-- 全螢幕觸控電子簽名 Modal -->
         <div v-if="sigModalOpen" class="sig-modal-backdrop" v-on:click.self="closeSignatureModal">
             <div class="sig-modal-container">
                 <div class="card-modern-header">
@@ -1596,11 +1508,9 @@
                         </button>
                     </div>
                 </div>
-
                 <div class="sig-canvas-wrapper">
                     <canvas id="sigCanvas"></canvas>
                 </div>
-
                 <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center">
                     <button type="button" class="btn btn-outline-secondary btn-sm" v-on:click="clearCanvas">
                         <i class="fas fa-eraser mr-1"></i> 清除重寫
@@ -1614,8 +1524,8 @@
                 </div>
             </div>
         </div>
-
-        <!-- 申報設備與製程明細 Modal 視窗 -->
+        
+<!-- 申報設備與製程明細 Modal 視窗 -->
         <div v-if="deviceModalOpen" class="modal-custom-backdrop" v-on:click.self="deviceModalOpen = false">
             <div class="modal-custom-box">
                 <div class="card-modern-header">
@@ -1626,7 +1536,8 @@
                     <button type="button" class="close" v-on:click="deviceModalOpen = false">&times;</button>
                 </div>
                 <div class="modal-custom-body">
-                    <!-- 設備統計卡片 -->
+                    
+<!-- 設備統計卡片 -->
                     <h6 class="font-weight-bold text-dark mb-2">各類型設備統計數量</h6>
                     <div class="table-responsive mb-3">
                         <table class="table table-sm table-bordered table-hover small">
@@ -1655,8 +1566,8 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <!-- 詳細明細 -->
+                    
+<!-- 詳細明細 -->
                     <div v-if="devDetailList.length > 0">
                         <h6 class="font-weight-bold text-dark mb-1">設備明細清單 ({{ devDetailList.length }} 筆)</h6>
                         <div class="table-responsive mb-3" style="max-height: 200px;">
@@ -1680,7 +1591,6 @@
                             </table>
                         </div>
                     </div>
-
                     <div v-if="procDetailList.length > 0">
                         <h6 class="font-weight-bold text-dark mb-1">製程明細清單 ({{ procDetailList.length }} 筆)</h6>
                         <div class="table-responsive" style="max-height: 160px;">
@@ -1706,19 +1616,22 @@
                 </div>
             </div>
         </div>
-
-        <!-- 燈箱圖片放大預覽 Modal -->
+        
+<!-- 燈箱圖片放大預覽 Modal -->
         <div v-if="previewImageUrl" class="lightbox-modal" v-on:click="previewImageUrl = null">
             <img :src="previewImageUrl" class="lightbox-img" alt="放大預覽" />
         </div>
     </div>
-
-    <!-- 本地核心 JS 依賴 (嚴禁外部 CDN) -->
-    <script src="../Scripts/vue.global.prod.js"></script>
-    <script src="../Scripts/axios.min.js"></script>
-    <script src="../Scripts/leaflet/leaflet.js"></script>
-
-    <script type="text/javascript">
+    
+<!-- 本地核心 JS 依賴 (嚴禁外部 CDN) -->
+    
+<script src="../Scripts/vue.global.prod.js"></script>
+    
+<script src="../Scripts/axios.min.js"></script>
+    
+<script src="../Scripts/leaflet/leaflet.js"></script>
+    
+<script type="text/javascript">
         // 照片卡片子元件
         const PhotoBoxComponent = {
             props: ['title', 'photoKey', 'memoKey', 'parent'],
@@ -1729,7 +1642,6 @@
                         <span v-if="hasPhoto" class="badge badge-success" style="font-size: 10px;">已拍照</span>
                         <span v-else class="badge badge-light text-muted" style="font-size: 10px;">未附圖</span>
                     </div>
-
                     <div class="photo-thumb-box" v-on:click="onThumbClick">
                         <img v-if="hasPhoto" :src="photoUrl" class="photo-thumb-img" alt="照片縮圖" />
                         <div v-else class="text-center text-muted">
@@ -1737,9 +1649,7 @@
                             <div style="font-size: 11px;">點擊拍照或上傳</div>
                         </div>
                     </div>
-
                     <input type="file" :id="'file_' + photoKey" accept="image/*" capture="environment" style="display: none;" v-on:change="onFileSelected" />
-
                     <div class="photo-btn-group">
                         <button type="button" class="btn btn-outline-primary" v-on:click="triggerCamera">
                             <i class="fas fa-camera"></i> 拍攝
@@ -1748,7 +1658,6 @@
                             <i class="fas fa-trash-alt"></i> 清除
                         </button>
                     </div>
-
                     <input type="text" class="form-control form-control-sm mt-1" style="font-size: 11px;" placeholder="照片補充說明..." v-model="parent.form[memoKey]" />
                 </div>
             `,
@@ -1775,7 +1684,6 @@
                 onFileSelected(e) {
                     const file = e.target.files[0];
                     if (!file) return;
-
                     const reader = new FileReader();
                     reader.onload = (uploadEvent) => {
                         const img = new Image();
@@ -1799,7 +1707,6 @@
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, w, h);
                             const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
-
                             this.parent.photos[this.photoKey] = compressedBase64;
                         };
                         img.src = uploadEvent.target.result;
@@ -1814,9 +1721,7 @@
                 }
             }
         };
-
         const { createApp, markRaw } = Vue;
-
         createApp({
             components: {
                 'photo-box': PhotoBoxComponent
@@ -1839,7 +1744,6 @@
                         inspector: '',
                         representative: ''
                     },
-
                     // 查核表主資料模型
                     form: {
                         INV_DATE: '',
@@ -1847,7 +1751,6 @@
                         weather: '晴',
                         Work_State: '正常操作',
                         Work_Memo: '',
-
                         // 各項0點/文字說明
                         INV_01_01: '', INV_01_02: 'V', INV_01_03: '', INV_01_03_Memo: '',
                         INV_02_01: '', INV_02_02: '', INV_02_03: 'V', INV_02_04: '', INV_02_04_Memo: '',
@@ -1858,7 +1761,6 @@
                         INV_07_01: '', INV_07_02: 'V', INV_07_03: '', INV_07_03_Memo: '',
                         INV_08_01: '', INV_08_02: 'V', INV_08_03: '', INV_08_03_Memo: '',
                         INV_09_01: '', INV_09_02: 'V', INV_09_03: '', INV_09_03_Memo: '',
-
                         // 洗車台規格
                         WashCar_Type: '加壓沖洗設備',
                         WashCar_Length: '',
@@ -1869,7 +1771,6 @@
                         MotorHP: '',
                         WarningWashCar: '有',
                         WashCarMemo: '有',
-
                         // 環境潛勢與道路抽查
                         EnvirCheck_Item: '',
                         EnvirCheck_Other: '',
@@ -1887,7 +1788,6 @@
                         CleanRoad_Ans2_CleanRoadName: '',
                         CleanRoad_Ans3: '是',
                         CleanRoad_Ans4: '',
-
                         // 照片說明
                         FileMemo_1: '', FileMemo_1a: '', FileMemo_1b: '', FileMemo_1c: '', FileMemo_1d: '',
                         FileMemo_2: '', FileMemo_2a: '',
@@ -1907,14 +1807,11 @@
                         FileMemo_CollGasEfficiency3: '', FileMemo_CollGasEfficiency4: '',
                         FileMemo_AirQualityValue1: '', FileMemo_AirQualityValue2: ''
                     },
-
                     // 勾選暫存物件 (布林響應)
                     chkForm: {},
-
                     // 環境潛勢選項清單
                     envCheckOptions: ['廠區有明顯異味', '有排放污水', '噪音污染', '排放黑煙', '其他'],
                     envCheckSelected: [],
-
                     // UI 互動控制
                     mapCollapsed: false,
                     userDistance: null,
@@ -1923,7 +1820,6 @@
                     deviceModalOpen: false,
                     devDetailList: [],
                     procDetailList: [],
-
                     // 簽名板狀態
                     sigModalOpen: false,
                     currentSigType: 'inspector',
@@ -1988,19 +1884,16 @@
                 async loadInitData() {
                     this.loading = true;
                     this.errorMessage = '';
-
                     const urlParams = new URLSearchParams(window.location.search);
                     this.facId = urlParams.get('id') || '';
                     const token = urlParams.get('id1') || '';
                     this.mode = urlParams.get('mode') || 'new';
                     const invNoStr = urlParams.get('id2') || '0';
-
                     if (!this.facId) {
                         this.errorMessage = '缺少場所管制編號參數 (id)';
                         this.loading = false;
                         return;
                     }
-
                     try {
                         const res = await axios.get(`NewCase.aspx?action=init&id=${encodeURIComponent(this.facId)}&id1=${encodeURIComponent(token)}&mode=${encodeURIComponent(this.mode)}&id2=${encodeURIComponent(invNoStr)}`);
                         if (res.data && res.data.Success) {
@@ -2010,7 +1903,6 @@
                             this.existingPhotos = res.data.ExistingPhotos || {};
                             this.invNo = res.data.InvNo || 0;
                             this.loginUser = res.data.LoginUser || '外勤查核人員';
-
                             if (this.mode === 'edit' && res.data.RecordData && Object.keys(res.data.RecordData).length > 0) {
                                 this.bindExistingRecord(res.data.RecordData);
                             } else {
@@ -2025,7 +1917,6 @@
                                 this.form.INV_TIME = `${hh}:${min}`;
                                 this.quickPassAll();
                             }
-
                             // 初始化地圖 (延遲等 DOM 渲染完畢)
                             this.$nextTick(() => {
                                 this.initLeafletMap();
@@ -2039,7 +1930,6 @@
                         this.loading = false;
                     }
                 },
-
                 // 2. 既有紀錄資料綁定 (編輯模式)
                 bindExistingRecord(data) {
                     for (const key in data) {
@@ -2050,52 +1940,43 @@
                             this.chkForm[key] = (data[key] === 'V' || data[key] === 'Y');
                         }
                     }
-
                     // 日期時間分離
                     if (data.INV_DATE) {
                         const parts = data.INV_DATE.split(' ');
                         this.form.INV_DATE = parts[0] || '';
                         this.form.INV_TIME = parts[1] || '';
                     }
-
                     // 環境潛勢複選
                     if (data.EnvirCheck_Item) {
                         this.envCheckSelected = data.EnvirCheck_Item.split('、').filter(Boolean);
                     }
                 },
-
                 // 3. Leaflet 地圖初始化 (嚴格 markRaw 隔離宣告，防 Vue 3 響應式崩潰)
                 initLeafletMap() {
                     const mapEl = document.getElementById('map');
                     if (!mapEl) return;
-
                     const lat = (this.facInfo.Lat && this.facInfo.Lat > 0) ? this.facInfo.Lat : 25.0125;
                     const lng = (this.facInfo.Lng && this.facInfo.Lng > 0) ? this.facInfo.Lng : 121.465;
-
                     try {
                         const map = L.map('map', {
                             center: [lat, lng],
                             zoom: (this.facInfo.Lat > 0) ? 16 : 13,
                             zoomControl: true
                         });
-
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                             maxZoom: 19,
                             attribution: '© OpenStreetMap'
                         }).addTo(map);
-
                         if (this.facInfo.Lat > 0 && this.facInfo.Lng > 0) {
                             const marker = L.marker([lat, lng]).addTo(map);
                             marker.bindPopup(`<b>${this.facInfo.FAC_NAME}</b><br/>${this.facInfo.ADDR || ''}`).openPopup();
                         }
-
                         // 物件隔離保存至原生屬性
                         this.leafletMap = markRaw(map);
                     } catch (e) {
                         console.error('Map init error:', e);
                     }
                 },
-
                 toggleMapCollapse() {
                     this.mapCollapsed = !this.mapCollapsed;
                     this.$nextTick(() => {
@@ -2104,18 +1985,15 @@
                         }
                     });
                 },
-
                 locateGPS() {
                     if (!navigator.geolocation) {
                         alert('您的瀏覽器不支援 GPS 定位功能。');
                         return;
                     }
-
                     navigator.geolocation.getCurrentPosition(
                         (pos) => {
                             const uLat = pos.coords.latitude;
                             const uLng = pos.coords.longitude;
-
                             if (this.leafletMap) {
                                 if (this.userMarker) {
                                     this.leafletMap.removeLayer(this.userMarker);
@@ -2128,7 +2006,6 @@
                                 this.userMarker.bindPopup('<b>您的現場目前位置</b>').openPopup();
                                 this.leafletMap.setView([uLat, uLng], 16);
                             }
-
                             // 計算距離
                             if (this.facInfo.Lat > 0 && this.facInfo.Lng > 0) {
                                 const distMeters = this.calcDistanceMeters(uLat, uLng, this.facInfo.Lat, this.facInfo.Lng);
@@ -2142,7 +2019,6 @@
                         { enableHighAccuracy: true, timeout: 10000 }
                     );
                 },
-
                 calcDistanceMeters(lat1, lon1, lat2, lon2) {
                     const R = 6371e3;
                     const p1 = (lat1 * Math.PI) / 180;
@@ -2153,13 +2029,11 @@
                     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                     return R * c;
                 },
-
                 openGoogleNavigation() {
                     if (this.facInfo.Lat && this.facInfo.Lng) {
                         window.open(`https://www.google.com/maps/dir/?api=1&destination=${this.facInfo.Lat},${this.facInfo.Lng}`, '_blank');
                     }
                 },
-
                 // 4. 記點計算法 (完全對照 LossPointCalculator 規則)
                 getSectionLoss(secNum) {
                     const cf = this.chkForm;
@@ -2214,11 +2088,9 @@
                     }
                     return 0;
                 },
-
                 // 5. 記點晶片一鍵設定 (0, 4, 10 點)
                 setSectionScore(secNum, score, zeroKey) {
                     const pad = String(secNum).padStart(2, '0');
-
                     // 清除該項所有 0/4/10 點勾選
                     for (const k in this.chkForm) {
                         if (k.startsWith(`INV_${pad}_`)) {
@@ -2226,7 +2098,6 @@
                             this.form[k] = '';
                         }
                     }
-
                     if (score === 0) {
                         const targetKey = zeroKey || `INV_${pad}_02`;
                         this.chkForm[targetKey] = true;
@@ -2249,7 +2120,6 @@
                         this.syncFormFromChk();
                     }
                 },
-
                 // 6. 一鍵全部合格 (Quick Pass All)
                 quickPassAll() {
                     for (let i = 1; i <= 9; i++) {
@@ -2262,11 +2132,9 @@
                     this.form.OtherChkAns1 = '無';
                     this.form.CleanRoad_Ans1 = '否';
                 },
-
                 onChkChange(key) {
                     this.form[key] = this.chkForm[key] ? 'V' : '';
                 },
-
                 toggleGroup(parentKey, childKeys) {
                     this.form[parentKey] = this.chkForm[parentKey] ? 'V' : '';
                     if (!this.chkForm[parentKey]) {
@@ -2282,7 +2150,6 @@
                         }
                     }
                 },
-
                 onSubChk(parentKey, subKey) {
                     this.form[subKey] = this.chkForm[subKey] ? 'V' : '';
                     if (this.chkForm[subKey]) {
@@ -2290,18 +2157,15 @@
                         this.form[parentKey] = 'V';
                     }
                 },
-
                 onCleanChkChange(lv) {
                     const key = 'CleanRoad_Ans2_CleanLV_' + lv;
                     this.form[key] = this.chkForm[key] ? 'Y' : 'N';
                 },
-
                 syncFormFromChk() {
                     for (const k in this.chkForm) {
                         this.form[k] = this.chkForm[k] ? 'V' : '';
                     }
                 },
-
                 // 7. 電子簽名板邏輯 (PointerEvents API + 二階貝茲曲線防斷筆)
                 openSignatureModal() {
                     this.sigModalOpen = true;
@@ -2309,43 +2173,35 @@
                         this.initCanvas();
                     });
                 },
-
                 closeSignatureModal() {
                     this.sigModalOpen = false;
                 },
-
                 switchSigType(type) {
                     this.currentSigType = type;
                     this.clearCanvas();
                 },
-
                 initCanvas() {
                     const canvas = document.getElementById('sigCanvas');
                     if (!canvas) return;
                     const container = canvas.parentElement;
                     const rect = container.getBoundingClientRect();
                     const dpr = window.devicePixelRatio || 1;
-
                     canvas.width = Math.round(rect.width * dpr);
                     canvas.height = Math.round(rect.height * dpr);
                     canvas.style.width = rect.width + 'px';
                     canvas.style.height = rect.height + 'px';
-
                     this.canvasCtx = canvas.getContext('2d');
                     this.canvasCtx.scale(dpr, dpr);
                     this.canvasCtx.strokeStyle = '#0f172a';
                     this.canvasCtx.lineWidth = 3.5;
                     this.canvasCtx.lineCap = 'round';
                     this.canvasCtx.lineJoin = 'round';
-
                     let isDrawing = false;
                     let lastX = 0, lastY = 0;
-
                     const getPos = e => {
                         const r = canvas.getBoundingClientRect();
                         return { x: e.clientX - r.left, y: e.clientY - r.top };
                     };
-
                     const down = e => {
                         e.preventDefault();
                         try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
@@ -2355,7 +2211,6 @@
                         this.canvasCtx.beginPath();
                         this.canvasCtx.moveTo(lastX, lastY);
                     };
-
                     const move = e => {
                         if (!isDrawing) return;
                         e.preventDefault();
@@ -2366,7 +2221,6 @@
                         this.canvasCtx.stroke();
                         lastX = pos.x; lastY = pos.y;
                     };
-
                     const up = e => {
                         if (!isDrawing) return;
                         isDrawing = false;
@@ -2375,13 +2229,11 @@
                         this.canvasCtx.stroke();
                         this.canvasCtx.closePath();
                     };
-
                     canvas.addEventListener('pointerdown', down, { passive: false });
                     canvas.addEventListener('pointermove', move, { passive: false });
                     canvas.addEventListener('pointerup', up, { passive: false });
                     canvas.addEventListener('pointercancel', up, { passive: false });
                 },
-
                 clearCanvas() {
                     const canvas = document.getElementById('sigCanvas');
                     if (canvas && this.canvasCtx) {
@@ -2389,11 +2241,9 @@
                         this.canvasCtx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
                     }
                 },
-
                 saveCanvasSignature() {
                     const canvas = document.getElementById('sigCanvas');
                     if (!canvas) return;
-
                     const dataUrl = canvas.toDataURL('image/png');
                     if (this.currentSigType === 'inspector') {
                         this.signatures.inspector = dataUrl;
@@ -2402,7 +2252,6 @@
                     }
                     this.sigModalOpen = false;
                 },
-
                 // 8. 申報設備詳細資料彈窗
                 openDeviceModal() {
                     this.deviceModalOpen = true;
@@ -2410,7 +2259,6 @@
                         this.loadDeviceDetail(this.devSummary[0].pCode, this.devSummary[0].Device_Name);
                     }
                 },
-
                 async loadDeviceDetail(pCode, devName) {
                     try {
                         const res = await axios.get(`NewCase.aspx?action=getdevices&facId=${encodeURIComponent(this.facId)}&pCode=${encodeURIComponent(pCode)}&devName=${encodeURIComponent(devName)}`);
@@ -2422,20 +2270,16 @@
                         console.error('loadDeviceDetail error:', e);
                     }
                 },
-
                 // 9. 儲存巡查紀錄 (POST 完整資料至後端)
                 async submitData() {
                     if (!this.form.INV_DATE) {
                         alert('請填寫查核日期！');
                         return;
                     }
-
                     this.saving = true;
                     this.syncFormFromChk();
-
                     // 環境潛勢陣列組裝
                     this.form.EnvirCheck_Item = this.envCheckSelected.join('、');
-
                     // 簽名圖片組裝
                     const sigPayload = {};
                     if (this.signatures.inspector) {
@@ -2444,7 +2288,6 @@
                     if (this.signatures.representative) {
                         sigPayload['受訪代表簽名'] = this.signatures.representative;
                     }
-
                     const payload = {
                         FAC_ID: this.facId,
                         Mode: this.mode,
@@ -2453,7 +2296,6 @@
                         Photos: this.photos,
                         Signatures: sigPayload
                     };
-
                     try {
                         const res = await axios.post('NewCase.aspx?action=save', payload);
                         if (res.data && res.data.Success) {
@@ -2472,7 +2314,6 @@
                         this.saving = false;
                     }
                 },
-
                 goBack() {
                     if (confirm('確定要返回清單嗎？未儲存的變更將會遺失。')) {
                         const urlParams = new URLSearchParams(window.location.search);

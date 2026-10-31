@@ -80,8 +80,63 @@ namespace NTPC_FEC.RoadClean
             }
         }
 
+        private bool CheckLoginGuard()
+        {
+            if (Session["LoginUser"] == null && Session["User"] == null)
+            {
+                string action = Request["action"];
+                if (!string.IsNullOrEmpty(action))
+                {
+                    Response.Clear();
+                    Response.StatusCode = 401;
+                    Response.ContentType = "application/json; charset=utf-8";
+                    Response.Write(json.Serialize(new { Success = false, Message = "登入已逾時或尚未登入，請重新登入系統！", NeedLogin = true }));
+                    try { Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                    return false;
+                }
+                Response.Redirect("~/Default.aspx", true);
+                return false;
+            }
+            return true;
+        }
+
+        private string GetCurrentUserId()
+        {
+            if (Session["LoginUser"] != null && !string.IsNullOrEmpty(Session["LoginUser"].ToString()))
+            {
+                return Session["LoginUser"].ToString().Trim();
+            }
+            if (Session["User"] != null && !string.IsNullOrEmpty(Session["User"].ToString()))
+            {
+                return Session["User"].ToString().Trim();
+            }
+            return "";
+        }
+
+        private bool IsAdminOrReviewer()
+        {
+            string uid = GetCurrentUserId();
+            if (string.IsNullOrEmpty(uid)) return false;
+            if (uid.Equals("Admin", StringComparison.OrdinalIgnoreCase)) return true;
+            try
+            {
+                var user = NTPC_FEC.Services.AuthService.GetCurrentUser(Context);
+                if (user != null)
+                {
+                    return string.Equals(user.UserID, "Admin", StringComparison.OrdinalIgnoreCase) || NTPC_FEC.Services.MenuService.CheckLicense(user.Lic, 63) || NTPC_FEC.Services.MenuService.CheckLicense(user.Lic, 41);
+                }
+            }
+            catch { }
+            return false;
+        }
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (!CheckLoginGuard())
+            {
+                return;
+            }
+
             string action = Request["action"];
             if (!string.IsNullOrEmpty(action))
             {
@@ -884,7 +939,13 @@ namespace NTPC_FEC.RoadClean
                 return;
             }
 
-            string loginUser = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "Admin";
+            if (!IsAdminOrReviewer())
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您非審查人員或管理員，無法執行案件審核！" }));
+                return;
+            }
+
+            string loginUser = GetCurrentUserId();
             int resultState = model.Result;
             string resultText = "通過";
             if (resultState == 2301) resultText = "退回修正";
@@ -947,7 +1008,13 @@ namespace NTPC_FEC.RoadClean
                 return;
             }
 
-            string loginUser = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "Admin";
+            if (!IsAdminOrReviewer())
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您非審查人員或管理員，無法執行批次審核！" }));
+                return;
+            }
+
+            string loginUser = GetCurrentUserId();
             string memo = !string.IsNullOrEmpty(model.Memo) ? model.Memo.Trim() : "快速審查通過";
             int successCount = 0;
 
@@ -1009,18 +1076,26 @@ namespace NTPC_FEC.RoadClean
                 return;
             }
 
-            string sqlCheck = "SELECT Case_State FROM RoadClean_ChkRecord_Main WHERE ChkID = @chkId";
-            object stateObj = DbHelper.ExecuteScalar(sqlCheck, new SqlParameter("@chkId", chkId));
-            if (stateObj == null || stateObj == DBNull.Value)
+            string sqlCheck = "SELECT Case_State, Create_User FROM RoadClean_ChkRecord_Main WHERE ChkID = @chkId";
+            DataTable dtChk = DbHelper.ExecuteDataTable(sqlCheck, new SqlParameter("@chkId", chkId));
+            if (dtChk == null || dtChk.Rows.Count == 0)
             {
                 Response.Write(json.Serialize(new { Success = false, Message = "查無此查核紀錄" }));
                 return;
             }
 
-            int state = Convert.ToInt32(stateObj);
+            int state = Convert.ToInt32(dtChk.Rows[0]["Case_State"]);
             if (state != 1001 && state != 2301 && state != 9001)
             {
                 Response.Write(json.Serialize(new { Success = false, Message = "此案件狀態不可刪除！" }));
+                return;
+            }
+
+            string createU = dtChk.Rows[0]["Create_User"] != DBNull.Value ? dtChk.Rows[0]["Create_User"].ToString().Trim() : "";
+            string currentU = GetCurrentUserId();
+            if (!IsAdminOrReviewer() && !string.Equals(createU, currentU, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：僅建立者本人或管理員方可刪除此紀錄！" }));
                 return;
             }
 

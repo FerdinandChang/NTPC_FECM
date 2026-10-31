@@ -590,47 +590,73 @@ namespace NTPC_FEC.Modules.Manager
 
             try
             {
-                // 4. 寫入 UserAuthPermission 表 (先刪後增)
-                string delAuthSql = "DELETE FROM UserAuthPermission WHERE UserID = @UserID";
-                DbHelper.ExecuteNonQuery(delAuthSql, new SqlParameter[] { new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId } });
-
-                foreach (string code in selectedCoreCodes)
+                using (SqlConnection conn = DbHelper.GetOpenConnection())
+                using (SqlTransaction trans = conn.BeginTransaction())
                 {
-                    string insAuthSql = "INSERT INTO UserAuthPermission (UserID, AuthCode) VALUES (@UserID, @AuthCode)";
-                    DbHelper.ExecuteNonQuery(insAuthSql, new SqlParameter[] {
-                        new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId },
-                        new SqlParameter("@AuthCode", SqlDbType.VarChar) { Value = code }
-                    });
-                }
-
-                // 5. 更新 UserAcc 的 PUnit (所屬單位)、LIC 與 LIC2
-                string sql = "UPDATE UserAcc SET PUnit = @PUnit, LIC = @LIC, LIC2 = @LIC2 WHERE UserID = @UserID";
-                var parameters = new SqlParameter[]
-                {
-                    new SqlParameter("@PUnit", SqlDbType.NVarChar) { Value = newPUnit },
-                    new SqlParameter("@LIC", SqlDbType.BigInt) { Value = finalLic },
-                    new SqlParameter("@LIC2", SqlDbType.BigInt) { Value = finalLic2 },
-                    new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId }
-                };
-                DbHelper.ExecuteNonQuery(sql, parameters);
-
-                // 6. 更新 UserFilterTown 行政區限制
-                string delSql = "DELETE FROM UserFilterTown WHERE User_ID = @UserID";
-                DbHelper.ExecuteNonQuery(delSql, new SqlParameter[] { new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId } });
-
-                foreach (ListItem townItem in cblTowns.Items)
-                {
-                    if (townItem.Selected)
+                    try
                     {
-                        string insSql = "INSERT INTO UserFilterTown (User_ID, TOWN_NO) VALUES (@UserID, @TownNo)";
-                        var townParams = new SqlParameter[]
+                        // 4. 寫入 UserAuthPermission 表 (先刪後增，包入交易)
+                        string delAuthSql = "DELETE FROM UserAuthPermission WHERE UserID = @UserID";
+                        using (SqlCommand cmd = new SqlCommand(delAuthSql, conn, trans))
                         {
-                            new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId },
-                            new SqlParameter("@TownNo", SqlDbType.VarChar) { Value = townItem.Value }
-                        };
-                        DbHelper.ExecuteNonQuery(insSql, townParams);
+                            cmd.Parameters.Add(new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId });
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        foreach (string code in selectedCoreCodes)
+                        {
+                            string insAuthSql = "INSERT INTO UserAuthPermission (UserID, AuthCode) VALUES (@UserID, @AuthCode)";
+                            using (SqlCommand cmd = new SqlCommand(insAuthSql, conn, trans))
+                            {
+                                cmd.Parameters.Add(new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId });
+                                cmd.Parameters.Add(new SqlParameter("@AuthCode", SqlDbType.VarChar) { Value = code });
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+
+                        // 5. 更新 UserAcc 的 PUnit (所屬單位)、LIC 與 LIC2
+                        string sql = "UPDATE UserAcc SET PUnit = @PUnit, LIC = @LIC, LIC2 = @LIC2 WHERE UserID = @UserID";
+                        using (SqlCommand cmd = new SqlCommand(sql, conn, trans))
+                        {
+                            cmd.Parameters.Add(new SqlParameter("@PUnit", SqlDbType.NVarChar) { Value = newPUnit });
+                            cmd.Parameters.Add(new SqlParameter("@LIC", SqlDbType.BigInt) { Value = finalLic });
+                            cmd.Parameters.Add(new SqlParameter("@LIC2", SqlDbType.BigInt) { Value = finalLic2 });
+                            cmd.Parameters.Add(new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId });
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 6. 更新 UserFilterTown 行政區限制
+                        string delSql = "DELETE FROM UserFilterTown WHERE User_ID = @UserID";
+                        using (SqlCommand cmd = new SqlCommand(delSql, conn, trans))
+                        {
+                            cmd.Parameters.Add(new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId });
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        foreach (ListItem townItem in cblTowns.Items)
+                        {
+                            if (townItem.Selected)
+                            {
+                                string insSql = "INSERT INTO UserFilterTown (User_ID, TOWN_NO) VALUES (@UserID, @TownNo)";
+                                using (SqlCommand cmd = new SqlCommand(insSql, conn, trans))
+                                {
+                                    cmd.Parameters.Add(new SqlParameter("@UserID", SqlDbType.VarChar) { Value = editUserId });
+                                    cmd.Parameters.Add(new SqlParameter("@TownNo", SqlDbType.VarChar) { Value = townItem.Value });
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+
+                        trans.Commit();
+                    }
+                    catch
+                    {
+                        trans.Rollback();
+                        throw;
                     }
                 }
+
+                PermissionService.ClearUserAuthCache(editUserId);
 
                 pnlSetLicModal.Visible = false;
                 string unitLabel = string.IsNullOrEmpty(newPUnit) ? "未指定" : newPUnit;
