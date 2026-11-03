@@ -9,6 +9,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 
 namespace NTPC_FEC.BareGround
 {
@@ -422,7 +423,14 @@ namespace NTPC_FEC.BareGround
 
             try
             {
+                string baseDir = Server.MapPath("~/Upload/BareGround");
                 string targetDir = Server.MapPath(string.Format("~/Upload/BareGround/{0}/{1}", bareId, invNo));
+                if (!FileSecurityHelper.IsSafePath(targetDir, baseDir))
+                {
+                    Response.Write(jsonSerializer.Serialize(new { Success = false, Message = "偵測到非法路徑穿越行為！" }));
+                    return;
+                }
+
                 if (!Directory.Exists(targetDir))
                 {
                     Directory.CreateDirectory(targetDir);
@@ -436,11 +444,29 @@ namespace NTPC_FEC.BareGround
                 }
 
                 byte[] imageBytes = Convert.FromBase64String(pureBase64);
+                if (imageBytes == null || imageBytes.Length < 8)
+                {
+                    Response.Write(jsonSerializer.Serialize(new { Success = false, Message = "簽章圖檔內容無效！" }));
+                    return;
+                }
+
+                // 驗證 PNG 或 JPEG Magic Bytes
+                bool isPng = (imageBytes[0] == 0x89 && imageBytes[1] == 0x50 && imageBytes[2] == 0x4E && imageBytes[3] == 0x47);
+                bool isJpg = (imageBytes[0] == 0xFF && imageBytes[1] == 0xD8 && imageBytes[2] == 0xFF);
+                if (!isPng && !isJpg)
+                {
+                    Response.Write(jsonSerializer.Serialize(new { Success = false, Message = "簽章圖檔格式不符，僅支援合法之 PNG/JPG 圖檔！" }));
+                    return;
+                }
+
                 string sigPath = Path.Combine(targetDir, "Sig1.png");
                 File.WriteAllBytes(sigPath, imageBytes);
 
                 string sigUrl = PathHelper.ResolveUrl(string.Format("~/Upload/BareGround/{0}/{1}/Sig1.png?t={2}",
                     bareId, invNo, DateTime.Now.Ticks));
+
+                // 記錄雙軌 AuditLog
+                AuditLogger.Log("BARE_INV_SIGN", bareId, string.Format("裸露地場址:{0}, 巡查編號:{1} 稽查簽章儲存完成", bareId, invNo));
 
                 Response.Write(jsonSerializer.Serialize(new
                 {

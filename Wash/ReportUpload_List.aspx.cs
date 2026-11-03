@@ -13,6 +13,7 @@ using NPOI.SS.UserModel;
 using NPOI.SS.Util;
 using NTPC_FEC.Helpers;
 using NTPC_FEC.Models;
+using NTPC_FEC.Security;
 using NTPC_FEC.Services;
 
 namespace NTPC_FEC.Wash
@@ -720,50 +721,63 @@ namespace NTPC_FEC.Wash
             // 覆寫存檔
             postedFile.SaveAs(saveFilePath);
 
-            // 資料庫檢查存在並更新或新增
-            string checkSql = "SELECT pID FROM RoadWash_UploadHis WHERE FAC_ID = @FAC_ID AND uploadyear = @year AND uploadmonth = @month";
-            SqlParameter[] checkP = new SqlParameter[]
+            // 資料庫檢查存在並更新或新增 (交易原子性保護)
+            using (SqlConnection conn = DbHelper.GetOpenConnection())
             {
-                new SqlParameter("@FAC_ID", SqlDbType.VarChar) { Value = targetFacId },
-                new SqlParameter("@year", SqlDbType.Int) { Value = year },
-                new SqlParameter("@month", SqlDbType.Int) { Value = month }
-            };
-            DataTable dtExists = DbHelper.ExecuteDataTable(checkSql, checkP);
+                using (SqlTransaction trans = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        string checkSql = "SELECT pID FROM RoadWash_UploadHis WITH (UPDLOCK, ROWLOCK) WHERE FAC_ID = @FAC_ID AND uploadyear = @year AND uploadmonth = @month";
+                        SqlCommand cmdCheck = new SqlCommand(checkSql, conn, trans);
+                        cmdCheck.Parameters.Add("@FAC_ID", SqlDbType.VarChar).Value = targetFacId;
+                        cmdCheck.Parameters.Add("@year", SqlDbType.Int).Value = year;
+                        cmdCheck.Parameters.Add("@month", SqlDbType.Int).Value = month;
 
-            if (dtExists.Rows.Count > 0)
-            {
-                int existingPid = Convert.ToInt32(dtExists.Rows[0]["pID"]);
-                string updateSql = @"
-                    UPDATE RoadWash_UploadHis 
-                    SET uploaddate = GETDATE(),
-                        uploaduser = @user,
-                        FileName = @fileName
-                    WHERE pID = @pID";
-                SqlParameter[] updateP = new SqlParameter[]
-                {
-                    new SqlParameter("@user", SqlDbType.VarChar) { Value = userId },
-                    new SqlParameter("@fileName", SqlDbType.NVarChar) { Value = saveFileName },
-                    new SqlParameter("@pID", SqlDbType.Int) { Value = existingPid }
-                };
-                DbHelper.ExecuteNonQuery(updateSql, updateP);
+                        object existingPidObj = cmdCheck.ExecuteScalar();
+                        if (existingPidObj != null && existingPidObj != DBNull.Value)
+                        {
+                            int existingPid = Convert.ToInt32(existingPidObj);
+                            string updateSql = @"
+                                UPDATE RoadWash_UploadHis 
+                                SET uploaddate = GETDATE(),
+                                    uploaduser = @user,
+                                    FileName = @fileName
+                                WHERE pID = @pID";
+                            SqlCommand cmdUpdate = new SqlCommand(updateSql, conn, trans);
+                            cmdUpdate.Parameters.Add("@user", SqlDbType.VarChar).Value = userId;
+                            cmdUpdate.Parameters.Add("@fileName", SqlDbType.NVarChar).Value = saveFileName;
+                            cmdUpdate.Parameters.Add("@pID", SqlDbType.Int).Value = existingPid;
+                            cmdUpdate.ExecuteNonQuery();
+                        }
+                        else
+                        {
+                            string insertSql = @"
+                                INSERT INTO RoadWash_UploadHis 
+                                (FAC_ID, uploadyear, uploadmonth, uploaddate, uploaduser, FileName)
+                                VALUES 
+                                (@FAC_ID, @year, @month, GETDATE(), @user, @fileName)";
+                            SqlCommand cmdInsert = new SqlCommand(insertSql, conn, trans);
+                            cmdInsert.Parameters.Add("@FAC_ID", SqlDbType.VarChar).Value = targetFacId;
+                            cmdInsert.Parameters.Add("@year", SqlDbType.Int).Value = year;
+                            cmdInsert.Parameters.Add("@month", SqlDbType.Int).Value = month;
+                            cmdInsert.Parameters.Add("@user", SqlDbType.VarChar).Value = userId;
+                            cmdInsert.Parameters.Add("@fileName", SqlDbType.NVarChar).Value = saveFileName;
+                            cmdInsert.ExecuteNonQuery();
+                        }
+
+                        trans.Commit();
+                    }
+                    catch
+                    {
+                        trans.Rollback();
+                        throw;
+                    }
+                }
             }
-            else
-            {
-                string insertSql = @"
-                    INSERT INTO RoadWash_UploadHis 
-                    (FAC_ID, uploadyear, uploadmonth, uploaddate, uploaduser, FileName)
-                    VALUES 
-                    (@FAC_ID, @year, @month, GETDATE(), @user, @fileName)";
-                SqlParameter[] insertP = new SqlParameter[]
-                {
-                    new SqlParameter("@FAC_ID", SqlDbType.VarChar) { Value = targetFacId },
-                    new SqlParameter("@year", SqlDbType.Int) { Value = year },
-                    new SqlParameter("@month", SqlDbType.Int) { Value = month },
-                    new SqlParameter("@user", SqlDbType.VarChar) { Value = userId },
-                    new SqlParameter("@fileName", SqlDbType.NVarChar) { Value = saveFileName }
-                };
-                DbHelper.ExecuteNonQuery(insertSql, insertP);
-            }
+
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("WASH_REPORT_UPLOAD", targetFacId, string.Format("上傳洗掃月報 (年度:{0}, 月份:{1}, 檔名:{2})", year, month, saveFileName));
 
             Response.Write(json.Serialize(new
             {
@@ -896,6 +910,9 @@ namespace NTPC_FEC.Wash
             };
             DbHelper.ExecuteNonQuery(sqlDel, pDel);
 
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("WASH_REPORT_DELETE", itemFacId, string.Format("刪除洗掃月報 (年度:{0}, 月份:{1}, 檔名:{2})", upYear, upMonth, fileName));
+
             Response.Write(json.Serialize(new
             {
                 Success = true,
@@ -989,6 +1006,9 @@ namespace NTPC_FEC.Wash
 
             FileInfo fi = new FileInfo(downloadFilePath);
             string outputFileName = fi.Name;
+
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("WASH_REPORT_DOWNLOAD", itemFacId, string.Format("下載洗掃月報 (年度:{0}, 月份:{1}, 檔名:{2})", upYear, upMonth, outputFileName));
 
             Response.Clear();
             Response.ContentType = "application/octet-stream";
@@ -1204,6 +1224,9 @@ namespace NTPC_FEC.Wash
             {
                 sheet.SetColumnWidth(i, widths[i] * 256);
             }
+
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("WASH_REPORT_EXPORT", "RoadWash_UploadHis", "匯出洗掃月報申報清冊 Excel");
 
             Response.Clear();
             Response.ContentType = "application/vnd.ms-excel";

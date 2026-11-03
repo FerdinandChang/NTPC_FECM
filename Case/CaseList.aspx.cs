@@ -9,6 +9,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NTPC_FEC.Manager;
@@ -908,6 +909,18 @@ namespace NTPC_FEC.Case
                     new SqlParameter("@Content_Name", model.ContentName ?? ""),
                     new SqlParameter("@Edit_User", GetCurrentUser()));
 
+                // 寫入 AuditLog 雙軌稽核日誌
+                AuditLogger.Log(
+                    operatorUser: GetCurrentUser(),
+                    actionType: "CASE_FAC_EDIT_SAVE",
+                    targetUser: model.FacId,
+                    clientIp: Request.UserHostAddress,
+                    details: string.Format("外勤巡查儲存場所基本資料變更，場所代碼：{0}，名稱：{1}，管編：{2}，地址：{3}",
+                        model.FacId, model.FacName, model.CNo, model.Addr),
+                    oldValue: null,
+                    newValue: null
+                );
+
                 Response.Write(json.Serialize(new { Success = true, Message = "場所基本資料異動已成功登記！" }));
             }
             catch (Exception ex)
@@ -943,6 +956,17 @@ namespace NTPC_FEC.Case
                     new SqlParameter("@Finish_INV_NO", invNo),
                     new SqlParameter("@FAC_ID", facId));
 
+                // 寫入 AuditLog 雙軌稽核日誌
+                AuditLogger.Log(
+                    operatorUser: GetCurrentUser(),
+                    actionType: "CASE_UPLOAD_CHECK",
+                    targetUser: facId,
+                    clientIp: Request.UserHostAddress,
+                    details: string.Format("外勤查核紀錄送出審核，場所代碼：{0}，查核編號：{1}，狀態推進為 A00", facId, invNo),
+                    oldValue: "Draft",
+                    newValue: "A00"
+                );
+
                 Response.Write(json.Serialize(new { Success = true, Message = "查核紀錄已成功送出審核！" }));
             }
             catch (Exception ex)
@@ -970,6 +994,17 @@ namespace NTPC_FEC.Case
                 DbHelper.ExecuteNonQuery(sqlDel,
                     new SqlParameter("@FAC_ID", facId),
                     new SqlParameter("@INV_NO", invNo));
+
+                // 寫入 AuditLog 雙軌稽核日誌
+                AuditLogger.Log(
+                    operatorUser: GetCurrentUser(),
+                    actionType: "CASE_INV_DELETE",
+                    targetUser: facId,
+                    clientIp: Request.UserHostAddress,
+                    details: string.Format("外勤巡查刪除查核紀錄 (軟刪除)，場所代碼：{0}，查核編號：{1}，狀態標記為 Z00", facId, invNo),
+                    oldValue: "Active",
+                    newValue: "Z00"
+                );
 
                 Response.Write(json.Serialize(new { Success = true, Message = "查核紀錄已順利刪除！" }));
             }
@@ -1016,6 +1051,18 @@ namespace NTPC_FEC.Case
                 DbHelper.ExecuteNonQuery(sqlCancel,
                     new SqlParameter("@FAC_ID", model.FacId),
                     new SqlParameter("@Cancel_Reason", model.CancelReason ?? "使用者手動移除派遣"));
+
+                // 寫入 AuditLog 雙軌稽核日誌
+                AuditLogger.Log(
+                    operatorUser: GetCurrentUser(),
+                    actionType: "CASE_MISSION_CANCEL",
+                    targetUser: model.FacId,
+                    clientIp: Request.UserHostAddress,
+                    details: string.Format("取消/移除外勤派遣任務，場所代碼：{0}，原因：{1}",
+                        model.FacId, model.CancelReason ?? "手動移除派遣"),
+                    oldValue: "Active",
+                    newValue: "Cancelled"
+                );
 
                 Response.Write(json.Serialize(new { Success = true, Message = "派遣任務已順利移除！" }));
             }
@@ -2297,6 +2344,19 @@ namespace NTPC_FEC.Case
                 Response.Clear();
                 Response.ContentType = "application/vnd.ms-excel";
                 string filename = "巡查場所派遣清單_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".xls";
+
+                // 寫入 AuditLog 雙軌稽核日誌
+                AuditLogger.Log(
+                    operatorUser: GetCurrentUser(),
+                    actionType: "CASE_EXPORT_EXCEL",
+                    targetUser: "FAC_Main",
+                    clientIp: Request.UserHostAddress,
+                    details: string.Format("匯出巡查場所派遣清單 Excel，模式：{0}，管制編號：{1}，名稱：{2}，共匯出 {3} 筆",
+                        mode, cNo, facName, dt != null ? dt.Rows.Count : 0),
+                    oldValue: null,
+                    newValue: null
+                );
+
                 ExcelExportHelper.ExportToResponse(workbook, filename, Response);
             }
             catch (Exception ex)

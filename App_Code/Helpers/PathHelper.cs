@@ -37,6 +37,18 @@ namespace NTPC_FEC.Helpers
             }
 
             string clean = virtualPath.Trim().Replace('\\', '/');
+            string querySuffix = "";
+            int qIdx = clean.IndexOf('?');
+            if (qIdx >= 0)
+            {
+                string rawQuery = clean.Substring(qIdx + 1).TrimStart('?', '&');
+                if (!string.IsNullOrEmpty(rawQuery))
+                {
+                    querySuffix = "&" + rawQuery;
+                }
+                clean = clean.Substring(0, qIdx);
+            }
+
             if (clean.StartsWith("~"))
             {
                 clean = clean.Substring(1);
@@ -54,7 +66,7 @@ namespace NTPC_FEC.Helpers
             clean = clean.TrimStart('/');
 
             // 統一透過 ViewImage.ashx 安全串流輸出，杜絕任何 IIS 靜態檔案 403 / 404 / 500.19 阻斷
-            return string.Format("{0}/ViewImage.ashx?p={1}", AppVirtualPath, HttpUtility.UrlEncode(clean));
+            return string.Format("{0}/ViewImage.ashx?p={1}{2}", AppVirtualPath, HttpUtility.UrlEncode(clean), querySuffix);
         }
 
         /// <summary>

@@ -50,18 +50,19 @@
         .top-navbar {
             background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
             color: #ffffff;
-            height: 60px;
+            min-height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 8px 16px;
             box-shadow: 0 2px 10px rgba(0, 153, 229, 0.25);
             position: sticky;
             top: 0;
             z-index: 1020;
+            gap: 8px;
         }
 
-.nav-btn {
+        .nav-btn {
             background: rgba(255, 255, 255, 0.18);
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: #ffffff !important;
@@ -73,10 +74,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0 14px;
+            padding: 0 12px;
             gap: 6px;
             transition: all 0.2s ease;
             text-decoration: none !important;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
         .nav-btn:hover {
             background-color: rgba(255, 255, 255, 0.32);
@@ -84,16 +87,31 @@
             text-decoration: none !important;
         }
 
+        .navbar-brand-wrap {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            flex: 1;
+            overflow: hidden;
+        }
 
         .navbar-brand-title {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             color: #ffffff;
             text-decoration: none;
             letter-spacing: 0.5px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .navbar-brand-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .navbar-brand-title:hover {
@@ -105,13 +123,14 @@
         .nav-mode-bar {
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
-            padding: 0 20px;
+            padding: 0 16px;
             display: flex;
-            gap: 8px;
+            gap: 4px;
             overflow-x: auto;
             white-space: nowrap;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
             scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
         }
         .nav-mode-bar::-webkit-scrollbar {
             display: none;
@@ -120,8 +139,8 @@
         .nav-mode-item {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 14px 18px;
+            gap: 6px;
+            padding: 12px 14px;
             font-size: 14px;
             font-weight: 600;
             color: #64748b;
@@ -129,6 +148,7 @@
             cursor: pointer;
             transition: all 0.2s ease;
             user-select: none;
+            flex-shrink: 0;
         }
 
         .nav-mode-item:hover {
@@ -156,31 +176,34 @@
             border-radius: 12px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(15, 23, 42, 0.04);
             border: 1px solid var(--border-color);
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             overflow: hidden;
         }
 
         .card-modern-header {
-            padding: 14px 20px;
+            padding: 12px 16px;
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .card-modern-title {
-            font-size: 1.05rem;
+            font-size: 1rem;
             font-weight: 700;
             color: var(--brand-navy);
             margin: 0;
             display: flex;
             align-items: center;
-            gap: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .card-modern-body {
-            padding: 20px;
+            padding: 16px;
         }
 
         /* 統計卡片 */
@@ -188,13 +211,14 @@
             background: #ffffff;
             border-radius: 10px;
             border: 1px solid var(--border-color);
-            padding: 14px 18px;
+            padding: 12px 14px;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
             transition: transform 0.15s ease, box-shadow 0.15s ease;
             cursor: pointer;
+            height: 100%;
         }
 
         .stat-card:hover {
@@ -203,17 +227,18 @@
         }
 
         .stat-icon {
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.3rem;
+            font-size: 1.15rem;
+            flex-shrink: 0;
         }
 
         .stat-val {
-            font-size: 1.45rem;
+            font-size: 1.35rem;
             font-weight: 800;
             line-height: 1.2;
             color: var(--brand-navy);
@@ -223,6 +248,7 @@
             font-size: 12px;
             font-weight: 600;
             color: #64748b;
+            white-space: nowrap;
         }
 
         /* 現代化表格 */
@@ -257,7 +283,7 @@
             background: #f1f5f9;
         }
 
-        /* 評級晶片 (比照 Clean_List.aspx 規格，嚴格單行不換行) */
+        /* 評級晶片 (桌面單行，手機卡片內自適應換行防破版) */
         .score-badge {
             display: inline-flex;
             align-items: center;
@@ -266,8 +292,8 @@
             border-radius: 6px;
             font-weight: 700;
             font-size: 13px;
-            white-space: nowrap !important;
-            flex-shrink: 0;
+            white-space: nowrap;
+            max-width: 100%;
         }
 
         .score-a {
@@ -303,6 +329,8 @@
             font-size: 12px;
             font-weight: 700;
             display: inline-block;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .road-lv-chip {
@@ -315,14 +343,14 @@
             border: 1px solid #cbd5e1;
         }
 
-        /* 操作按鈕群組 - 嚴格單行排列不換行 */
+        /* 操作按鈕群組 */
         .action-btn-group {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            flex-wrap: nowrap !important;
-            white-space: nowrap !important;
+            flex-wrap: nowrap;
+            white-space: nowrap;
         }
 
         .btn-action {
@@ -345,29 +373,23 @@
             text-decoration: none;
         }
 
-        @media (max-width: 767.98px) {
-            .btn-action {
-                flex: 1;
-                justify-content: center;
-                min-height: 42px;
-                font-size: 14px;
-            }
-        }
-
         /* 手機卡片清單 (Mobile Cards View) */
         .mobile-card {
             background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 16px;
+            padding: 14px;
             margin-bottom: 12px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            max-width: 100%;
         }
 
         .mobile-card-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 8px;
             margin-bottom: 10px;
             padding-bottom: 8px;
             border-bottom: 1px dashed var(--border-color);
@@ -378,6 +400,76 @@
             font-weight: 700;
             color: var(--brand-navy);
             margin: 0;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        /* 手機卡片內標籤防破版保護 */
+        .mobile-tag-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+            max-width: 100%;
+        }
+
+        .mobile-tag-group .score-badge {
+            white-space: normal !important;
+            word-break: break-word;
+            text-align: left;
+            line-height: 1.35;
+            font-size: 12.5px;
+            padding: 5px 10px;
+            max-width: 100%;
+            align-items: flex-start;
+        }
+
+        .mobile-tag-group .score-badge i {
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        /* 快捷日期膠囊列 (防手機端超出邊界) */
+        .date-shortcut-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        @media (max-width: 767.98px) {
+            .top-navbar {
+                padding: 6px 10px;
+                min-height: 50px;
+            }
+            .navbar-brand-title {
+                font-size: 0.96rem;
+                gap: 6px;
+            }
+            .nav-btn {
+                height: 34px;
+                padding: 0 10px;
+            }
+            .nav-mode-bar {
+                padding: 0 8px;
+            }
+            .nav-mode-item {
+                padding: 10px 10px;
+                font-size: 13px;
+            }
+            .card-modern-header {
+                padding: 10px 12px;
+            }
+            .card-modern-body {
+                padding: 12px;
+            }
+            .btn-action {
+                flex: 1;
+                min-width: 0;
+                justify-content: center;
+                min-height: 40px;
+                font-size: 13.5px;
+                padding: 5px 8px;
+            }
         }
 
                 /* ========================================================
@@ -547,26 +639,25 @@
 </head>
 <body>
     <div id="listApp" v-cloak>
-        <!-- 頂部品牌導覽列 (比照 Clean_List.aspx 規格) -->
-                <!-- 頂部品牌導覽列 (全站標準左側導航、右側主操作) -->
+        <!-- 頂部品牌導覽列 (全站標準左側導航、右側主操作) -->
         <header class="top-navbar">
-            <div class="d-flex align-items-center">
+            <div class="navbar-brand-wrap">
                 <a href="../MainPage.aspx" class="nav-btn mr-2" title="返回主選單">
                     <i class="fas fa-home"></i>
                     <span class="d-none d-sm-inline">回首頁</span>
                 </a>
                 <a href="Break_List.aspx" class="navbar-brand-title">
-                    <i class="fas fa-road text-white"></i>
-                    <span>道路破損巡查與通報管理</span>
-                    <span class="badge badge-light text-dark font-weight-bold ml-1">
+                    <i class="fas fa-road text-white flex-shrink-0"></i>
+                    <span class="navbar-brand-text">道路破損巡查與通報管理</span>
+                    <span class="badge badge-light text-dark font-weight-bold ml-1 flex-shrink-0">
                         {{ counts.Total || 0 }} 筆
                     </span>
                 </a>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="NewBreak.aspx?mode=new" class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2">
-                    <i class="fas fa-plus-circle mr-1"></i>
-                    <span class="d-none d-sm-inline">新增破損巡查</span>
+            <div class="d-flex align-items-center flex-shrink-0">
+                <a href="NewBreak.aspx?mode=new" class="btn btn-success btn-sm font-weight-bold shadow-sm d-inline-flex align-items-center" style="min-height: 34px; padding: 0 10px; border-radius: 8px;">
+                    <i class="fas fa-plus-circle"></i>
+                    <span class="d-none d-sm-inline ml-1">新增破損巡查</span>
                 </a>
             </div>
         </header>
@@ -583,9 +674,14 @@
                 <span>破損改善回報 (處理中)</span>
                 <span class="tab-badge badge badge-primary">{{ counts.BreakImprove || 0 }}</span>
             </div>
+            <div class="nav-mode-item" :class="{ 'active': currentMode === 'Follow' }" v-on:click="switchMode('Follow')">
+                <i class="fas fa-search-location"></i>
+                <span>建議持續追蹤</span>
+                <span class="tab-badge badge badge-info">{{ counts.Follow || 0 }}</span>
+            </div>
             <div class="nav-mode-item" :class="{ 'active': currentMode === 'Finish' }" v-on:click="switchMode('Finish')">
                 <i class="fas fa-check-double"></i>
-                <span>破損改善成果 (已完成)</span>
+                <span>破損改善成果 (已結案)</span>
                 <span class="tab-badge badge badge-success">{{ counts.Finish || 0 }}</span>
             </div>
             <div class="nav-mode-item" :class="{ 'active': currentMode === 'all' }" v-on:click="switchMode('all')">
@@ -595,7 +691,7 @@
             </div>
         </nav>
 
-        <main class="container-fluid py-4 px-lg-4">
+        <main class="container-fluid py-3 py-md-4 px-2 px-sm-3 px-lg-4">
             <!-- 提示訊息 -->
             <div v-if="alertMessage" class="alert alert-dismissible fade show shadow-sm" :class="'alert-' + alertType" role="alert">
                 <i class="fas" :class="alertType === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'"></i>
@@ -604,13 +700,13 @@
             </div>
 
             <!-- 頂部統計指標卡片 (比照 Clean_List.aspx 規格) -->
-            <div class="row mb-3">
+            <div class="row mb-2 mb-md-3">
                 <div class="col-6 col-lg-3 mb-2 mb-lg-0">
                     <div class="stat-card" v-on:click="switchMode('BreakEdit')">
                         <div class="stat-icon bg-light text-secondary">
                             <i class="fas fa-file-signature"></i>
                         </div>
-                        <div>
+                        <div style="min-width: 0;">
                             <div class="stat-val">{{ counts.BreakEdit || 0 }}</div>
                             <div class="stat-label">待通報暫存</div>
                         </div>
@@ -621,7 +717,7 @@
                         <div class="stat-icon bg-primary text-white">
                             <i class="fas fa-tools"></i>
                         </div>
-                        <div>
+                        <div style="min-width: 0;">
                             <div class="stat-val text-primary">{{ counts.BreakImprove || 0 }}</div>
                             <div class="stat-label">改善處理中</div>
                         </div>
@@ -632,7 +728,7 @@
                         <div class="stat-icon bg-success text-white">
                             <i class="fas fa-check-double"></i>
                         </div>
-                        <div>
+                        <div style="min-width: 0;">
                             <div class="stat-val text-success">{{ counts.Finish || 0 }}</div>
                             <div class="stat-label">已改善結案</div>
                         </div>
@@ -643,7 +739,7 @@
                         <div class="stat-icon bg-dark text-white">
                             <i class="fas fa-layer-group"></i>
                         </div>
-                        <div>
+                        <div style="min-width: 0;">
                             <div class="stat-val text-dark">{{ counts.Total || 0 }}</div>
                             <div class="stat-label">總累計通報</div>
                         </div>
@@ -659,15 +755,19 @@
                         <span>案件條件篩選</span>
                     </h2>
                     <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-light border font-weight-bold d-inline-flex d-md-none align-items-center" v-on:click="filterCollapsed = !filterCollapsed">
+                            <i class="fas mr-1" :class="filterCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+                            <span>{{ filterCollapsed ? '展開篩選' : '收合篩選' }}</span>
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" v-on:click="resetFilter">
                             <i class="fas fa-redo-alt mr-1"></i> 重設條件
                         </button>
                     </div>
                 </div>
-                <div class="card-modern-body">
+                <div class="card-modern-body" v-show="!filterCollapsed">
                     <div class="row">
                         <!-- 行政區篩選 -->
-                        <div class="col-12 col-md-4 mb-3">
+                        <div class="col-12 col-md-3 mb-2 mb-md-3">
                             <label class="font-weight-bold text-muted small mb-1">
                                 <i class="fas fa-map-marker-alt text-danger mr-1"></i> 行政區
                             </label>
@@ -679,28 +779,29 @@
                             </select>
                         </div>
 
+                        <!-- 損壞性質篩選 (路平報馬仔對標規格) -->
+                        <div class="col-12 col-md-3 mb-2 mb-md-3">
+                            <label class="font-weight-bold text-muted small mb-1">
+                                <i class="fas fa-exclamation-triangle text-danger mr-1"></i> 路面損壞-性質
+                            </label>
+                            <select class="form-control" v-model="filter.DamageType" v-on:change="handleSearch" style="font-weight: 600;">
+                                <option value="">全部損壞性質</option>
+                                <option v-for="dt in damageTypes" :key="dt" :value="dt">
+                                    {{ dt }}
+                                </option>
+                            </select>
+                        </div>
+
                         <!-- 道路名稱 / 案號關鍵字 -->
-                        <div class="col-12 col-md-4 mb-3">
+                        <div class="col-12 col-md-3 mb-2 mb-md-3">
                             <label class="font-weight-bold text-muted small mb-1">
                                 <i class="fas fa-road text-info mr-1"></i> 通報道路名稱 / 案號
                             </label>
                             <input type="text" class="form-control" v-model="filter.RoadName" placeholder="例如：文化路一段、或輸入案號..." v-on:keyup.enter="handleSearch" />
                         </div>
 
-                        <!-- 日期區間 -->
-                        <div class="col-12 col-md-4 mb-3">
-                            <label class="font-weight-bold text-muted small mb-1">
-                                <i class="far fa-calendar-alt text-primary mr-1"></i> {{ getDateLabel() }} 區間
-                            </label>
-                            <div class="d-flex align-items-center" style="width: 100%;">
-                                <input type="date" class="form-control" style="flex: 1; min-width: 0;" v-model="filter.DateS" />
-                                <span class="mx-2 text-muted font-weight-bold">~</span>
-                                <input type="date" class="form-control" style="flex: 1; min-width: 0;" v-model="filter.DateE" />
-                            </div>
-                        </div>
-
                         <!-- 處理單位篩選 (改善與結案模式) -->
-                        <div class="col-12 col-md-4 mb-3" v-if="currentMode !== 'BreakEdit'">
+                        <div class="col-12 col-md-3 mb-2 mb-md-3" v-if="currentMode !== 'BreakEdit'">
                             <label class="font-weight-bold text-muted small mb-1">
                                 <i class="fas fa-building text-warning mr-1"></i> 處理權責單位
                             </label>
@@ -711,16 +812,28 @@
                                 </option>
                             </select>
                         </div>
+
+                        <!-- 日期區間 -->
+                        <div class="col-12 col-md-6 mb-2 mb-md-3">
+                            <label class="font-weight-bold text-muted small mb-1">
+                                <i class="far fa-calendar-alt text-primary mr-1"></i> {{ getDateLabel() }} 區間
+                            </label>
+                            <div class="d-flex align-items-center" style="width: 100%;">
+                                <input type="date" class="form-control" style="flex: 1; min-width: 0;" v-model="filter.DateS" />
+                                <span class="mx-2 text-muted font-weight-bold">~</span>
+                                <input type="date" class="form-control" style="flex: 1; min-width: 0;" v-model="filter.DateE" />
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 快捷日期按鈕與搜尋列 (比照 Clean_List.aspx 規格) -->
-                    <div class="d-flex flex-wrap align-items-center justify-content-between pt-2 border-top">
-                        <div class="btn-group btn-group-sm mb-2 mb-md-0" role="group">
-                            <button type="button" class="btn btn-outline-secondary" v-on:click="setDateShortcut('all')">不限日期</button>
-                            <button type="button" class="btn btn-outline-secondary" v-on:click="setDateShortcut('today')">今天</button>
-                            <button type="button" class="btn btn-outline-secondary" v-on:click="setDateShortcut('week')">近 7 天</button>
-                            <button type="button" class="btn btn-outline-secondary" v-on:click="setDateShortcut('month')">近 1 個月</button>
-                            <button type="button" class="btn btn-outline-secondary" v-on:click="setDateShortcut('quarter')">近 3 個月</button>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between pt-2 border-top gap-2">
+                        <div class="date-shortcut-group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="setDateShortcut('all')">不限日期</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="setDateShortcut('today')">今天</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="setDateShortcut('week')">近 7 天</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="setDateShortcut('month')">近 1 個月</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="setDateShortcut('quarter')">近 3 個月</button>
                         </div>
                         <button type="button" class="btn btn-primary px-4 font-weight-bold shadow-sm" :disabled="loading" v-on:click="handleSearch">
                             <i class="fas fa-search mr-1"></i>
@@ -737,7 +850,7 @@
                     <h2 class="card-modern-title">
                         <i class="fas fa-list-ul text-primary"></i>
                         <span>{{ getModeTitle() }}</span>
-                        <span class="badge badge-pill badge-light border text-muted ml-2 font-weight-bold" style="font-size: 12px;">
+                        <span class="badge badge-pill badge-light border text-muted font-weight-bold" style="font-size: 12px;">
                             共 {{ totalCount }} 筆紀錄
                         </span>
                     </h2>
@@ -782,7 +895,7 @@
                                     <th style="width: 170px; min-width: 140px;">破損道路</th>
                                     <th style="width: 150px;">{{ currentMode === 'BreakEdit' ? '查核時間' : (currentMode === 'BreakImprove' ? '通報時間' : '處理時間') }}</th>
                                     <th style="width: 140px;">佐證照片</th>
-                                    <th style="width: 170px; min-width: 150px; white-space: nowrap;">鋪面平整度</th>
+                                    <th style="width: 170px; min-width: 150px; white-space: nowrap;">損壞性質 / 尺寸</th>
                                     <th style="width: 160px; min-width: 140px; white-space: nowrap;">人手孔蓋狀況</th>
                                     <th style="width: 120px;" v-if="currentMode !== 'BreakEdit'">處理單位</th>
                                     <th style="width: 110px;">案件階段</th>
@@ -793,8 +906,13 @@
                                 <tr v-for="item in list" :key="item.Break_ID">
                                     <!-- 通報編號 -->
                                     <td>
-                                        <div class="font-weight-bold text-dark" style="font-family: monospace; font-size: 14px;">
-                                            {{ item.Show_ID }}
+                                        <div class="font-weight-bold text-dark d-flex align-items-center gap-1" style="font-family: monospace; font-size: 14px;">
+                                            <span>{{ item.Show_ID }}</span>
+                                            <a v-if="item.RDM_Case_ID || /^\d{6,10}$/.test(item.Show_ID)"
+                                               :href="'https://rdm.ntpc.gov.tw/ROAD/SatisfySurvey.aspx?id=' + encodeURIComponent(item.RDM_Case_ID || item.Show_ID)"
+                                               target="_blank" rel="noopener" class="badge badge-info px-1 py-0" style="font-size: 11px;" title="開啟路平報馬仔網頁">
+                                                ↗ 路平
+                                            </a>
                                         </div>
                                         <small class="text-muted">
                                             人員: {{ item.Report_UserName || item.Report_User || '未登錄' }}
@@ -832,12 +950,19 @@
                                         <span v-else class="text-muted small">無照片</span>
                                     </td>
 
-                                    <!-- 鋪面平整度晶片 -->
+                                    <!-- 損壞性質 / 尺寸晶片 -->
                                     <td style="white-space: nowrap;">
-                                        <span class="score-badge" :class="getSmoothScoreClass(item.Smooth)">
-                                            <i :class="getSmoothScoreIcon(item.Smooth)"></i>
-                                            <span>{{ item.SmoothName || item.Smooth || '未評' }}</span>
+                                        <span class="score-badge" :class="item.Damage_Type === '坑洞' ? 'score-d' : (item.Damage_Type && item.Damage_Type.indexOf('人手孔蓋') >= 0 ? 'score-c' : 'score-b')">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span>{{ item.Damage_Type || item.SmoothName || '路面破損' }}</span>
                                         </span>
+                                        <div v-if="item.Damage_Length || item.Damage_Width" class="text-muted small mt-1 font-weight-bold">
+                                            {{ item.Damage_Length || '0' }}m × {{ item.Damage_Width || '0' }}m
+                                            <span v-if="item.Damage_Count" class="badge badge-light border ml-1">共 {{ item.Damage_Count }} 處</span>
+                                        </div>
+                                        <div v-if="item.Location_Desc" class="text-secondary small mt-1 text-truncate" style="max-width: 170px;" :title="item.Location_Desc">
+                                            <i class="fas fa-map-pin mr-1"></i>{{ item.Location_Desc }}
+                                        </div>
                                     </td>
 
                                     <!-- 人手孔蓋狀況晶片 -->
@@ -882,20 +1007,46 @@
                                             </template>
 
                                             <!-- 改善處理中狀態 -->
+                                            <!-- 改善處理中狀態 (若被退回，顯示重新派工) -->
                                             <template v-else-if="item.SetCOM_Date && !item.Improve_Date">
-                                                <a :href="'ImproveBreak.aspx?id=' + item.Break_ID" class="btn btn-sm btn-success btn-action font-weight-bold shadow-sm" title="改善回報">
+                                                <a v-if="item.G_Back === 'Y'" :href="'SetSG_Break.aspx?id=' + item.Break_ID" class="btn btn-sm btn-warning btn-action text-dark font-weight-bold shadow-sm" title="案件被退回，重新指派權責單位">
+                                                    <i class="fas fa-redo-alt"></i> 重新派工
+                                                </a>
+                                                <a v-else :href="'ImproveBreak.aspx?id=' + item.Break_ID" class="btn btn-sm btn-success btn-action font-weight-bold shadow-sm" title="改善回報">
                                                     <i class="fas fa-tools"></i> 改善回報
                                                 </a>
                                                 <a :href="'BreakDetail.aspx?id=' + item.Break_ID" class="btn btn-sm btn-info btn-action font-weight-bold" title="檢視詳細">
                                                     <i class="fas fa-eye"></i> 檢視
                                                 </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-action" v-on:click="confirmDelete(item)" title="刪除案件">
+                                                    <i class="fas fa-trash-alt"></i> 刪除
+                                                </button>
                                             </template>
 
-                                            <!-- 改善已完成狀態 -->
+                                            <!-- 建議持續追蹤狀態 -->
+                                            <template v-else-if="item.Need_Follow === 'Y'">
+                                                <a :href="'ImproveBreak.aspx?id=' + item.Break_ID" class="btn btn-sm btn-primary btn-action font-weight-bold" title="更新追蹤回報">
+                                                    <i class="fas fa-sync-alt"></i> 更新
+                                                </a>
+                                                <a :href="'NewBreak.aspx?mode=new&fromId=' + item.Break_ID" class="btn btn-sm btn-outline-primary btn-action font-weight-bold" title="依本案建立後續複查通報">
+                                                    <i class="fas fa-plus"></i> 複查
+                                                </a>
+                                                <a :href="'BreakDetail.aspx?id=' + item.Break_ID" class="btn btn-sm btn-info btn-action font-weight-bold" title="檢視詳細">
+                                                    <i class="fas fa-eye"></i> 檢視
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-action" v-on:click="confirmDelete(item)" title="刪除案件">
+                                                    <i class="fas fa-trash-alt"></i> 刪除
+                                                </button>
+                                            </template>
+
+                                            <!-- 改善已完成狀態 (成果列表) -->
                                             <template v-else>
                                                 <a :href="'BreakDetail.aspx?id=' + item.Break_ID" class="btn btn-sm btn-info btn-action font-weight-bold" title="成果檢視">
                                                     <i class="fas fa-file-alt"></i> 詳細資料
                                                 </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-action" v-on:click="confirmDelete(item)" title="刪除案件">
+                                                    <i class="fas fa-trash-alt"></i> 刪除
+                                                </button>
                                             </template>
                                         </div>
                                     </td>
@@ -904,34 +1055,49 @@
                         </table>
                     </div>
 
-                    <!-- 手機端自適應卡片清單 (Mobile Cards) (比照 Clean_List.aspx 規格) -->
-                    <div class="d-block d-md-none p-3">
+                    <!-- 手機端自適應卡片清單 (Mobile Cards) (遵循專案 SKILL 規範，防破版) -->
+                    <div class="d-block d-md-none p-2 p-sm-3">
                         <div v-for="item in list" :key="item.Break_ID" class="mobile-card">
                             <div class="mobile-card-header">
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex flex-wrap align-items-center gap-1" style="min-width: 0; flex: 1;">
                                     <span class="town-chip">{{ item.TownName || item.TOWN_CODE }}</span>
-                                    <span class="font-weight-bold text-dark" style="font-family: monospace;">{{ item.Show_ID }}</span>
+                                    <span class="font-weight-bold text-dark" style="font-family: monospace; font-size: 13.5px; word-break: break-all;">{{ item.Show_ID }}</span>
+                                    <a v-if="item.RDM_Case_ID || /^\d{6,10}$/.test(item.Show_ID)"
+                                       :href="'https://rdm.ntpc.gov.tw/ROAD/SatisfySurvey.aspx?id=' + encodeURIComponent(item.RDM_Case_ID || item.Show_ID)"
+                                       target="_blank" rel="noopener" class="badge badge-info px-1 py-0" style="font-size: 11px;">
+                                        ↗ 路平
+                                    </a>
                                 </div>
-                                <span class="badge px-2 py-1 font-weight-bold" :class="item.StateBadge">
+                                <span class="badge px-2 py-1 font-weight-bold flex-shrink-0" :class="item.StateBadge">
                                     {{ item.StateName }}
                                 </span>
                             </div>
 
                             <h3 class="mobile-card-title mb-1">{{ item.ROAD_Name }}</h3>
-                            <div class="small text-muted mb-2">
-                                <i class="far fa-clock mr-1"></i> {{ item.Report_Date }}
-                                <span class="ml-2"><i class="fas fa-user-edit mr-1"></i> {{ item.Report_UserName || item.Report_User }}</span>
+                            <div v-if="item.Location_Desc" class="small text-secondary font-weight-bold mb-1" style="word-break: break-word;">
+                                <i class="fas fa-map-pin text-danger mr-1"></i>{{ item.Location_Desc }}
+                            </div>
+                            <div class="small text-muted mb-2 d-flex flex-wrap align-items-center gap-2">
+                                <span><i class="far fa-clock mr-1"></i>{{ item.Report_Date }}</span>
+                                <span><i class="fas fa-user-edit mr-1"></i>{{ item.Report_UserName || item.Report_User }}</span>
+                                <span v-if="currentMode !== 'BreakEdit' && item.G_COM_NAME" class="text-dark font-weight-bold">
+                                    <i class="fas fa-building text-primary mr-1"></i>{{ item.G_COM_NAME }}
+                                </span>
                             </div>
 
-                            <!-- 狀態晶片群 -->
-                            <div class="d-flex flex-wrap gap-2 mb-3">
-                                <span class="score-badge" :class="getSmoothScoreClass(item.Smooth)">
-                                    <i :class="getSmoothScoreIcon(item.Smooth)"></i>
-                                    平整: {{ item.SmoothName || item.Smooth || '未評' }}
+                            <!-- 狀態晶片群 (自動折行防超出邊界) -->
+                            <div class="mobile-tag-group">
+                                <span class="score-badge" :class="item.Damage_Type === '坑洞' ? 'score-d' : (item.Damage_Type && item.Damage_Type.indexOf('人手孔蓋') >= 0 ? 'score-c' : 'score-b')">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>性質: {{ item.Damage_Type || item.SmoothName || '路面破損' }}</span>
                                 </span>
-                                <span class="score-badge score-b">
+                                <span v-if="(item.Damage_Length && item.Damage_Length !== '0' && item.Damage_Length !== '0.0') || (item.Damage_Width && item.Damage_Width !== '0' && item.Damage_Width !== '0.0')" class="score-badge" style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">
+                                    <i class="fas fa-ruler-combined"></i>
+                                    <span>尺寸: {{ item.Damage_Length || '0' }}m × {{ item.Damage_Width || '0' }}m</span>
+                                </span>
+                                <span v-if="item.HoleName && item.HoleName !== '-'" class="score-badge score-b">
                                     <i class="fas fa-circle-notch"></i>
-                                    孔蓋: {{ item.HoleName || item.Hole_Conn_St || '-' }}
+                                    <span>孔蓋: {{ item.HoleName }}</span>
                                 </span>
                                 <button v-if="item.PhotoCount > 0" type="button" class="btn btn-sm btn-light border py-1 px-2 font-weight-bold small text-primary" v-on:click="openPhotoModal(item)">
                                     <i class="fas fa-camera mr-1"></i> {{ item.PhotoCount }} 張照片
@@ -939,7 +1105,7 @@
                             </div>
 
                             <!-- 補充說明 -->
-                            <div v-if="item.Memo" class="alert alert-light py-2 px-3 small text-muted mb-3 border">
+                            <div v-if="item.Memo" class="alert alert-light py-2 px-3 small text-muted mb-3 border" style="word-break: break-word;">
                                 <i class="fas fa-comment-alt mr-1"></i> 備註：{{ item.Memo }}
                             </div>
 
@@ -957,17 +1123,40 @@
                                     </button>
                                 </template>
                                 <template v-else-if="item.SetCOM_Date && !item.Improve_Date">
-                                    <a :href="'ImproveBreak.aspx?id=' + item.Break_ID" class="btn btn-success btn-action font-weight-bold shadow-sm">
-                                        <i class="fas fa-tools"></i> 改善回報
+                                    <a v-if="item.G_Back === 'Y'" :href="'SetSG_Break.aspx?id=' + item.Break_ID" class="btn btn-warning btn-action text-dark font-weight-bold shadow-sm">
+                                        <i class="fas fa-redo-alt"></i> 重派
+                                    </a>
+                                    <a v-else :href="'ImproveBreak.aspx?id=' + item.Break_ID" class="btn btn-success btn-action font-weight-bold shadow-sm">
+                                        <i class="fas fa-tools"></i> 回報
                                     </a>
                                     <a :href="'BreakDetail.aspx?id=' + item.Break_ID" class="btn btn-info btn-action font-weight-bold">
                                         <i class="fas fa-eye"></i> 檢視
                                     </a>
+                                    <button type="button" class="btn btn-outline-danger btn-action" v-on:click="confirmDelete(item)">
+                                        <i class="fas fa-trash-alt"></i> 刪除
+                                    </button>
+                                </template>
+                                <template v-else-if="item.Need_Follow === 'Y'">
+                                    <a :href="'ImproveBreak.aspx?id=' + item.Break_ID" class="btn btn-primary btn-action font-weight-bold">
+                                        <i class="fas fa-sync-alt"></i> 更新
+                                    </a>
+                                    <a :href="'NewBreak.aspx?mode=new&fromId=' + item.Break_ID" class="btn btn-outline-primary btn-action font-weight-bold">
+                                        <i class="fas fa-plus"></i> 複查
+                                    </a>
+                                    <a :href="'BreakDetail.aspx?id=' + item.Break_ID" class="btn btn-info btn-action font-weight-bold">
+                                        <i class="fas fa-eye"></i> 檢視
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger btn-action" v-on:click="confirmDelete(item)">
+                                        <i class="fas fa-trash-alt"></i> 刪除
+                                    </button>
                                 </template>
                                 <template v-else>
-                                    <a :href="'BreakDetail.aspx?id=' + item.Break_ID" class="btn btn-info btn-action font-weight-bold w-100">
+                                    <a :href="'BreakDetail.aspx?id=' + item.Break_ID" class="btn btn-info btn-action font-weight-bold flex-fill">
                                         <i class="fas fa-file-alt"></i> 詳細資料
                                     </a>
+                                    <button type="button" class="btn btn-outline-danger btn-action flex-fill" v-on:click="confirmDelete(item)">
+                                        <i class="fas fa-trash-alt"></i> 刪除
+                                    </button>
                                 </template>
                             </div>
                         </div>
@@ -1085,6 +1274,7 @@
                     counts: {
                         BreakEdit: 0,
                         BreakImprove: 0,
+                        Follow: 0,
                         Finish: 0,
                         Total: 0
                     },
@@ -1093,9 +1283,11 @@
                         TownCode: '',
                         RoadName: '',
                         UnitId: '',
+                        DamageType: '',
                         DateS: '',
                         DateE: ''
                     },
+                    damageTypes: ['坑洞', '龜裂', '凹陷', '人手孔蓋週邊破損', '人手孔蓋欠平順', '補綻(臨補)', '其他'],
 
                     list: [],
                     totalCount: 0,
@@ -1104,6 +1296,7 @@
                     totalPages: 1,
 
                     loading: false,
+                    filterCollapsed: false,
                     alertMessage: '',
                     alertType: 'info',
 
@@ -1148,9 +1341,10 @@
             mounted() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const m = urlParams.get('mode');
-                if (m && ['breakedit', 'breakimprove', 'finish', 'all'].includes(m.toLowerCase())) {
+                if (m && ['breakedit', 'breakimprove', 'follow', 'finish', 'all'].includes(m.toLowerCase())) {
                     if (m.toLowerCase() === 'breakedit') this.currentMode = 'BreakEdit';
                     if (m.toLowerCase() === 'breakimprove') this.currentMode = 'BreakImprove';
+                    if (m.toLowerCase() === 'follow') this.currentMode = 'Follow';
                     if (m.toLowerCase() === 'finish') this.currentMode = 'Finish';
                     if (m.toLowerCase() === 'all') this.currentMode = 'all';
                 }
@@ -1180,6 +1374,7 @@
                                 const d = respData.Data || {};
                                 if (d.Towns && d.Towns.length > 0) this.towns = d.Towns;
                                 if (d.Units && d.Units.length > 0) this.units = d.Units;
+                                if (d.DamageTypes && d.DamageTypes.length > 0) this.damageTypes = d.DamageTypes;
                                 if (d.Counts) this.counts = d.Counts;
 
                                 // 若不是 BreakEdit 且日期尚未設定，帶入後端預設區間
@@ -1236,6 +1431,7 @@
                         roadName: this.filter.RoadName,
                         townCode: this.filter.TownCode,
                         unitId: this.filter.UnitId,
+                        damageType: this.filter.DamageType,
                         dateS: this.filter.DateS,
                         dateE: this.filter.DateE,
                         pageIndex: this.pageIndex,
@@ -1333,6 +1529,7 @@
                     this.filter.TownCode = '';
                     this.filter.RoadName = '';
                     this.filter.UnitId = '';
+                    this.filter.DamageType = '';
                     this.setDateShortcut('month');
                 },
 
@@ -1357,6 +1554,7 @@
                         townCode: this.filter.TownCode,
                         roadName: this.filter.RoadName,
                         unitId: this.filter.UnitId,
+                        damageType: this.filter.DamageType,
                         dateS: this.filter.DateS,
                         dateE: this.filter.DateE
                     });
@@ -1400,6 +1598,7 @@
                 getModeTitle() {
                     if (this.currentMode === 'BreakEdit') return '查核紀錄暫存列表 (待通報草稿)';
                     if (this.currentMode === 'BreakImprove') return '破損改善回報列表 (處理中案件)';
+                    if (this.currentMode === 'Follow') return '建議機關持續追蹤案件列表';
                     if (this.currentMode === 'Finish') return '破損改善成果列表 (已結案案件)';
                     return '全部破損通報案件總覽';
                 },

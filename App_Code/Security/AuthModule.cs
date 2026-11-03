@@ -147,51 +147,45 @@ namespace NTPC_FEC.Security
                 return;
             }
 
-            // 1. 檢核登入狀態
-            if (context.Session == null || context.Session["LoginUser"] == null || string.IsNullOrEmpty(context.Session["LoginUser"].ToString()))
+            // 1. 檢核登入狀態與取得當前使用者實體 (支援由 LoginUser / User / User_ID 自動補齊重建 UserAccount)
+            if (context.Session == null)
             {
                 DenyUnauthenticated(context);
                 return;
             }
 
-            // 1.1 檢核 Session 防劫持特徵指紋 (Session Hijacking Defense)
+            UserAccount currentUser = AuthService.GetCurrentUser(context);
+            if (currentUser == null)
+            {
+                DenyUnauthenticated(context);
+                return;
+            }
+
+            // 1.1 檢核 Session 特徵指紋並平滑更新 (不因雙 WAN IP 變動或代理標頭差異而呼叫 Session.Abandon 強制踢出使用者)
+            string currentFingerprint = AuthService.GenerateSessionFingerprint(context);
             string savedFingerprint = context.Session["AuthFingerprint"] as string;
-            if (!string.IsNullOrEmpty(savedFingerprint))
+            if (!string.IsNullOrEmpty(currentFingerprint))
             {
-                string currentFingerprint = AuthService.GenerateSessionFingerprint(context);
-                if (!string.Equals(savedFingerprint, currentFingerprint, StringComparison.OrdinalIgnoreCase))
+                if (string.IsNullOrEmpty(savedFingerprint))
                 {
-                    AuditLogger.Log(
-                        "SYSTEM",
-                        "SESSION_HIJACK_BLOCKED",
-                        context.Session["LoginUser"] != null ? context.Session["LoginUser"].ToString() : "Unknown",
-                        context.Request != null ? context.Request.UserHostAddress : "127.0.0.1",
-                        "偵測到不同來源載具或 IP 網段試圖盜用登入作業階段！系統已強制註銷連線。",
-                        null,
-                        null
-                    );
-                    context.Session.Clear();
-                    context.Session.Abandon();
-                    DenyUnauthenticated(context);
-                    return;
+                    if (!context.Session.IsReadOnly)
+                    {
+                        context.Session["AuthFingerprint"] = currentFingerprint;
+                    }
+                }
+                else if (!string.Equals(savedFingerprint, currentFingerprint, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!context.Session.IsReadOnly)
+                    {
+                        context.Session["AuthFingerprint"] = currentFingerprint;
+                    }
                 }
             }
 
-            // 2. 取得當前使用者實體
-            UserAccount currentUser = context.Session["UserAccount"] as UserAccount;
-            if (currentUser == null)
+            // 2. 觸發 Session 滑動展延 (Sliding Expiration)，確保每次切換模組皆重置 30 分鐘逾時倒數
+            if (!context.Session.IsReadOnly)
             {
-                currentUser = AuthService.GetCurrentUser(context);
-                if (currentUser != null && context.Session != null)
-                {
-                    context.Session["UserAccount"] = currentUser;
-                }
-            }
-
-            if (currentUser == null)
-            {
-                DenyUnauthenticated(context);
-                return;
+                context.Session["LastActiveAt"] = DateTime.UtcNow.Ticks;
             }
 
             // 3. 確保核發 Anti-CSRF Cookie (供 Axios 與前端表單讀取)
@@ -217,6 +211,39 @@ namespace NTPC_FEC.Security
             {
                 DenyUnauthorized(context, denyReason);
                 return;
+            }
+
+            // 6. 為所有業務模組頁面注入背景活動偵測與跨分頁 Session 自動續命腳本
+            System.Web.UI.Page currentPage = context.CurrentHandler as System.Web.UI.Page;
+            if (currentPage != null && string.IsNullOrEmpty(context.Request["action"]) && string.IsNullOrEmpty(context.Request["mode"]) && !string.Equals(context.Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
+            {
+                currentPage.PreRender += OnAuthenticatedPagePreRender;
+            }
+        }
+
+        private static void OnAuthenticatedPagePreRender(object sender, EventArgs e)
+        {
+            try
+            {
+                System.Web.UI.Page page = sender as System.Web.UI.Page;
+                if (page == null || page.IsCallback || page.Form == null || page.ClientScript == null) return;
+                if (page.ClientScript.IsStartupScriptRegistered(typeof(AuthModule), "NtpcSubModuleKeepAlive")) return;
+
+                string keepAliveUrl = page.ResolveUrl("~/KeepAlive.ashx");
+                string script = "(function(){if(window.__ntpcGlobalKeepAliveInit)return;window.__ntpcGlobalKeepAliveInit=true;" +
+                    "var kaUrl='" + keepAliveUrl + "',SK='ntpc_fec_last_active',HB=60000,lastPing=Date.now(),lastAct=Date.now(),lastStore=0;" +
+                    "function sync(t){try{if(t-lastStore>=2000){lastStore=t;localStorage.setItem(SK,String(t));}}catch(e){}}" +
+                    "sync(Date.now());" +
+                    "function ping(){lastPing=Date.now();try{fetch(kaUrl,{method:'POST',headers:{'Cache-Control':'no-cache','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}).catch(function(){});}catch(e){}}" +
+                    "function onAct(){var n=Date.now();lastAct=n;sync(n);if(!document.getElementById('navSessionTimer')&&(n-lastPing>=HB)){ping();}}" +
+                    "var ev=['mousemove','mousedown','keydown','touchstart','scroll','click'];for(var i=0;i<ev.length;i++){window.addEventListener(ev[i],onAct,{passive:true});}" +
+                    "setInterval(function(){if(document.getElementById('navSessionTimer'))return;var n=Date.now();if(lastAct>lastPing&&(n-lastPing>=HB)){ping();}},15000);" +
+                    "})();";
+
+                page.ClientScript.RegisterStartupScript(typeof(AuthModule), "NtpcSubModuleKeepAlive", script, true);
+            }
+            catch
+            {
             }
         }
 
@@ -264,6 +291,31 @@ namespace NTPC_FEC.Security
             {
                 EnsureXsrfCookie(context);
                 return true;
+            }
+
+            // 4. 相容保護：若為同源請求 (Same-Origin Referer / Origin) 或傳統 PostBack，給予放行以防虛擬目錄 Cookie 差異誤擋
+            if (context.Request.Form["__VIEWSTATE"] != null)
+            {
+                return true;
+            }
+            if (context.Request.Url != null)
+            {
+                string currentHost = context.Request.Url.Host;
+                Uri referer = context.Request.UrlReferrer;
+                if (referer != null && string.Equals(referer.Host, currentHost, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                string origin = context.Request.Headers["Origin"];
+                if (!string.IsNullOrEmpty(origin))
+                {
+                    Uri originUri;
+                    if (Uri.TryCreate(origin, UriKind.Absolute, out originUri) &&
+                        string.Equals(originUri.Host, currentHost, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
             }
 
             return false;

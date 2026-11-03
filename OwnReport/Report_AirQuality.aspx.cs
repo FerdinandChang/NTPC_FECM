@@ -11,6 +11,7 @@ using System.Web.UI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 using NTPC_FEC.Models;
 using NTPC_FEC.Services;
 
@@ -471,11 +472,38 @@ namespace NTPC_FEC.OwnReport
                 return;
             }
 
-            // 業者帳號權限隔離：若為業者身分，強制校驗是否為自身場所
+            // 業者帳號權限隔離：非管理者且無管轄權限者，強制校驗是否為自身場所
+            string currentUserId = Session["LoginUser"] != null ? Session["LoginUser"].ToString().Trim() : "";
+            string userRole = Session["Role"] != null ? Session["Role"].ToString().Trim() : "";
+            long userLic = Session["LIC"] != null ? Convert.ToInt64(Session["LIC"]) : 0L;
+            string userFacId = "";
+
             UserAccount loggedUser = AuthService.GetCurrentUser(Context);
-            if (loggedUser != null && !string.IsNullOrEmpty(loggedUser.FacID))
+            if (loggedUser != null)
             {
-                if (!string.Equals(model.FAC_ID.Trim(), loggedUser.FacID.Trim(), StringComparison.OrdinalIgnoreCase))
+                userFacId = !string.IsNullOrEmpty(loggedUser.FacID) ? loggedUser.FacID.Trim() : "";
+                userLic = loggedUser.Lic != 0 ? loggedUser.Lic : userLic;
+            }
+
+            if (string.IsNullOrEmpty(userRole) || (string.IsNullOrEmpty(userFacId) && userLic == 0))
+            {
+                string sqlAcc = "SELECT Role, Lic, FacID FROM UserAcc WHERE UserID = @uid";
+                DataTable dtAcc = DbHelper.ExecuteDataTable(sqlAcc, new SqlParameter("@uid", currentUserId));
+                if (dtAcc != null && dtAcc.Rows.Count > 0)
+                {
+                    userRole = dtAcc.Rows[0]["Role"].ToString().Trim();
+                    if (dtAcc.Rows[0]["Lic"] != DBNull.Value) userLic = Convert.ToInt64(dtAcc.Rows[0]["Lic"]);
+                    userFacId = dtAcc.Rows[0]["FacID"] != DBNull.Value ? dtAcc.Rows[0]["FacID"].ToString().Trim() : "";
+                }
+            }
+
+            bool isManager = string.Equals(userRole, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(userRole, "SystemAdmin", StringComparison.OrdinalIgnoreCase) ||
+                             MenuService.CheckLicense(userLic, 9) || MenuService.CheckLicense(userLic, 14);
+
+            if (!isManager && !string.IsNullOrEmpty(userFacId))
+            {
+                if (!string.Equals(model.FAC_ID.Trim(), userFacId, StringComparison.OrdinalIgnoreCase))
                 {
                     Response.Write(jsonSerializer.Serialize(new ResponseModel
                     {

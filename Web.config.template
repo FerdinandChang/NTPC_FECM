@@ -28,13 +28,13 @@
   <system.web>
     <globalization fileEncoding="utf-8" requestEncoding="utf-8" responseEncoding="utf-8" culture="zh-TW" uiCulture="zh-TW" />
     <!-- 依據公務機關資安規範，Web 系統使用者閒置逾時上限為 30 分鐘 -->
-    <sessionState timeout="30" />
+    <sessionState timeout="30" cookieSameSite="Lax" />
     <!-- 資安規範：正式機隱藏詳細例外訊息以防敏感資訊洩漏，本地開發保留原生錯誤 -->
     <customErrors mode="RemoteOnly" defaultRedirect="~/Error.aspx" />
     <compilation debug="false" targetFramework="4.8" />
     <httpCookies httpOnlyCookies="true" requireSSL="false" sameSite="Lax" />
-    <!-- 檔案上傳上限 100MB (102400 KB)，執行逾時 600 秒 -->
-    <httpRuntime targetFramework="4.8" maxRequestLength="102400" executionTimeout="600" />
+    <!-- 檔案上傳上限 100MB (102400 KB)，執行逾時 600 秒；fcnMode="Disabled" 防止上傳/刪除照片目錄觸發 AppDomain 重啟清空 Session -->
+    <httpRuntime targetFramework="4.8" maxRequestLength="102400" executionTimeout="600" enableVersionHeader="false" fcnMode="Disabled" />
   </system.web>
   <system.webServer>
     <!-- 全域效能優化：啟用 IIS 動態與靜態內容 Gzip/Deflate 壓縮 (節省 80% 傳輸體積與下載時間) -->

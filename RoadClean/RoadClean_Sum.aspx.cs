@@ -145,6 +145,7 @@ namespace NTPC_FEC.RoadClean
             public List<TownStatModel> TownStats { get; set; }
             public int TotalRoads { get; set; }
             public double TotalDistance { get; set; }
+            public double TotalCheckedDistance { get; set; }
             public int TotalChecks { get; set; }
             public double AvgPassRate { get; set; }
 
@@ -651,6 +652,13 @@ namespace NTPC_FEC.RoadClean
             result.TotalDistance = Math.Round(sumDis, 1);
             result.TotalChecks = totalChecksCount;
             result.AvgPassRate = totalChecksCount > 0 ? Math.Round((double)totalPassChecks / totalChecksCount * 100.0, 1) : 0.0;
+
+            double sumCheckedDis = 0;
+            for (int i = 0; i < result.DisStats.Count; i++)
+            {
+                sumCheckedDis += result.DisStats[i].DisTotal;
+            }
+            result.TotalCheckedDistance = Math.Round(sumCheckedDis, 1);
 
             return result;
         }

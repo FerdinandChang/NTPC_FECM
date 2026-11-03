@@ -9,6 +9,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 
@@ -597,6 +598,16 @@ namespace NTPC_FEC.OwnReport
                 return;
             }
 
+            // [IDOR 防護] 非管理員帳號 (業者) 只能預覽自身所屬場所之自主回報紀錄，嚴防水平越權偷看他廠缺失
+            string curUserId = GetCurrentUserId();
+            string userFacId = GetUserFacId(curUserId);
+            bool isAdmin = IsAdminUser(curUserId);
+            if (!isAdmin && !string.IsNullOrEmpty(userFacId) && !string.Equals(userFacId, facId, StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "您無權檢視其他場所之回報資料！" }));
+                return;
+            }
+
             string sql = @"
                 SELECT TOP 1
                     INV_Report.*,
@@ -789,6 +800,19 @@ namespace NTPC_FEC.OwnReport
                 byte[] bytes = ms.ToArray();
                 Response.BinaryWrite(bytes);
             }
+
+            // 寫入 AuditLog 雙軌稽核日誌
+            AuditLogger.Log(
+                operatorUser: GetCurrentUserId(),
+                actionType: "PIC_REPORT_EXPORT_EXCEL",
+                targetUser: "INV_Report",
+                clientIp: Request.UserHostAddress,
+                details: string.Format("匯出固定污染源自主與改善回報清單 Excel，回報類型：{0}，篩選場所：{1}，起訖：{2}~{3}，共匯出 {4} 筆",
+                    filter.Mode, filter.FacId, filter.DateS, filter.DateE, dt != null ? dt.Rows.Count : 0),
+                oldValue: null,
+                newValue: null
+            );
+
             Response.Flush();
             Response.End();
         }

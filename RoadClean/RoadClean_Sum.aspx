@@ -183,6 +183,35 @@
             padding: 20px;
         }
 
+        /* 頂部 5 欄統計指標網格 (自適應各載具) */
+        .stat-grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 1rem;
+        }
+        @media (max-width: 1199.98px) {
+            .stat-grid-5 {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 767.98px) {
+            .stat-grid-5 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 480px) {
+            .stat-grid-5 {
+                grid-template-columns: 1fr;
+            }
+        }
+        .bg-indigo {
+            background-color: #6366f1 !important;
+        }
+        .text-indigo {
+            color: #4f46e5 !important;
+        }
+
         /* 頂部統計指標卡片 */
         .stat-card {
             background: #ffffff;
@@ -574,55 +603,60 @@
             <div class="nav-mode-item" :class="{ 'active': currentTab === 'length' }" v-on:click="switchTab('length')">
                 <i class="fas fa-route"></i>
                 <span>道路長度分析與圖表</span>
-                <span class="tab-badge badge badge-info">{{ sumResult.TotalDistance || 0 }}km</span>
+                <span class="tab-badge badge badge-info">{{ sumResult.TotalCheckedDistance || 0 }}km</span>
             </div>
         </nav>
 
         <main class="container-fluid py-4 px-lg-4">
-            <!-- 頂部統計指標卡片 -->
-            <div class="row mb-3">
-                <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                    <div class="stat-card" v-on:click="switchTab('matrix')" style="cursor: pointer;">
-                        <div class="stat-icon bg-primary text-white">
-                            <i class="fas fa-road"></i>
-                        </div>
-                        <div>
-                            <div class="stat-val text-primary">{{ sumResult.TotalRoads || 0 }}</div>
-                            <div class="stat-label">納管巡檢道路數 (條)</div>
-                        </div>
+            <!-- 頂部統計指標卡片 (5 欄式全載具自適應網格) -->
+            <div class="stat-grid-5">
+                <div class="stat-card" v-on:click="switchTab('matrix')" style="cursor: pointer;">
+                    <div class="stat-icon bg-primary text-white">
+                        <i class="fas fa-road"></i>
+                    </div>
+                    <div>
+                        <div class="stat-val text-primary">{{ sumResult.TotalRoads || 0 }}</div>
+                        <div class="stat-label">納管巡檢道路數 (條)</div>
                     </div>
                 </div>
-                <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                    <div class="stat-card" v-on:click="switchTab('length')" style="cursor: pointer;">
-                        <div class="stat-icon bg-info text-white">
-                            <i class="fas fa-route"></i>
-                        </div>
-                        <div>
-                            <div class="stat-val text-info">{{ sumResult.TotalDistance || 0 }} <span style="font-size: 13px;">km</span></div>
-                            <div class="stat-label">納管道路總長度</div>
-                        </div>
+
+                <div class="stat-card" v-on:click="switchTab('matrix')" style="cursor: pointer;">
+                    <div class="stat-icon bg-indigo text-white">
+                        <i class="fas fa-ruler-combined"></i>
+                    </div>
+                    <div>
+                        <div class="stat-val text-indigo">{{ sumResult.TotalDistance || 0 }} <span style="font-size: 13px;">km</span></div>
+                        <div class="stat-label">納管道路總長度</div>
                     </div>
                 </div>
-                <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                    <div class="stat-card" v-on:click="switchTab('count')" style="cursor: pointer;">
-                        <div class="stat-icon bg-warning text-dark">
-                            <i class="fas fa-clipboard-check"></i>
-                        </div>
-                        <div>
-                            <div class="stat-val text-warning">{{ sumResult.TotalChecks || 0 }}</div>
-                            <div class="stat-label">期間累計巡檢次數</div>
-                        </div>
+
+                <div class="stat-card" v-on:click="switchTab('length')" style="cursor: pointer;">
+                    <div class="stat-icon bg-info text-white">
+                        <i class="fas fa-route"></i>
+                    </div>
+                    <div>
+                        <div class="stat-val text-info">{{ sumResult.TotalCheckedDistance || 0 }} <span style="font-size: 13px;">km</span></div>
+                        <div class="stat-label">期間累計查核里程</div>
                     </div>
                 </div>
-                <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                    <div class="stat-card" v-on:click="switchTab('count')" style="cursor: pointer;">
-                        <div class="stat-icon bg-success text-white">
-                            <i class="fas fa-award"></i>
-                        </div>
-                        <div>
-                            <div class="stat-val text-success">{{ sumResult.AvgPassRate || 0 }} <span style="font-size: 13px;">%</span></div>
-                            <div class="stat-label">A 級潔淨達標率</div>
-                        </div>
+
+                <div class="stat-card" v-on:click="switchTab('count')" style="cursor: pointer;">
+                    <div class="stat-icon bg-warning text-dark">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div>
+                        <div class="stat-val text-warning">{{ sumResult.TotalChecks || 0 }}</div>
+                        <div class="stat-label">期間累計巡檢次數</div>
+                    </div>
+                </div>
+
+                <div class="stat-card" v-on:click="switchTab('count')" style="cursor: pointer;">
+                    <div class="stat-icon bg-success text-white">
+                        <i class="fas fa-award"></i>
+                    </div>
+                    <div>
+                        <div class="stat-val text-success">{{ sumResult.AvgPassRate || 0 }} <span style="font-size: 13px;">%</span></div>
+                        <div class="stat-label">A 級潔淨達標率</div>
                     </div>
                 </div>
             </div>
@@ -1413,6 +1447,7 @@
                         TownStats: [],
                         TotalRoads: 0,
                         TotalDistance: 0,
+                        TotalCheckedDistance: 0,
                         TotalChecks: 0,
                         AvgPassRate: 0
                     },

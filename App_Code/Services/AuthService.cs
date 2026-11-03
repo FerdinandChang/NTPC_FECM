@@ -305,25 +305,15 @@ namespace NTPC_FEC.Services
         }
 
         /// <summary>
-        /// 計算當前 Client 的 Session 防劫持特徵指紋 (基於 User-Agent 與 IP 網段)
+        /// 計算當前 Client 的 Session 防劫持特徵指紋 (僅綁定 User-Agent，避免雙 WAN 負載平衡、Proxy 叢集、IPv6 或外勤 4G/5G 基地台 IP 切換誤觸強制登出)
         /// 相容 C# 5.0 規範
         /// </summary>
         public static string GenerateSessionFingerprint(HttpContext context)
         {
             if (context == null || context.Request == null) return string.Empty;
 
-            string ua = context.Request.UserAgent != null ? context.Request.UserAgent : string.Empty;
-            string ip = context.Request.UserHostAddress != null ? context.Request.UserHostAddress : string.Empty;
-
-            // IP 網段截取 (前三段，相容行動外勤 4G 基地台浮動切換)
-            string ipSubnet = ip;
-            int lastDot = ip.LastIndexOf('.');
-            if (lastDot > 0)
-            {
-                ipSubnet = ip.Substring(0, lastDot);
-            }
-
-            string raw = string.Format("FINGERPRINT_{0}_{1}_NTPC_SEC", ua, ipSubnet);
+            string ua = context.Request.UserAgent != null ? context.Request.UserAgent.Trim() : string.Empty;
+            string raw = string.Format("FINGERPRINT_{0}_NTPC_SEC", ua);
             using (var sha = SHA256.Create())
             {
                 byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
@@ -539,8 +529,14 @@ namespace NTPC_FEC.Services
             // 9. 寫入 Session 與更新最後登入時間
             if (context != null && context.Session != null)
             {
+                bool isAdminRole = string.Equals(user.UserID, "admin", StringComparison.OrdinalIgnoreCase) || ((user.Lic & (1L << 63)) != 0);
                 context.Session["LoginUser"] = user.UserID;
+                context.Session["User"] = user.UserID;
+                context.Session["User_ID"] = user.UserID;
                 context.Session["UserName"] = user.Name;
+                context.Session["LIC"] = user.Lic;
+                context.Session["UnitCode"] = user.PUnit;
+                context.Session["Role"] = isAdminRole ? "Admin" : "User";
                 context.Session["UserAccount"] = user;
                 context.Session["MustChangePassword"] = mustChangePwd;
                 context.Session["AuthFingerprint"] = GenerateSessionFingerprint(context);
@@ -728,8 +724,14 @@ namespace NTPC_FEC.Services
 
             if (context != null && context.Session != null)
             {
+                bool isAdminRole = string.Equals(user.UserID, "admin", StringComparison.OrdinalIgnoreCase) || ((user.Lic & (1L << 63)) != 0);
                 context.Session["LoginUser"] = user.UserID;
+                context.Session["User"] = user.UserID;
+                context.Session["User_ID"] = user.UserID;
                 context.Session["UserName"] = user.Name;
+                context.Session["LIC"] = user.Lic;
+                context.Session["UnitCode"] = user.PUnit;
+                context.Session["Role"] = isAdminRole ? "Admin" : "User";
                 context.Session["UserAccount"] = user;
                 context.Session["LoginMode"] = "client";
                 context.Session["AuthFingerprint"] = GenerateSessionFingerprint(context);
@@ -796,7 +798,101 @@ namespace NTPC_FEC.Services
         public static UserAccount GetCurrentUser(HttpContext context)
         {
             if (context == null || context.Session == null) return null;
-            return context.Session["UserAccount"] as UserAccount;
+
+            UserAccount account = context.Session["UserAccount"] as UserAccount;
+            if (account != null)
+            {
+                return account;
+            }
+
+            // 相容自動重建機制：當 Session["LoginUser"] / Session["User"] 存在但 UserAccount 物件遺失時，自動從資料庫重建並補齊 Session
+            string loginUserId = null;
+            if (context.Session["LoginUser"] != null)
+            {
+                UserAccount asAcc = context.Session["LoginUser"] as UserAccount;
+                if (asAcc != null)
+                {
+                    if (!context.Session.IsReadOnly)
+                    {
+                        context.Session["UserAccount"] = asAcc;
+                        context.Session["LoginUser"] = asAcc.UserID;
+                    }
+                    return asAcc;
+                }
+                loginUserId = context.Session["LoginUser"].ToString().Trim();
+            }
+            else if (context.Session["User"] != null)
+            {
+                loginUserId = context.Session["User"].ToString().Trim();
+            }
+            else if (context.Session["User_ID"] != null)
+            {
+                loginUserId = context.Session["User_ID"].ToString().Trim();
+            }
+
+            if (string.IsNullOrEmpty(loginUserId))
+            {
+                return null;
+            }
+
+            try
+            {
+                string sql = "SELECT UID, UserID, PUnit, Name, Acc_State, LIC, LIC2, FAC_ID, LastLogin, LastPwdChangeDate FROM UserAcc WHERE UserID = @UserID";
+                var parameters = new SqlParameter[]
+                {
+                    new SqlParameter("@UserID", SqlDbType.VarChar) { Value = loginUserId }
+                };
+                DataTable dt = DbHelper.ExecuteDataTable(sql, parameters);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    DataRow row = dt.Rows[0];
+                    long lic = 0L, lic2 = 0L;
+                    if (row["LIC"] != null && row["LIC"] != DBNull.Value) long.TryParse(row["LIC"].ToString(), out lic);
+                    if (row["LIC2"] != null && row["LIC2"] != DBNull.Value) long.TryParse(row["LIC2"].ToString(), out lic2);
+                    int uid = 0;
+                    if (row["UID"] != null && row["UID"] != DBNull.Value) int.TryParse(row["UID"].ToString(), out uid);
+
+                    DateTime? lastLogin = (row.Table.Columns.Contains("LastLogin") && row["LastLogin"] != DBNull.Value)
+                        ? (DateTime?)Convert.ToDateTime(row["LastLogin"])
+                        : null;
+                    DateTime? lastPwdDate = (row.Table.Columns.Contains("LastPwdChangeDate") && row["LastPwdChangeDate"] != DBNull.Value)
+                        ? (DateTime?)Convert.ToDateTime(row["LastPwdChangeDate"])
+                        : null;
+
+                    account = new UserAccount
+                    {
+                        UID = uid,
+                        UserID = (row["UserID"] != null && row["UserID"] != DBNull.Value) ? row["UserID"].ToString().Trim() : loginUserId,
+                        Name = (row["Name"] != null && row["Name"] != DBNull.Value) ? row["Name"].ToString().Trim() : loginUserId,
+                        PUnit = (row["PUnit"] != null && row["PUnit"] != DBNull.Value) ? row["PUnit"].ToString().Trim() : "",
+                        AccState = (row["Acc_State"] != null && row["Acc_State"] != DBNull.Value) ? row["Acc_State"].ToString().Trim() : "OK",
+                        Lic = lic,
+                        Lic2 = lic2,
+                        FacID = (row["FAC_ID"] != null && row["FAC_ID"] != DBNull.Value) ? row["FAC_ID"].ToString().Trim() : "",
+                        LastLogin = lastLogin,
+                        LastPwdChangeDate = lastPwdDate
+                    };
+
+                    if (!context.Session.IsReadOnly)
+                    {
+                        bool isAdminRole = string.Equals(account.UserID, "admin", StringComparison.OrdinalIgnoreCase) || ((account.Lic & (1L << 63)) != 0);
+                        context.Session["UserAccount"] = account;
+                        context.Session["LoginUser"] = account.UserID;
+                        context.Session["User"] = account.UserID;
+                        context.Session["User_ID"] = account.UserID;
+                        context.Session["UserName"] = account.Name;
+                        context.Session["LIC"] = account.Lic;
+                        context.Session["UnitCode"] = account.PUnit;
+                        context.Session["Role"] = isAdminRole ? "Admin" : "User";
+                    }
+                    return account;
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
         }
         #endregion
 

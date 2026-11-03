@@ -682,6 +682,24 @@ namespace NTPC_FEC.Manager
                 return;
             }
 
+            // [RBAC 安全防禦] 嚴格校驗當前操作者是否具備複審/三審或系統管理權限，杜絕一般帳號越權推進審核狀態
+            string currentOperator = GetCurrentUser();
+            long userLic = 0L;
+            if (Session["LIC"] != null)
+            {
+                long.TryParse(Session["LIC"].ToString(), out userLic);
+            }
+
+            string targetAuth = (invState == "INV2") ? "CASE_INV2" : "CASE_INV3";
+            int targetBit = (invState == "INV2") ? 4 : 5;
+
+            bool hasPerm = PermissionService.HasPermission(currentOperator, userLic, targetAuth, targetBit);
+            if (!hasPerm && !PermissionService.HasPermission(currentOperator, userLic, "SYS_ACCOUNT_MANAGE", 63) && !currentOperator.Equals("admin", StringComparison.OrdinalIgnoreCase))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "您不具備此階段案件批次審核通過之權限！" }));
+                return;
+            }
+
             if (string.IsNullOrEmpty(facIdsRaw))
             {
                 Response.Write(json.Serialize(new { Success = false, Message = "請先勾選欲批次通過之場所" }));
@@ -1213,6 +1231,18 @@ namespace NTPC_FEC.Manager
                     workbook.Write(ms);
                     Response.BinaryWrite(ms.ToArray());
                 }
+
+                // 寫入 AuditLog 雙軌稽核日誌
+                AuditLogger.Log(
+                    operatorUser: GetCurrentUser(),
+                    actionType: "AUDIT_EXPORT_EXCEL",
+                    targetUser: "FAC_Main",
+                    clientIp: Request.UserHostAddress,
+                    details: string.Format("匯出審查場所清單 Excel，階段：{0}，篩選管制編號：{1}，場所名稱：{2}，共匯出 {3} 筆",
+                        mode, cno, facName, dt != null ? dt.Rows.Count : 0),
+                    oldValue: null,
+                    newValue: null
+                );
 
                 try
                 {

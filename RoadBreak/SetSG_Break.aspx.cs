@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Web;
 using System.Web.Configuration;
 using System.Web.Script.Serialization;
@@ -80,7 +81,11 @@ namespace NTPC_FEC.RoadBreak
                     GetUnitUsers(Request["unitId"]);
                     break;
                 case "updateuseremail":
-                    UpdateUserEmail();
+                case "updateusercontact":
+                    UpdateUserContact();
+                    break;
+                case "addunituser":
+                    AddUnitUser();
                     break;
                 case "save":
                     SaveDispatchRecord();
@@ -88,6 +93,43 @@ namespace NTPC_FEC.RoadBreak
                 default:
                     Response.Write(json.Serialize(new { Success = false, Message = "未知的操作指令：" + action }));
                     break;
+            }
+        }
+
+        // 自動檢查並安全補齊資料表擴充欄位 (防呆保護)
+        private void EnsureRoadBreakColumns()
+        {
+            try
+            {
+                string sql = @"
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'RDM_Case_ID')
+                        ALTER TABLE RoadBreak_CaseMain ADD RDM_Case_ID nvarchar(50) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'District_Office')
+                        ALTER TABLE RoadBreak_CaseMain ADD District_Office nvarchar(100) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'Handle_Unit')
+                        ALTER TABLE RoadBreak_CaseMain ADD Handle_Unit nvarchar(100) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'Handle_Status')
+                        ALTER TABLE RoadBreak_CaseMain ADD Handle_Status nvarchar(100) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'Need_Follow')
+                        ALTER TABLE RoadBreak_CaseMain ADD Need_Follow char(1) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'Follow_Memo')
+                        ALTER TABLE RoadBreak_CaseMain ADD Follow_Memo nvarchar(500) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'Dispatch_Memo')
+                        ALTER TABLE RoadBreak_CaseMain ADD Dispatch_Memo nvarchar(500) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_UnitUser') AND name = 'UserTel')
+                        ALTER TABLE RoadBreak_UnitUser ADD UserTel nvarchar(50) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'Contact_Phone')
+                        ALTER TABLE RoadBreak_CaseMain ADD Contact_Phone nvarchar(50) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'Contact_Email')
+                        ALTER TABLE RoadBreak_CaseMain ADD Contact_Email nvarchar(100) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RoadBreak_CaseMain') AND name = 'Contact_Name')
+                        ALTER TABLE RoadBreak_CaseMain ADD Contact_Name nvarchar(50) NULL;
+                ";
+                DbHelper.ExecuteNonQuery(sql);
+            }
+            catch
+            {
+                // 忽略權限不足或已存在之例外
             }
         }
 
@@ -100,6 +142,8 @@ namespace NTPC_FEC.RoadBreak
                 Response.Write(json.Serialize(new { Success = false, Message = "案件代碼不得為空。" }));
                 return;
             }
+
+            EnsureRoadBreakColumns();
 
             string sql = @"SELECT RoadBreak_CaseMain.*, C_TOWN.TOWN_NA,
                 (SELECT TOP 1 Name FROM UserAcc WHERE UserAcc.UserID = RoadBreak_CaseMain.Report_User) AS Report_UserName,
@@ -143,7 +187,7 @@ namespace NTPC_FEC.RoadBreak
                 DateTime dtRep;
                 if (DateTime.TryParse(r["Report_Date"].ToString(), out dtRep))
                 {
-                    reportDateStr = dtRep.ToString("yyyy-MM-dd HH:mm");
+                    reportDateStr = dtRep.ToString("yyyy/MM/dd HH:mm");
                 }
             }
 
@@ -153,43 +197,100 @@ namespace NTPC_FEC.RoadBreak
                 DateTime dtSet;
                 if (DateTime.TryParse(r["SetCOM_Date"].ToString(), out dtSet))
                 {
-                    setComDateStr = dtSet.ToString("yyyy-MM-dd HH:mm");
+                    setComDateStr = dtSet.ToString("yyyy/MM/dd HH:mm");
                 }
             }
 
             string currentLoginUser = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "";
             string currentLoginUserName = GetUserNameById(currentLoginUser);
 
-            string roadLv = r["ROAD_LV"] != DBNull.Value ? r["ROAD_LV"].ToString() : "";
+            string roadLv = r["ROAD_LV"] != DBNull.Value ? r["ROAD_LV"].ToString().Trim() : "";
+            string townNa = r["TOWN_NA"] != DBNull.Value ? r["TOWN_NA"].ToString().Trim() : "";
+
+            // 讀取新對標通報欄位
+            string damageCat = r.Table.Columns.Contains("Damage_Category") && r["Damage_Category"] != DBNull.Value ? r["Damage_Category"].ToString().Trim() : "路面損壞";
+            string damageType = r.Table.Columns.Contains("Damage_Type") && r["Damage_Type"] != DBNull.Value ? r["Damage_Type"].ToString().Trim() : "";
+            string damageLen = r.Table.Columns.Contains("Damage_Length") && r["Damage_Length"] != DBNull.Value ? r["Damage_Length"].ToString().Trim() : "";
+            string damageWid = r.Table.Columns.Contains("Damage_Width") && r["Damage_Width"] != DBNull.Value ? r["Damage_Width"].ToString().Trim() : "";
+            string locationDesc = r.Table.Columns.Contains("Location_Desc") && r["Location_Desc"] != DBNull.Value ? r["Location_Desc"].ToString().Trim() : "";
+            string laneInfo = r.Table.Columns.Contains("Lane_Info") && r["Lane_Info"] != DBNull.Value ? r["Lane_Info"].ToString().Trim() : "全車道";
+            string direction = r.Table.Columns.Contains("Direction") && r["Direction"] != DBNull.Value ? r["Direction"].ToString().Trim() : "無法判定";
+            string roadType = r.Table.Columns.Contains("Road_Type") && r["Road_Type"] != DBNull.Value ? r["Road_Type"].ToString().Trim() : "平面";
+
+            if (string.IsNullOrEmpty(damageType))
+            {
+                string oldHole = r["Hole_Conn_St"] != DBNull.Value ? r["Hole_Conn_St"].ToString().Trim() : "";
+                string oldSmooth = r["Smooth"] != DBNull.Value ? r["Smooth"].ToString().Trim() : "";
+                if (oldHole == "3" || oldHole == "4") damageType = "人手孔蓋週邊破損";
+                else if (oldHole == "2") damageType = "人手孔蓋欠平順";
+                else if (oldSmooth == "4") damageType = "坑洞";
+                else if (oldSmooth == "2") damageType = "龜裂";
+                else if (oldSmooth == "3") damageType = "凹陷";
+                else damageType = "坑洞";
+            }
+
+            string showId = r["Show_ID"] != DBNull.Value ? r["Show_ID"].ToString().Trim() : "";
+            string rdmCaseId = r.Table.Columns.Contains("RDM_Case_ID") && r["RDM_Case_ID"] != DBNull.Value ? r["RDM_Case_ID"].ToString().Trim() : "";
+            if (string.IsNullOrEmpty(rdmCaseId) && !string.IsNullOrEmpty(showId) && Regex.IsMatch(showId, @"^\d{5,10}$"))
+            {
+                rdmCaseId = showId;
+            }
+
+            string districtOffice = r.Table.Columns.Contains("District_Office") && r["District_Office"] != DBNull.Value ? r["District_Office"].ToString().Trim() : "";
+            if (string.IsNullOrEmpty(districtOffice) && !string.IsNullOrEmpty(townNa))
+            {
+                districtOffice = townNa + "公所";
+            }
+
+            string handleUnit = r.Table.Columns.Contains("Handle_Unit") && r["Handle_Unit"] != DBNull.Value ? r["Handle_Unit"].ToString().Trim() : "";
+            string handleStatus = r.Table.Columns.Contains("Handle_Status") && r["Handle_Status"] != DBNull.Value ? r["Handle_Status"].ToString().Trim() : "機關自行修補";
+            string dispatchMemo = r.Table.Columns.Contains("Dispatch_Memo") && r["Dispatch_Memo"] != DBNull.Value ? r["Dispatch_Memo"].ToString().Trim() : "";
 
             var caseData = new
             {
                 Break_ID = r["Break_ID"].ToString().Trim(),
-                Show_ID = r["Show_ID"] != DBNull.Value ? r["Show_ID"].ToString().Trim() : "【送出通報後自動取得】",
+                Show_ID = !string.IsNullOrEmpty(showId) ? showId : "【送出派工時設定】",
+                Raw_Show_ID = showId,
+                RDM_Case_ID = rdmCaseId,
                 Report_Date = reportDateStr,
                 Report_User = r["Report_User"].ToString(),
                 Report_UserName = r["Report_UserName"].ToString(),
-                S_COM = r["S_COM"] != DBNull.Value ? r["S_COM"].ToString() : "",
-                S_COM_NAME = r["S_COM_NAME"].ToString(),
+                S_COM = r["S_COM"] != DBNull.Value && !string.IsNullOrEmpty(r["S_COM"].ToString().Trim()) ? r["S_COM"].ToString().Trim() : "新北市環保局空噪科(逸散計畫)",
+                S_COM_NAME = r["S_COM_NAME"] != DBNull.Value && !string.IsNullOrEmpty(r["S_COM_NAME"].ToString().Trim()) ? r["S_COM_NAME"].ToString().Trim() : (r["S_COM"] != DBNull.Value ? r["S_COM"].ToString().Trim() : "新北市環保局空噪科(逸散計畫)"),
                 SetCOM_Date = setComDateStr,
                 S_USER = currentLoginUser,
                 S_UserName = currentLoginUserName,
                 KIND = "RD",
                 KIND_Name = "道路髒污破損(RD)",
-                S_UTME = utmE > 0 ? utmE.ToString("0.00") : "",
-                S_UTMN = utmN > 0 ? utmN.ToString("0.00") : "",
+                S_UTME = utmE > 0 ? utmE.ToString("0.##") : "",
+                S_UTMN = utmN > 0 ? utmN.ToString("0.##") : "",
                 Lat = lat > 0 ? lat : 0,
                 Lng = lon > 0 ? lon : 0,
                 TOWN_CODE = r["TOWN_CODE"].ToString(),
-                TOWN_NA = r["TOWN_NA"].ToString(),
+                TOWN_NA = townNa,
                 ROAD_LV = roadLv,
                 ROAD_Name = r["ROAD_Name"].ToString(),
+                Damage_Category = damageCat,
+                Damage_Type = damageType,
+                Damage_Length = damageLen,
+                Damage_Width = damageWid,
+                Location_Desc = locationDesc,
+                Lane_Info = laneInfo,
+                Direction = direction,
+                Road_Type = roadType,
+                District_Office = districtOffice,
+                Handle_Unit = handleUnit,
+                Handle_Status = handleStatus,
+                Dispatch_Memo = dispatchMemo,
                 Smooth = r["Smooth"].ToString(),
                 Smooth_Str = r["Smooth_Str"].ToString(),
                 Hole_Conn_St = r["Hole_Conn_St"].ToString(),
                 Hole_Conn_St_Str = r["Hole_Conn_St_Str"].ToString(),
+                Contact_Phone = r.Table.Columns.Contains("Contact_Phone") && r["Contact_Phone"] != DBNull.Value ? r["Contact_Phone"].ToString().Trim() : "",
+                Contact_Email = r.Table.Columns.Contains("Contact_Email") && r["Contact_Email"] != DBNull.Value ? r["Contact_Email"].ToString().Trim() : "",
+                Contact_Name = r.Table.Columns.Contains("Contact_Name") && r["Contact_Name"] != DBNull.Value ? r["Contact_Name"].ToString().Trim() : "",
                 Memo = r["Memo"] != DBNull.Value ? r["Memo"].ToString() : "",
-                G_COM = r["G_COM"] != DBNull.Value ? r["G_COM"].ToString() : ""
+                G_COM = r["G_COM"] != DBNull.Value ? r["G_COM"].ToString().Trim() : ""
             };
 
             // 通報單位清單
@@ -199,8 +300,8 @@ namespace NTPC_FEC.RoadBreak
             foreach (DataRow dr in dtSCom.Rows)
             {
                 UnitItemDto item = new UnitItemDto();
-                item.UnitID = dr["UnitID"].ToString();
-                item.UnitName = dr["UnitName"].ToString();
+                item.UnitID = dr["UnitID"].ToString().Trim();
+                item.UnitName = dr["UnitName"].ToString().Trim();
                 reportUnits.Add(item);
             }
 
@@ -214,9 +315,8 @@ namespace NTPC_FEC.RoadBreak
             sqlGCom += " ORDER BY UnitID";
 
             DataTable dtGCom = DbHelper.ExecuteDataTable(sqlGCom, new SqlParameter("@kw", roadLv));
-            if (dtGCom.Rows.Count == 0 && !string.IsNullOrEmpty(roadLv))
+            if (dtGCom.Rows.Count == 0)
             {
-                // 回退列出所有處理單位
                 string sqlFallback = "SELECT UnitID, UnitName FROM RoadBreak_Unit WHERE pType = '處理單位' ORDER BY UnitID";
                 dtGCom = DbHelper.ExecuteDataTable(sqlFallback);
             }
@@ -224,8 +324,8 @@ namespace NTPC_FEC.RoadBreak
             foreach (DataRow dr in dtGCom.Rows)
             {
                 UnitItemDto item = new UnitItemDto();
-                item.UnitID = dr["UnitID"].ToString();
-                item.UnitName = dr["UnitName"].ToString();
+                item.UnitID = dr["UnitID"].ToString().Trim();
+                item.UnitName = dr["UnitName"].ToString().Trim();
                 handleUnits.Add(item);
             }
 
@@ -251,7 +351,11 @@ namespace NTPC_FEC.RoadBreak
                 return;
             }
 
-            string sql = @"SELECT RoadBreak_UnitUser.RunUser, RoadBreak_UnitUser.UserEmail, UserAcc.Name
+            EnsureRoadBreakColumns();
+
+            string sql = @"SELECT RoadBreak_UnitUser.RunUser, RoadBreak_UnitUser.UserEmail,
+                RoadBreak_UnitUser.UserTel,
+                UserAcc.Name, UserAcc.TEL
                 FROM RoadBreak_UnitUser
                 LEFT JOIN UserAcc ON RoadBreak_UnitUser.RunUser = UserAcc.UserID
                 WHERE RoadBreak_UnitUser.UnitID = @UnitID
@@ -264,7 +368,13 @@ namespace NTPC_FEC.RoadBreak
                 UnitUserDto u = new UnitUserDto();
                 u.RunUser = dr["RunUser"] != DBNull.Value ? dr["RunUser"].ToString() : "";
                 u.UserEmail = dr["UserEmail"] != DBNull.Value ? dr["UserEmail"].ToString() : "";
-                u.Name = dr["Name"] != DBNull.Value ? dr["Name"].ToString() : u.RunUser;
+                string tel = dr["UserTel"] != DBNull.Value ? dr["UserTel"].ToString().Trim() : "";
+                if (string.IsNullOrEmpty(tel) && dr["TEL"] != DBNull.Value)
+                {
+                    tel = dr["TEL"].ToString().Trim();
+                }
+                u.UserTel = tel;
+                u.Name = dr["Name"] != DBNull.Value && !string.IsNullOrEmpty(dr["Name"].ToString().Trim()) ? dr["Name"].ToString() : u.RunUser;
                 list.Add(u);
             }
 
@@ -275,8 +385,8 @@ namespace NTPC_FEC.RoadBreak
             }));
         }
 
-        // 即時更新承辦人 Email (含權限防護)
-        private void UpdateUserEmail()
+        // 即時更新承辦人 Email 與連絡電話
+        private void UpdateUserContact()
         {
             string rawJson = "";
             using (StreamReader sr = new StreamReader(Request.InputStream))
@@ -297,6 +407,8 @@ namespace NTPC_FEC.RoadBreak
                 return;
             }
 
+            EnsureRoadBreakColumns();
+
             string currentUserId = Session["UserID"] != null ? Session["UserID"].ToString().Trim() : "";
             if (string.IsNullOrEmpty(currentUserId) && Session["LoginUser"] != null) currentUserId = Session["LoginUser"].ToString().Trim();
             long lic = Session["LIC"] != null ? Convert.ToInt64(Session["LIC"]) : 0L;
@@ -304,20 +416,14 @@ namespace NTPC_FEC.RoadBreak
             bool isAdmin = string.Equals(currentRole, "Admin", StringComparison.OrdinalIgnoreCase) ||
                            string.Equals(currentRole, "SystemAdmin", StringComparison.OrdinalIgnoreCase);
 
-            // 權責檢核：管理員、本人、或具備道路通報維護權限者 (ROAD_BREAK_NEW)
             bool hasAuth = isAdmin || string.Equals(currentUserId, input.RunUser.Trim(), StringComparison.OrdinalIgnoreCase)
                                    || PermissionService.HasPermission(currentUserId, lic, "ROAD_BREAK_NEW", 26);
 
             if (!hasAuth)
             {
-                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您未具備維護該單位承辦人通訊信箱之權限。" }));
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您未具備維護該單位承辦人通訊資料之權限。" }));
                 return;
             }
-
-            // 查詢舊 Email 供 AuditLog 比對
-            string sqlOld = "SELECT TOP 1 UserEmail FROM RoadBreak_UnitUser WHERE RunUser = @user";
-            object objOld = DbHelper.ExecuteScalar(sqlOld, new SqlParameter("@user", input.RunUser.Trim()));
-            string oldEmail = objOld != null && objOld != DBNull.Value ? objOld.ToString().Trim() : "";
 
             string email = input.UserEmail != null ? input.UserEmail.Trim() : "";
             if (!string.IsNullOrEmpty(email) && (!email.Contains("@") || !email.Contains(".")))
@@ -326,7 +432,9 @@ namespace NTPC_FEC.RoadBreak
                 return;
             }
 
-            string sql = "UPDATE RoadBreak_UnitUser SET UserEmail = @email WHERE RunUser = @user";
+            string tel = input.UserTel != null ? input.UserTel.Trim() : "";
+
+            string sql = "UPDATE RoadBreak_UnitUser SET UserEmail = @email, UserTel = @tel WHERE RunUser = @user";
             if (!string.IsNullOrEmpty(input.UnitID))
             {
                 sql += " AND UnitID = @unit";
@@ -334,6 +442,7 @@ namespace NTPC_FEC.RoadBreak
 
             List<SqlParameter> paramList = new List<SqlParameter>();
             paramList.Add(new SqlParameter("@email", email));
+            paramList.Add(new SqlParameter("@tel", tel));
             paramList.Add(new SqlParameter("@user", input.RunUser.Trim()));
             if (!string.IsNullOrEmpty(input.UnitID))
             {
@@ -341,26 +450,110 @@ namespace NTPC_FEC.RoadBreak
             }
 
             int affected = DbHelper.ExecuteNonQuery(sql, paramList.ToArray());
+            if (affected == 0 && !string.IsNullOrEmpty(input.UnitID))
+            {
+                string insertSql = @"INSERT INTO RoadBreak_UnitUser (UnitID, RunUser, UserEmail, UserTel)
+                                     VALUES (@unit, @user, @email, @tel)";
+                DbHelper.ExecuteNonQuery(insertSql,
+                    new SqlParameter("@unit", input.UnitID.Trim()),
+                    new SqlParameter("@user", input.RunUser.Trim()),
+                    new SqlParameter("@email", email),
+                    new SqlParameter("@tel", tel));
+            }
 
-            // 寫入 AuditLog 稽核日誌
             AuditLogger.Log(
                 operatorUser: currentUserId,
-                actionType: "DISPATCH_EMAIL_UPDATE",
+                actionType: "DISPATCH_CONTACT_UPDATE",
                 targetUser: input.RunUser,
                 clientIp: Request.UserHostAddress,
-                details: string.Format("更新道路破損通報單位 [{0}] 承辦人員電子信箱", input.UnitID ?? ""),
-                oldValue: oldEmail,
-                newValue: email
+                details: string.Format("更新道路破損處理單位 [{0}] 承辦人通訊資料", input.UnitID ?? ""),
+                oldValue: "",
+                newValue: string.Format("Email:{0}, Tel:{1}", email, tel)
             );
 
             Response.Write(json.Serialize(new
             {
                 Success = true,
-                Message = "承辦人電子信箱已更新完成。"
+                Message = "承辦人連絡電話與信箱已更新完成。"
             }));
         }
 
-        // 儲存派工通報
+        // 新增處理單位承辦聯絡人
+        private void AddUnitUser()
+        {
+            string rawJson = "";
+            using (StreamReader sr = new StreamReader(Request.InputStream))
+            {
+                rawJson = sr.ReadToEnd();
+            }
+
+            if (string.IsNullOrEmpty(rawJson))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "請求內容不能為空。" }));
+                return;
+            }
+
+            UnitUserDto input = json.Deserialize<UnitUserDto>(rawJson);
+            if (input == null || string.IsNullOrEmpty(input.Name))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "承辦人姓名不可為空。" }));
+                return;
+            }
+
+            string unitId = Request["unitId"];
+            if (string.IsNullOrEmpty(unitId))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "處理單位不可為空。" }));
+                return;
+            }
+
+            EnsureRoadBreakColumns();
+
+            string email = input.UserEmail != null ? input.UserEmail.Trim() : "";
+            string tel = input.UserTel != null ? input.UserTel.Trim() : "";
+            string name = input.Name.Trim();
+            string runUser = !string.IsNullOrEmpty(input.RunUser) ? input.RunUser.Trim() : name;
+
+            string checkSql = "SELECT COUNT(*) FROM RoadBreak_UnitUser WHERE UnitID = @unit AND RunUser = @user";
+            int count = Convert.ToInt32(DbHelper.ExecuteScalar(checkSql,
+                new SqlParameter("@unit", unitId),
+                new SqlParameter("@user", runUser)));
+
+            if (count > 0)
+            {
+                string updateSql = "UPDATE RoadBreak_UnitUser SET UserEmail = @email, UserTel = @tel WHERE UnitID = @unit AND RunUser = @user";
+                DbHelper.ExecuteNonQuery(updateSql,
+                    new SqlParameter("@email", email),
+                    new SqlParameter("@tel", tel),
+                    new SqlParameter("@unit", unitId),
+                    new SqlParameter("@user", runUser));
+            }
+            else
+            {
+                string insertSql = @"INSERT INTO RoadBreak_UnitUser (UnitID, RunUser, UserEmail, UserTel)
+                                     VALUES (@unit, @user, @email, @tel)";
+                DbHelper.ExecuteNonQuery(insertSql,
+                    new SqlParameter("@unit", unitId),
+                    new SqlParameter("@user", runUser),
+                    new SqlParameter("@email", email),
+                    new SqlParameter("@tel", tel));
+            }
+
+            Response.Write(json.Serialize(new
+            {
+                Success = true,
+                Message = "已成功新增承辦人員聯絡資料！",
+                User = new
+                {
+                    RunUser = runUser,
+                    Name = name,
+                    UserTel = tel,
+                    UserEmail = email
+                }
+            }));
+        }
+
+        // 儲存派工通報並綁定路平反映編號
         private void SaveDispatchRecord()
         {
             string rawJson = "";
@@ -408,7 +601,8 @@ namespace NTPC_FEC.RoadBreak
                 return;
             }
 
-            // 檢查案件是否存在
+            EnsureRoadBreakColumns();
+
             string checkSql = "SELECT * FROM RoadBreak_CaseMain WHERE Break_ID = @id";
             DataTable dtCase = DbHelper.ExecuteDataTable(checkSql, new SqlParameter("@id", breakId));
             if (dtCase.Rows.Count == 0)
@@ -421,16 +615,36 @@ namespace NTPC_FEC.RoadBreak
             string existingShowId = rowCase["Show_ID"] != DBNull.Value ? rowCase["Show_ID"].ToString().Trim() : "";
             DateTime setComDate = DateTime.Now;
 
+            // 處理路平報馬仔反映編號 (RDM_Case_ID) 與顯示案號 (Show_ID)
+            string rdmCaseId = input.RDM_Case_ID != null ? input.RDM_Case_ID.Trim() : "";
+            string customShowId = input.Custom_Show_ID != null ? input.Custom_Show_ID.Trim() : "";
+
             string finalShowId = existingShowId;
-            if (string.IsNullOrEmpty(finalShowId))
+            if (input.UseRdmAsShowId && !string.IsNullOrEmpty(rdmCaseId))
+            {
+                finalShowId = rdmCaseId;
+            }
+            else if (!string.IsNullOrEmpty(customShowId))
+            {
+                finalShowId = customShowId;
+            }
+            else if (string.IsNullOrEmpty(finalShowId))
             {
                 // 自動產生通報案號：yyyyMMddRDHHmmss
                 finalShowId = setComDate.ToString("yyyyMMdd") + "RD" + setComDate.ToString("HHmmss");
             }
 
             string memoText = input.Memo != null ? input.Memo.Trim() : "";
+            string districtOffice = input.District_Office != null ? input.District_Office.Trim() : "";
+            string handleUnit = input.Handle_Unit != null ? input.Handle_Unit.Trim() : "";
+            string handleStatus = input.Handle_Status != null ? input.Handle_Status.Trim() : "機關自行修補";
+            string dispatchMemo = input.Dispatch_Memo != null ? input.Dispatch_Memo.Trim() : "";
 
-            // 更新案件主檔
+            string contactPhone = input.Contact_Phone != null ? input.Contact_Phone.Trim() : "";
+            string contactEmail = input.Contact_Email != null ? input.Contact_Email.Trim() : "";
+            string contactName = input.Contact_Name != null ? input.Contact_Name.Trim() : "";
+
+            // 更新案件主檔 (若曾被退回，重派時一併清除 G_Back 標記)
             string updateSql = @"UPDATE RoadBreak_CaseMain SET
                 S_User = @S_User,
                 SetCOM_Date = @SetCOM_Date,
@@ -438,7 +652,16 @@ namespace NTPC_FEC.RoadBreak
                 KIND = 'RD',
                 Memo = @Memo,
                 G_COM = @G_COM,
-                Show_ID = @Show_ID
+                Show_ID = @Show_ID,
+                RDM_Case_ID = @RDM_Case_ID,
+                District_Office = @District_Office,
+                Handle_Unit = @Handle_Unit,
+                Handle_Status = @Handle_Status,
+                Dispatch_Memo = @Dispatch_Memo,
+                Contact_Phone = @Contact_Phone,
+                Contact_Email = @Contact_Email,
+                Contact_Name = @Contact_Name,
+                G_Back = 'N'
             WHERE Break_ID = @Break_ID";
 
             DbHelper.ExecuteNonQuery(updateSql,
@@ -448,37 +671,46 @@ namespace NTPC_FEC.RoadBreak
                 new SqlParameter("@Memo", memoText),
                 new SqlParameter("@G_COM", input.G_COM),
                 new SqlParameter("@Show_ID", finalShowId),
+                new SqlParameter("@RDM_Case_ID", rdmCaseId),
+                new SqlParameter("@District_Office", districtOffice),
+                new SqlParameter("@Handle_Unit", handleUnit),
+                new SqlParameter("@Handle_Status", handleStatus),
+                new SqlParameter("@Dispatch_Memo", dispatchMemo),
+                new SqlParameter("@Contact_Phone", contactPhone),
+                new SqlParameter("@Contact_Email", contactEmail),
+                new SqlParameter("@Contact_Name", contactName),
                 new SqlParameter("@Break_ID", breakId)
             );
 
             // 安全寄送派工通知郵件
-            string mailMsg = SendDispatchNotificationEmail(breakId, finalShowId, input.S_COM, input.G_COM, memoText, setComDate);
+            string mailMsg = SendDispatchNotificationEmail(breakId, finalShowId, rdmCaseId, input.S_COM, input.G_COM, memoText, setComDate);
+
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("ROAD_BREAK_DISPATCH_SAVE", breakId, string.Format("道路破損派工通報成功 (案號:{0}, 顯示案號:{1}, 處理單位:{2})", breakId, finalShowId, input.G_COM));
 
             Response.Write(json.Serialize(new
             {
                 Success = true,
                 Message = "道路髒污破損案件派工通報成功！通報案號：" + finalShowId,
                 Show_ID = finalShowId,
+                RDM_Case_ID = rdmCaseId,
                 MailStatus = mailMsg
             }));
         }
 
         // 安全發送派工通知郵件
-        private string SendDispatchNotificationEmail(string breakId, string showId, string sComId, string gComId, string memo, DateTime setComDate)
+        private string SendDispatchNotificationEmail(string breakId, string showId, string rdmCaseId, string sComId, string gComId, string memo, DateTime setComDate)
         {
             try
             {
-                // 取處理單位名稱
                 string sqlGComName = "SELECT TOP 1 UnitName FROM RoadBreak_Unit WHERE UnitID = @id";
                 object objGName = DbHelper.ExecuteScalar(sqlGComName, new SqlParameter("@id", gComId));
-                string gComName = objGName != null ? objGName.ToString().Trim() : "權責處理單位";
+                string gComName = objGName != null && objGName != DBNull.Value && !string.IsNullOrEmpty(objGName.ToString().Trim()) ? objGName.ToString().Trim() : (!string.IsNullOrEmpty(gComId) ? gComId : "權責處理單位");
 
-                // 取通報單位名稱
                 string sqlSComName = "SELECT TOP 1 UnitName FROM RoadBreak_Unit WHERE UnitID = @id";
                 object objSName = DbHelper.ExecuteScalar(sqlSComName, new SqlParameter("@id", sComId));
-                string sComName = objSName != null ? objSName.ToString().Trim() : "通報單位";
+                string sComName = objSName != null && objSName != DBNull.Value && !string.IsNullOrEmpty(objSName.ToString().Trim()) ? objSName.ToString().Trim() : (!string.IsNullOrEmpty(sComId) ? sComId : "新北市環保局空噪科(逸散計畫)");
 
-                // 取得處理單位承辦人的 Email 清單
                 string sqlEmails = "SELECT UserEmail FROM RoadBreak_UnitUser WHERE UnitID = @UnitID AND UserEmail IS NOT NULL AND UserEmail <> ''";
                 DataTable dtEmails = DbHelper.ExecuteDataTable(sqlEmails, new SqlParameter("@UnitID", gComId));
                 if (dtEmails.Rows.Count == 0)
@@ -501,13 +733,20 @@ namespace NTPC_FEC.RoadBreak
 
                 StringBuilder sb = new StringBuilder();
                 sb.AppendFormat("<div style='font-family: Arial, \"Microsoft JhengHei\", sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>");
-                sb.AppendFormat("<div style='background: linear-gradient(135deg, #0b1f7d 0%, #0284c7 100%); color: #ffffff; padding: 18px 24px;'>");
+                sb.AppendFormat("<div style='background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%); color: #ffffff; padding: 18px 24px;'>");
                 sb.AppendFormat("<h3 style='margin:0; font-size: 1.25rem;'>新北市固定逸散源管理平台 - 道路髒污破損派工通報</h3>");
-                sb.AppendFormat("<div style='font-size: 0.85rem; opacity: 0.85; margin-top: 4px;'>通報案號：{0}</div>", showId);
+                sb.AppendFormat("<div style='font-size: 0.85rem; opacity: 0.9; margin-top: 4px;'>通報案號：{0}</div>", showId);
                 sb.Append("</div>");
                 sb.Append("<div style='padding: 24px; color: #1e293b; line-height: 1.6; background-color: #ffffff;'>");
                 sb.AppendFormat("<p><strong>{0}</strong>，您好：</p>", gComName);
                 sb.AppendFormat("<p>向您通報 1 件道路髒污破損通報案件【通報案號：<strong>{0}</strong>】，請於七天內至系統完成案件改善回報，謝謝。</p>", showId);
+
+                if (!string.IsNullOrEmpty(rdmCaseId))
+                {
+                    string rdmUrl = "https://rdm.ntpc.gov.tw/ROAD/SatisfySurvey.aspx?id=" + HttpUtility.UrlEncode(rdmCaseId);
+                    sb.AppendFormat("<p><strong>路平報馬仔反映編號：</strong><a href='{0}' target='_blank' style='color:#0284c7;font-weight:bold;'>{1} (點此查看路平系統案件)</a></p>", rdmUrl, HttpUtility.HtmlEncode(rdmCaseId));
+                }
+
                 sb.AppendFormat("<p><a href='{0}' target='_blank' style='display:inline-block; padding: 8px 16px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;'>前往固定逸散源管理平台</a></p>", siteUrl);
 
                 if (!string.IsNullOrEmpty(memo))
@@ -549,13 +788,11 @@ namespace NTPC_FEC.RoadBreak
                                 client.Send(msg);
                                 sentCount++;
 
-                                // 記錄發信歷史
                                 RecordEmailHistory(targetEmail, subject, bodyHtml, breakId, "道路破損通報");
                             }
                         }
                         catch (Exception ex)
                         {
-                            // 記錄單一收件人發送錯誤，不阻斷後續收件人
                             RecordEmailHistory(targetEmail, subject, "發信失敗: " + ex.Message, breakId, "道路破損通報");
                         }
                     }
@@ -569,7 +806,6 @@ namespace NTPC_FEC.RoadBreak
             }
         }
 
-        // 記錄發信紀錄至 Email_History
         private void RecordEmailHistory(string mailAdd, string subject, string content, string caseId, string appName)
         {
             try
@@ -585,13 +821,10 @@ namespace NTPC_FEC.RoadBreak
                     new SqlParameter("@ID", caseId ?? "")
                 );
             }
-            catch
-            {
-                // 日誌記錄容錯處理
-            }
+            catch { }
         }
 
-        // 讀取現場佐證照片
+        // 讀取現場佐證照片 (相容新舊命名規則)
         private List<PhotoItemDto> LoadEvidencePhotos(string breakId)
         {
             List<PhotoItemDto> list = new List<PhotoItemDto>();
@@ -608,21 +841,24 @@ namespace NTPC_FEC.RoadBreak
 
             var beforeFiles = files
                 .Where(new Func<FileInfo, bool>(delegate(FileInfo f) {
-                    string name = f.Name;
-                    return name.IndexOf("佐證照片") >= 0 && name.IndexOf("改善後") < 0;
+                    string name = f.Name.ToLower();
+                    bool isImg = name.EndsWith(".jpg") || name.EndsWith(".jpeg") || name.EndsWith(".png") || name.EndsWith(".gif") || name.EndsWith(".webp");
+                    return isImg && f.Name.IndexOf("改善後") < 0 && f.Name.IndexOf("完工") < 0;
                 }))
                 .OrderBy(new Func<FileInfo, string>(delegate(FileInfo f) { return f.Name; }))
                 .ToList();
 
+            int idx = 1;
             foreach (FileInfo f in beforeFiles)
             {
                 PhotoItemDto item = new PhotoItemDto();
                 item.FileName = f.Name;
-                item.Title = Path.GetFileNameWithoutExtension(f.Name);
-                item.Url = "../" + relDir + "/" + f.Name;
+                item.Title = "現場照片 " + idx + " (" + Path.GetFileNameWithoutExtension(f.Name) + ")";
+                item.Url = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}?v={2}", breakId, f.Name, f.LastWriteTime.Ticks));
                 item.Size = f.Length;
                 item.LastModified = f.LastWriteTime.ToString("yyyy-MM-dd HH:mm");
                 list.Add(item);
+                idx++;
             }
 
             return list;
@@ -675,7 +911,7 @@ namespace NTPC_FEC.RoadBreak
             lon = lonRad * 180.0 / Math.PI;
         }
 
-        // ==================== DTO 類別定義 (相容 C# 5.0，無自動屬性初始化) ====================
+        // ==================== DTO 類別定義 (相容 C# 5.0) ====================
         public class UnitItemDto
         {
             public string UnitID { get; set; }
@@ -687,6 +923,7 @@ namespace NTPC_FEC.RoadBreak
             public string RunUser { get; set; }
             public string Name { get; set; }
             public string UserEmail { get; set; }
+            public string UserTel { get; set; }
         }
 
         public class EmailUpdateDto
@@ -694,14 +931,25 @@ namespace NTPC_FEC.RoadBreak
             public string UnitID { get; set; }
             public string RunUser { get; set; }
             public string UserEmail { get; set; }
+            public string UserTel { get; set; }
         }
 
         public class DispatchSaveDto
         {
             public string Break_ID { get; set; }
+            public string RDM_Case_ID { get; set; }
+            public bool UseRdmAsShowId { get; set; }
+            public string Custom_Show_ID { get; set; }
             public string S_COM { get; set; }
             public string G_COM { get; set; }
+            public string District_Office { get; set; }
+            public string Handle_Unit { get; set; }
+            public string Handle_Status { get; set; }
+            public string Dispatch_Memo { get; set; }
             public string Memo { get; set; }
+            public string Contact_Phone { get; set; }
+            public string Contact_Email { get; set; }
+            public string Contact_Name { get; set; }
         }
 
         public class PhotoItemDto

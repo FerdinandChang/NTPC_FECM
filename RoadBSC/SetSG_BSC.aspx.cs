@@ -11,6 +11,8 @@ using System.Web.Configuration;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
+using NTPC_FEC.Services;
 
 namespace NTPC_FEC.RoadBSC
 {
@@ -266,6 +268,35 @@ namespace NTPC_FEC.RoadBSC
                 return;
             }
 
+            string currentUserId = Session["UserID"] != null ? Session["UserID"].ToString().Trim() : "";
+            if (string.IsNullOrEmpty(currentUserId) && Session["LoginUser"] != null) currentUserId = Session["LoginUser"].ToString().Trim();
+            long lic = Session["LIC"] != null ? Convert.ToInt64(Session["LIC"]) : 0L;
+            string currentRole = Session["Role"] != null ? Session["Role"].ToString().Trim() : "";
+            bool isAdmin = string.Equals(currentRole, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(currentRole, "SystemAdmin", StringComparison.OrdinalIgnoreCase);
+
+            // 權責檢核：管理員、本人、或具備道路落塵通報維護權限者 (ROAD_BSC_NEW / 28)
+            bool hasAuth = isAdmin || string.Equals(currentUserId, input.RunUser.Trim(), StringComparison.OrdinalIgnoreCase)
+                                   || PermissionService.HasPermission(currentUserId, lic, "ROAD_BSC_NEW", 28);
+
+            if (!hasAuth)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您未具備維護該單位承辦人通訊信箱之權限。" }));
+                return;
+            }
+
+            string email = input.UserEmail != null ? input.UserEmail.Trim() : "";
+            if (!string.IsNullOrEmpty(email) && (!email.Contains("@") || !email.Contains(".")))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "電子信箱格式無效。" }));
+                return;
+            }
+
+            // 查詢舊 Email 供 AuditLog 比對
+            string sqlOld = "SELECT TOP 1 UserEmail FROM RoadBSC_UnitUser WHERE RunUser = @user";
+            object objOld = DbHelper.ExecuteScalar(sqlOld, new SqlParameter("@user", input.RunUser.Trim()));
+            string oldEmail = objOld != null && objOld != DBNull.Value ? objOld.ToString().Trim() : "";
+
             string sql = "UPDATE RoadBSC_UnitUser SET UserEmail = @email WHERE RunUser = @user";
             if (!string.IsNullOrEmpty(input.UnitID))
             {
@@ -273,14 +304,26 @@ namespace NTPC_FEC.RoadBSC
             }
 
             List<SqlParameter> pList = new List<SqlParameter>();
-            pList.Add(new SqlParameter("@email", (object)input.UserEmail ?? DBNull.Value));
-            pList.Add(new SqlParameter("@user", input.RunUser));
+            pList.Add(new SqlParameter("@email", email));
+            pList.Add(new SqlParameter("@user", input.RunUser.Trim()));
             if (!string.IsNullOrEmpty(input.UnitID))
             {
-                pList.Add(new SqlParameter("@unitId", input.UnitID));
+                pList.Add(new SqlParameter("@unitId", input.UnitID.Trim()));
             }
 
             int affected = DbHelper.ExecuteNonQuery(sql, pList.ToArray());
+
+            // 寫入 AuditLog 稽核日誌
+            AuditLogger.Log(
+                operatorUser: currentUserId,
+                actionType: "DISPATCH_EMAIL_UPDATE",
+                targetUser: input.RunUser.Trim(),
+                clientIp: Request.UserHostAddress,
+                details: string.Format("更新落塵處理單位承辦人信箱 (UnitID: {0})", input.UnitID),
+                oldValue: oldEmail,
+                newValue: email
+            );
+
             Response.Write(json.Serialize(new
             {
                 Success = true,
@@ -340,6 +383,17 @@ namespace NTPC_FEC.RoadBSC
             };
 
             DbHelper.ExecuteNonQuery(updateSql, updateParams);
+
+            // 寫入 AuditLog 派工紀錄
+            AuditLogger.Log(
+                operatorUser: currentLoginUser,
+                actionType: "DISPATCH_ASSIGN",
+                targetUser: data.G_COM,
+                clientIp: Request.UserHostAddress,
+                details: string.Format("跳空落塵案件派工：案號 {0}, 通報單位 {1}, 權責單位 {2}", data.BSC_ID, data.S_COM, data.G_COM),
+                oldValue: null,
+                newValue: null
+            );
 
             string emailStatus = "未寄送郵件";
             try
@@ -404,42 +458,44 @@ namespace NTPC_FEC.RoadBSC
             string fromMail = WebConfigurationManager.AppSettings["MailFrom"] ?? "noreply@ntpc.gov.tw";
             string fromName = "新北市固定逸散源管理平台";
 
-            MailMessage mail = new MailMessage();
-            mail.From = new MailAddress(fromMail, fromName, Encoding.UTF8);
-            foreach (string em in emailList)
+            using (MailMessage mail = new MailMessage())
             {
-                mail.To.Add(em);
-            }
+                mail.From = new MailAddress(fromMail, fromName, Encoding.UTF8);
+                foreach (string em in emailList)
+                {
+                    mail.To.Add(em);
+                }
 
-            mail.Subject = string.Format("【跳空落塵清理通報派工通知】案件編號：{0} ({1} {2})", showId, townName, roadName);
-            mail.IsBodyHtml = true;
-            mail.BodyEncoding = Encoding.UTF8;
+                mail.Subject = string.Format("【跳空落塵清理通報派工通知】案件編號：{0} ({1} {2})", showId, townName, roadName);
+                mail.IsBodyHtml = true;
+                mail.BodyEncoding = Encoding.UTF8;
 
-            StringBuilder sb = new StringBuilder();
-            sb.Append("<html><body style='font-family:微軟正黑體,Arial; font-size:15px; color:#333; line-height:1.6;'>");
-            sb.Append("<div style='max-width:650px; margin:0 auto; border:1px solid #9B741E; border-radius:8px; overflow:hidden;'>");
-            sb.Append("<div style='background:linear-gradient(135deg, #9B741E, #d97706); color:#fff; padding:16px 20px;'>");
-            sb.Append("<h3 style='margin:0; font-size:18px;'>新北市固定逸散源管理平台 - 人行道/跳空通道落塵通報派工單</h3>");
-            sb.Append("</div>");
-            sb.Append("<div style='padding:20px;'>");
-            sb.AppendFormat("<p><strong>致 {0} 權責主管與承辦人員：</strong></p>", unitName);
-            sb.Append("<p>本府外勤查核小組於現場巡檢中發現人行道/跳空通道落塵堆積情事，已交辦貴單位進行現場清理，詳細資訊如下：</p>");
-            sb.Append("<table style='width:100%; border-collapse:collapse; margin:16px 0;'>");
-            sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc; width:130px;'><strong>案件代號</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", showId);
-            sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>行政區/路段</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0} {1}</td></tr>", townName, roadName);
-            sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>派工時間</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
-            sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>巡查備註說明</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", string.IsNullOrEmpty(memo) ? "無" : memo);
-            sb.Append("</table>");
-            sb.Append("<p style='color:#9B741E;'>請貴單位儘速派員前往現場確認並清除落塵，完成改善後請至平台回報成果照片銷案。</p>");
-            sb.Append("<hr style='border:none; border-top:1px dashed #ccc; margin:20px 0;' />");
-            sb.Append("<p style='font-size:12px; color:#888;'>此信件為系統自動發送，請勿直接回覆此郵件。</p>");
-            sb.Append("</div></div></body></html>");
+                StringBuilder sb = new StringBuilder();
+                sb.Append("<html><body style='font-family:微軟正黑體,Arial; font-size:15px; color:#333; line-height:1.6;'>");
+                sb.Append("<div style='max-width:650px; margin:0 auto; border:1px solid #9B741E; border-radius:8px; overflow:hidden;'>");
+                sb.Append("<div style='background:linear-gradient(135deg, #9B741E, #d97706); color:#fff; padding:16px 20px;'>");
+                sb.Append("<h3 style='margin:0; font-size:18px;'>新北市固定逸散源管理平台 - 人行道/跳空通道落塵通報派工單</h3>");
+                sb.Append("</div>");
+                sb.Append("<div style='padding:20px;'>");
+                sb.AppendFormat("<p><strong>致 {0} 權責主管與承辦人員：</strong></p>", unitName);
+                sb.Append("<p>本府外勤查核小組於現場巡檢中發現人行道/跳空通道落塵堆積情事，已交辦貴單位進行現場清理，詳細資訊如下：</p>");
+                sb.Append("<table style='width:100%; border-collapse:collapse; margin:16px 0;'>");
+                sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc; width:130px;'><strong>案件代號</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", showId);
+                sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>行政區/路段</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0} {1}</td></tr>", townName, roadName);
+                sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>派工時間</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
+                sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>巡查備註說明</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", string.IsNullOrEmpty(memo) ? "無" : memo);
+                sb.Append("</table>");
+                sb.Append("<p style='color:#9B741E;'>請貴單位儘速派員前往現場確認並清除落塵，完成改善後請至平台回報成果照片銷案。</p>");
+                sb.Append("<hr style='border:none; border-top:1px dashed #ccc; margin:20px 0;' />");
+                sb.Append("<p style='font-size:12px; color:#888;'>此信件為系統自動發送，請勿直接回覆此郵件。</p>");
+                sb.Append("</div></div></body></html>");
 
-            mail.Body = sb.ToString();
+                mail.Body = sb.ToString();
 
-            using (SmtpClient smtp = new SmtpClient(host))
-            {
-                smtp.Send(mail);
+                using (SmtpClient smtp = new SmtpClient(host))
+                {
+                    smtp.Send(mail);
+                }
             }
 
             return string.Format("已發送至 {0} 個電子郵件地址", emailList.Count);

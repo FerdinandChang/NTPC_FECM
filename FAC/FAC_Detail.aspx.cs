@@ -9,6 +9,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 using NTPC_FEC.Models;
 using NTPC_FEC.Services;
 
@@ -445,6 +446,18 @@ namespace NTPC_FEC.FAC
                 {
                     // 若歷史表記錄失敗不阻斷主更新成功狀態
                 }
+
+                // 寫入 AuditLog 稽核日誌
+                AuditLogger.Log(
+                    operatorUser: loginUser,
+                    actionType: "FAC_BASIC_UPDATE",
+                    targetUser: model.FacId.Trim(),
+                    clientIp: Request.UserHostAddress,
+                    details: string.Format("修改場所基本資料：場所 {0}, 名稱 {1}, 地址 {2}, 聯絡人 {3}, 電話 {4}",
+                        model.FacId.Trim(), model.FacName, model.Addr, model.ContentName, model.Tel),
+                    oldValue: null,
+                    newValue: model.FacName
+                );
 
                 Response.Write(json.Serialize(new { Success = true, Message = "場所基本資料已成功儲存更新！" }));
             }

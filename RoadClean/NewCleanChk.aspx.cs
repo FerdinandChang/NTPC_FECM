@@ -10,6 +10,8 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
+using NTPC_FEC.Services;
 
 namespace NTPC_FEC.RoadClean
 {
@@ -552,7 +554,7 @@ namespace NTPC_FEC.RoadClean
                             string destFile = Path.Combine(targetDir, tempFiles[i].Name);
                             tempFiles[i].CopyTo(destFile, true);
                         }
-                        try { Directory.Delete(tempFolder, true); } catch { }
+                        try { for (int d = 0; d < tempFiles.Length; d++) { try { tempFiles[d].Delete(); } catch { } } } catch { }
                     }
                 }
             }

@@ -32,7 +32,7 @@ namespace NTPC_FEC.Wash
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            UserAccount user = Session["LoginUser"] as UserAccount;
+            UserAccount user = AuthService.GetCurrentUser(Context);
             if (user == null)
             {
                 user = AuthService.GetCurrentUser(Context);
@@ -691,7 +691,7 @@ END";
                            string.Equals(role, "SystemAdmin", StringComparison.OrdinalIgnoreCase) ||
                            string.Equals(userId, "Admin", StringComparison.OrdinalIgnoreCase);
 
-            bool hasAuth = isAdmin || PermissionService.HasPermission(userId, lic, "ROAD_WASH_UPLOAD", 21)
+            bool hasAuth = isAdmin || PermissionService.HasPermission(userId, lic, "MAP_WASH_GIS", 41) || PermissionService.HasPermission(userId, lic, "OWN_WASH_UPLOAD", 13) || PermissionService.HasPermission(userId, lic, "OWN_WASH_LIST", 14) || PermissionService.HasPermission(userId, lic, "ROAD_WASH_UPLOAD", 21)
                                    || PermissionService.HasPermission(userId, lic, "ROAD_WASH_REPORT", 21);
 
             if (!hasAuth)

@@ -10,6 +10,7 @@ using System.Web.UI;
 using Newtonsoft.Json;
 using NTPC_FEC.Helpers;
 using NTPC_FEC.Models;
+using NTPC_FEC.Security;
 using NTPC_FEC.Services;
 
 namespace NTPC_FEC.LINE
@@ -728,6 +729,9 @@ SELECT SCOPE_IDENTITY();";
                 int.TryParse(newIdObj.ToString(), out newId);
             }
 
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("LINE_PUSH_SEND", targetRole, string.Format("發布 LINE 官方推播 [ID:{0}, 類型:{1}, 標題:{2}]", newId, msgType, input.Title.Trim()));
+
             Response.Write(jsonSerializer.Serialize(new ResponseModel
             {
                 Success = true,
@@ -772,6 +776,12 @@ SELECT SCOPE_IDENTITY();";
             };
             int aff = DbHelper.ExecuteNonQuery(delSql, p);
 
+            if (aff > 0)
+            {
+                // 記錄雙軌 AuditLog
+                AuditLogger.Log("LINE_PUSH_DELETE", "LINE_PushMsg", string.Format("刪除 LINE 推播訊息 [Msg_ID:{0}]", msgId));
+            }
+
             Response.Write(jsonSerializer.Serialize(new ResponseModel
             {
                 Success = aff > 0,
@@ -798,6 +808,9 @@ SELECT SCOPE_IDENTITY();";
 
             string delSql = "DELETE FROM LINE_PushMsg WHERE Create_User IN ('SYSTEM', 'EPD_ADMIN', 'EPD_TECH', 'EPD_CLEAN')";
             int aff = DbHelper.ExecuteNonQuery(delSql);
+
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("LINE_PUSH_CLEAR_SAMPLES", "LINE_PushMsg", string.Format("清除預載範例推播 共 {0} 筆", aff));
 
             Response.Write(jsonSerializer.Serialize(new ResponseModel
             {

@@ -8,6 +8,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 using NTPC_FEC.Models;
 using NTPC_FEC.Services;
 
@@ -999,6 +1000,8 @@ namespace NTPC_FEC.Machine
 
                 if (rows > 0)
                 {
+                    // 記錄雙軌 AuditLog
+                    AuditLogger.Log("MAC_SUBMIT_CHECK", facId, string.Format("施工機具送出審核 (場所:{0}, 機具:{1})", facId, macId));
                     Response.Write(json.Serialize(new { Success = true, Message = "已成功送出審核！" }));
                 }
                 else
@@ -1063,6 +1066,8 @@ namespace NTPC_FEC.Machine
 
                 if (rows > 0)
                 {
+                    // 記錄雙軌 AuditLog
+                    AuditLogger.Log("MAC_DELETE", facId, string.Format("施工機具軟刪除 (場所:{0}, 機具:{1})", facId, macId));
                     Response.Write(json.Serialize(new { Success = true, Message = "已成功刪除該筆機具！" }));
                 }
                 else
@@ -1161,6 +1166,9 @@ namespace NTPC_FEC.Machine
                 ORDER BY m.Check_date DESC, m.FAC_ID DESC", where.ToString());
 
             DataTable dt = DbHelper.ExecuteDataTable(sql, pars.ToArray());
+
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("MAC_EXPORT_CSV", "Machine_Main", string.Format("匯出施工機具清冊 CSV (模式:{0}, 匯出筆數:{1})", filter.Mode, dt != null ? dt.Rows.Count : 0));
 
             Response.Clear();
             Response.ContentType = "text/csv; charset=utf-8";

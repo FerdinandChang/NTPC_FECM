@@ -10,6 +10,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 
 namespace NTPC_FEC.RoadBSC
 {
@@ -674,12 +675,6 @@ namespace NTPC_FEC.RoadBSC
             }
 
             DataRow rCase = dtCase.Rows[0];
-            if (rCase["SetCOM_Date"] != DBNull.Value || rCase["Improve_Date"] != DBNull.Value)
-            {
-                Response.Write(json.Serialize(new { Success = false, Message = "此案件已成案指派改善或已結案，系統嚴禁刪除！" }));
-                return;
-            }
-
             string reportU = rCase["Report_User"] != DBNull.Value ? rCase["Report_User"].ToString().Trim() : "";
             string curU = GetCurrentUser();
             bool isAdmin = curU.Equals("Admin", StringComparison.OrdinalIgnoreCase);
@@ -688,6 +683,20 @@ namespace NTPC_FEC.RoadBSC
                 Response.Write(json.Serialize(new { Success = false, Message = "權限不足：僅本通報建立者或管理員方可刪除此紀錄！" }));
                 return;
             }
+
+            // 允許成案/指派案件刪除，並留存 AuditLog 稽核歷程
+            string setComStr = rCase["SetCOM_Date"] != DBNull.Value ? rCase["SetCOM_Date"].ToString() : "未派工";
+            string improveStr = rCase["Improve_Date"] != DBNull.Value ? rCase["Improve_Date"].ToString() : "未結案";
+
+            AuditLogger.Log(
+                operatorUser: curU,
+                actionType: "ROAD_BSC_CASE_DELETE",
+                targetUser: bscId,
+                clientIp: Request.UserHostAddress,
+                details: string.Format("刪除洗掃案件 [{0}] (派工狀態:{1}, 改善狀態:{2})", bscId, setComStr, improveStr),
+                oldValue: json.Serialize(new { BscId = bscId, SetCOM = setComStr, Improve = improveStr }),
+                newValue: null
+            );
 
             string sql = "DELETE FROM RoadBSC_CaseMain WHERE BSC_ID = @id";
             int rows = DbHelper.ExecuteNonQuery(sql, new SqlParameter("@id", bscId));
@@ -700,7 +709,7 @@ namespace NTPC_FEC.RoadBSC
                     string picDir = PathHelper.FindDirectory("Upload/RoadBSCPIC/" + bscId);
                     if (Directory.Exists(picDir))
                     {
-                        Directory.Delete(picDir, true);
+                        string[] filesToDel = Directory.GetFiles(picDir, "*", SearchOption.AllDirectories); for (int i = 0; i < filesToDel.Length; i++) { try { File.Delete(filesToDel[i]); } catch { } }
                     }
                 }
             }

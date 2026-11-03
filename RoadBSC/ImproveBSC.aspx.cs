@@ -11,6 +11,8 @@ using System.Web.Configuration;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
+using NTPC_FEC.Services;
 
 namespace NTPC_FEC.RoadBSC
 {
@@ -264,6 +266,17 @@ namespace NTPC_FEC.RoadBSC
 
                 SendImproveNotificationEmail(bscId, true, input.G_Memo);
 
+                // 寫入 AuditLog 案件退回紀錄
+                AuditLogger.Log(
+                    operatorUser: loginUser,
+                    actionType: "ROAD_BSC_REJECT",
+                    targetUser: bscId,
+                    clientIp: Request.UserHostAddress,
+                    details: string.Format("落塵通報案件退回重派：案號 {0}, 退回說明: {1}", bscId, input.G_Memo != null ? input.G_Memo : "非本單位權責，退回重新派工"),
+                    oldValue: null,
+                    newValue: null
+                );
+
                 Response.Write(json.Serialize(new
                 {
                     Success = true,
@@ -289,6 +302,17 @@ namespace NTPC_FEC.RoadBSC
 
                 SendImproveNotificationEmail(bscId, false, input.G_Memo);
 
+                // 寫入 AuditLog 改善成果回報紀錄
+                AuditLogger.Log(
+                    operatorUser: loginUser,
+                    actionType: "ROAD_BSC_IMPROVE",
+                    targetUser: bscId,
+                    clientIp: Request.UserHostAddress,
+                    details: string.Format("落塵通報改善完成回報：案號 {0}, 說明: {1}", bscId, input.G_Memo != null ? input.G_Memo : ""),
+                    oldValue: null,
+                    newValue: null
+                );
+
                 Response.Write(json.Serialize(new
                 {
                     Success = true,
@@ -311,10 +335,14 @@ namespace NTPC_FEC.RoadBSC
                     if (!string.IsNullOrEmpty(item.FileName))
                     {
                         string safeName = Path.GetFileName(item.FileName);
-                        string delPath = Path.Combine(physDir, safeName);
-                        if (File.Exists(delPath))
+                        // 僅允許刪除處理單位成果照片 (G_ 開頭)，嚴禁刪除外勤通報原始佐證照片
+                        if (safeName.StartsWith("G_", StringComparison.OrdinalIgnoreCase))
                         {
-                            try { File.Delete(delPath); } catch { }
+                            string delPath = Path.Combine(physDir, safeName);
+                            if (FileSecurityHelper.IsSafePath(physDir, delPath) && File.Exists(delPath))
+                            {
+                                try { File.Delete(delPath); } catch { }
+                            }
                         }
                     }
                     continue;
@@ -326,6 +354,11 @@ namespace NTPC_FEC.RoadBSC
                         ? Path.GetFileName(item.FileName) 
                         : (item.TargetTitle != null ? Path.GetFileName(item.TargetTitle) : "G_改善後照片_1") + ".jpg";
 
+                    if (!targetFileName.StartsWith("G_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetFileName = "G_" + targetFileName;
+                    }
+
                     if (!targetFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && 
                         !targetFileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) && 
                         !targetFileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
@@ -334,6 +367,10 @@ namespace NTPC_FEC.RoadBSC
                     }
 
                     string fullPath = Path.Combine(physDir, targetFileName);
+                    if (!FileSecurityHelper.IsSafePath(physDir, fullPath))
+                    {
+                        continue;
+                    }
 
                     try
                     {
@@ -396,35 +433,37 @@ namespace NTPC_FEC.RoadBSC
                 string fromMail = WebConfigurationManager.AppSettings["MailFrom"] ?? "noreply@ntpc.gov.tw";
                 string fromName = "新北市固定逸散源管理平台";
 
-                MailMessage mail = new MailMessage();
-                mail.From = new MailAddress(fromMail, fromName, Encoding.UTF8);
-                foreach (string em in emailList) mail.To.Add(em);
-
-                string typeTitle = isBack ? "【通報案件退回通知】" : "【落塵清理改善回報完成通知】";
-                mail.Subject = string.Format("{0} 案件編號：{1} ({2} {3})", typeTitle, showId, townName, roadName);
-                mail.IsBodyHtml = true;
-                mail.BodyEncoding = Encoding.UTF8;
-
-                StringBuilder sb = new StringBuilder();
-                sb.Append("<html><body style='font-family:微軟正黑體,Arial; font-size:15px; color:#333; line-height:1.6;'>");
-                sb.Append("<div style='max-width:650px; margin:0 auto; border:1px solid #9B741E; border-radius:8px; overflow:hidden;'>");
-                sb.Append("<div style='background:linear-gradient(135deg, #9B741E, #d97706); color:#fff; padding:16px 20px;'>");
-                sb.AppendFormat("<h3 style='margin:0; font-size:18px;'>新北市固定逸散源管理平台 - {0}</h3>", isBack ? "通報案件退回處理單" : "落塵清理成果回報單");
-                sb.Append("</div>");
-                sb.Append("<div style='padding:20px;'>");
-                sb.AppendFormat("<p>處理單位 <strong>{0}</strong> 已於 {1} 提交本案回報說明：</p>", handleUnitName, DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
-                sb.Append("<table style='width:100%; border-collapse:collapse; margin:16px 0;'>");
-                sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc; width:130px;'><strong>案件代號</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", showId);
-                sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>行政區/路段</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0} {1}</td></tr>", townName, roadName);
-                sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>處理說明</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", string.IsNullOrEmpty(memo) ? "無" : memo);
-                sb.Append("</table>");
-                sb.Append("</div></div></body></html>");
-
-                mail.Body = sb.ToString();
-
-                using (SmtpClient smtp = new SmtpClient(host))
+                using (MailMessage mail = new MailMessage())
                 {
-                    smtp.Send(mail);
+                    mail.From = new MailAddress(fromMail, fromName, Encoding.UTF8);
+                    foreach (string em in emailList) mail.To.Add(em);
+
+                    string typeTitle = isBack ? "【通報案件退回通知】" : "【落塵清理改善回報完成通知】";
+                    mail.Subject = string.Format("{0} 案件編號：{1} ({2} {3})", typeTitle, showId, townName, roadName);
+                    mail.IsBodyHtml = true;
+                    mail.BodyEncoding = Encoding.UTF8;
+
+                    StringBuilder sb = new StringBuilder();
+                    sb.Append("<html><body style='font-family:微軟正黑體,Arial; font-size:15px; color:#333; line-height:1.6;'>");
+                    sb.Append("<div style='max-width:650px; margin:0 auto; border:1px solid #9B741E; border-radius:8px; overflow:hidden;'>");
+                    sb.Append("<div style='background:linear-gradient(135deg, #9B741E, #d97706); color:#fff; padding:16px 20px;'>");
+                    sb.AppendFormat("<h3 style='margin:0; font-size:18px;'>新北市固定逸散源管理平台 - {0}</h3>", isBack ? "通報案件退回處理單" : "落塵清理成果回報單");
+                    sb.Append("</div>");
+                    sb.Append("<div style='padding:20px;'>");
+                    sb.AppendFormat("<p>處理單位 <strong>{0}</strong> 已於 {1} 提交本案回報說明：</p>", handleUnitName, DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
+                    sb.Append("<table style='width:100%; border-collapse:collapse; margin:16px 0;'>");
+                    sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc; width:130px;'><strong>案件代號</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", showId);
+                    sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>行政區/路段</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0} {1}</td></tr>", townName, roadName);
+                    sb.AppendFormat("<tr><td style='border:1px solid #ddd; padding:8px 12px; background:#f8fafc;'><strong>處理說明</strong></td><td style='border:1px solid #ddd; padding:8px 12px;'>{0}</td></tr>", string.IsNullOrEmpty(memo) ? "無" : memo);
+                    sb.Append("</table>");
+                    sb.Append("</div></div></body></html>");
+
+                    mail.Body = sb.ToString();
+
+                    using (SmtpClient smtp = new SmtpClient(host))
+                    {
+                        smtp.Send(mail);
+                    }
                 }
             }
             catch { }

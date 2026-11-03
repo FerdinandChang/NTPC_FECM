@@ -1109,7 +1109,7 @@ namespace NTPC_FEC.RoadClean
                 string targetDir = Server.MapPath("~/Upload/RoadCleanPIC/" + chkId);
                 if (Directory.Exists(targetDir))
                 {
-                    Directory.Delete(targetDir, true);
+                    string[] filesToDel = Directory.GetFiles(targetDir, "*", SearchOption.AllDirectories); for (int i = 0; i < filesToDel.Length; i++) { try { File.Delete(filesToDel[i]); } catch { } }
                 }
             }
             catch

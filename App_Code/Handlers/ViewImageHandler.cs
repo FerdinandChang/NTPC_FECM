@@ -49,6 +49,11 @@ namespace NTPC_FEC.Handlers
 
             // 1. 安全防禦：防止目錄遍歷 (Path Traversal) 與 Null Byte 注入
             rawPath = HttpUtility.UrlDecode(rawPath).Replace('\\', '/').Trim();
+            int qIdx = rawPath.IndexOf('?');
+            if (qIdx >= 0)
+            {
+                rawPath = rawPath.Substring(0, qIdx).Trim();
+            }
             if (rawPath.IndexOf('\0') >= 0 || rawPath.Contains(".."))
             {
                 response.StatusCode = 403;

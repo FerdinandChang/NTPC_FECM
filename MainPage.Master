@@ -2224,7 +2224,18 @@
         (function () {
             var IDLE_TIMEOUT_SEC = 1800;       // 總閒置逾時：30 分鐘 (1800 秒)
             var WARNING_BEFORE_SEC = 120;      // 倒數預警時間：2 分鐘 (120 秒)
-            var HEARTBEAT_INTERVAL_MS = 300000; // 心跳展延節流：5 分鐘 (300,000 毫秒)
+            var HEARTBEAT_INTERVAL_MS = 60000;  // 心跳展延節流：1 分鐘 (60,000 毫秒)，確保前後端倒數零落差
+            var STORAGE_ACTIVE_KEY = 'ntpc_fec_last_active';
+            var lastStorageSyncTime = 0;
+            function syncActivityToStorage(ts) {
+                try {
+                    if (ts - lastStorageSyncTime >= 2000) {
+                        lastStorageSyncTime = ts;
+                        localStorage.setItem(STORAGE_ACTIVE_KEY, String(ts));
+                    }
+                } catch (e) {}
+            }
+            syncActivityToStorage(Date.now());
 
             var lastActiveTime = Date.now();
             var lastKeepAliveTime = Date.now();
@@ -2345,7 +2356,8 @@
                     return;
                 }
 
-                // 情況二：平時正常操作，更新最後活動時間
+                // 情況二：平時正常操作，更新最後活動時間並同步至跨分頁 localStorage
+                 syncActivityToStorage(now);
                 lastActiveTime = now;
 
                 // 若剛才已有秒數倒數 (>= 2秒)，使用者一動滑鼠立即重置為 30:00 並微閃綠燈，讓使用者有感
@@ -2387,6 +2399,8 @@
                 if (isLoggingOut) return;
 
                 var now = Date.now();
+                try { var sharedTs = parseInt(localStorage.getItem(STORAGE_ACTIVE_KEY) || '0', 10); if (sharedTs > lastActiveTime) { lastActiveTime = sharedTs; if (isModalVisible) { hideIdleModal(); } } } catch (e) {}
+                if (lastActiveTime > lastKeepAliveTime && (now - lastKeepAliveTime) >= HEARTBEAT_INTERVAL_MS) { pingKeepAlive(); }
                 var elapsedSec = Math.floor((now - lastActiveTime) / 1000);
                 var remainingSec = IDLE_TIMEOUT_SEC - elapsedSec;
 

@@ -8,6 +8,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 using NTPC_FEC.Models;
 using NTPC_FEC.Services;
 
@@ -634,44 +635,62 @@ namespace NTPC_FEC.Wash
             // 儲存檔案
             file.SaveAs(fullSavePath);
 
-            // 寫入/更新資料庫紀錄
-            string checkSql = "SELECT COUNT(*) FROM RoadWash_UploadHis WHERE FAC_ID = @FAC_ID AND uploadyear = @Year AND uploadmonth = @Month";
-            var checkParams = new SqlParameter[]
+            // 寫入/更新資料庫紀錄 (交易保護)
+            using (SqlConnection conn = DbHelper.GetOpenConnection())
+            using (SqlTransaction trans = conn.BeginTransaction())
             {
-                new SqlParameter("@FAC_ID", SqlDbType.VarChar) { Value = facId },
-                new SqlParameter("@Year", SqlDbType.Int) { Value = year },
-                new SqlParameter("@Month", SqlDbType.Int) { Value = month }
-            };
+                try
+                {
+                    string checkSql = "SELECT COUNT(*) FROM RoadWash_UploadHis WITH (UPDLOCK, HOLDLOCK) WHERE FAC_ID = @FAC_ID AND uploadyear = @Year AND uploadmonth = @Month";
+                    SqlCommand cmdCheck = new SqlCommand(checkSql, conn, trans);
+                    cmdCheck.Parameters.Add(new SqlParameter("@FAC_ID", SqlDbType.VarChar) { Value = facId });
+                    cmdCheck.Parameters.Add(new SqlParameter("@Year", SqlDbType.Int) { Value = year });
+                    cmdCheck.Parameters.Add(new SqlParameter("@Month", SqlDbType.Int) { Value = month });
+                    int count = Convert.ToInt32(cmdCheck.ExecuteScalar());
 
-            int count = Convert.ToInt32(DbHelper.ExecuteScalar(checkSql, checkParams));
-            if (count > 0)
-            {
-                // 更新現有紀錄
-                string updateSql = "UPDATE RoadWash_UploadHis SET uploaddate = GETDATE(), uploaduser = @UploadUser, FileName = @FileName WHERE FAC_ID = @FAC_ID AND uploadyear = @Year AND uploadmonth = @Month";
-                var updateParams = new SqlParameter[]
+                    if (count > 0)
+                    {
+                        string updateSql = "UPDATE RoadWash_UploadHis SET uploaddate = GETDATE(), uploaduser = @UploadUser, FileName = @FileName WHERE FAC_ID = @FAC_ID AND uploadyear = @Year AND uploadmonth = @Month";
+                        SqlCommand cmdUpdate = new SqlCommand(updateSql, conn, trans);
+                        cmdUpdate.Parameters.Add(new SqlParameter("@UploadUser", SqlDbType.VarChar) { Value = userId });
+                        cmdUpdate.Parameters.Add(new SqlParameter("@FileName", SqlDbType.NVarChar) { Value = originalFileName });
+                        cmdUpdate.Parameters.Add(new SqlParameter("@FAC_ID", SqlDbType.VarChar) { Value = facId });
+                        cmdUpdate.Parameters.Add(new SqlParameter("@Year", SqlDbType.Int) { Value = year });
+                        cmdUpdate.Parameters.Add(new SqlParameter("@Month", SqlDbType.Int) { Value = month });
+                        cmdUpdate.ExecuteNonQuery();
+                    }
+                    else
+                    {
+                        string insertSql = "INSERT INTO RoadWash_UploadHis (FAC_ID, uploadyear, uploadmonth, uploaddate, uploaduser, FileName) VALUES (@FAC_ID, @Year, @Month, GETDATE(), @UploadUser, @FileName)";
+                        SqlCommand cmdInsert = new SqlCommand(insertSql, conn, trans);
+                        cmdInsert.Parameters.Add(new SqlParameter("@FAC_ID", SqlDbType.VarChar) { Value = facId });
+                        cmdInsert.Parameters.Add(new SqlParameter("@Year", SqlDbType.Int) { Value = year });
+                        cmdInsert.Parameters.Add(new SqlParameter("@Month", SqlDbType.Int) { Value = month });
+                        cmdInsert.Parameters.Add(new SqlParameter("@UploadUser", SqlDbType.VarChar) { Value = userId });
+                        cmdInsert.Parameters.Add(new SqlParameter("@FileName", SqlDbType.NVarChar) { Value = originalFileName });
+                        cmdInsert.ExecuteNonQuery();
+                    }
+
+                    trans.Commit();
+                }
+                catch (Exception ex)
                 {
-                    new SqlParameter("@UploadUser", SqlDbType.VarChar) { Value = userId },
-                    new SqlParameter("@FileName", SqlDbType.NVarChar) { Value = originalFileName },
-                    new SqlParameter("@FAC_ID", SqlDbType.VarChar) { Value = facId },
-                    new SqlParameter("@Year", SqlDbType.Int) { Value = year },
-                    new SqlParameter("@Month", SqlDbType.Int) { Value = month }
-                };
-                DbHelper.ExecuteNonQuery(updateSql, updateParams);
+                    trans.Rollback();
+                    throw new Exception("儲存申報資料庫紀錄失敗：" + ex.Message);
+                }
             }
-            else
-            {
-                // 新增紀錄
-                string insertSql = "INSERT INTO RoadWash_UploadHis (FAC_ID, uploadyear, uploadmonth, uploaddate, uploaduser, FileName) VALUES (@FAC_ID, @Year, @Month, GETDATE(), @UploadUser, @FileName)";
-                var insertParams = new SqlParameter[]
-                {
-                    new SqlParameter("@FAC_ID", SqlDbType.VarChar) { Value = facId },
-                    new SqlParameter("@Year", SqlDbType.Int) { Value = year },
-                    new SqlParameter("@Month", SqlDbType.Int) { Value = month },
-                    new SqlParameter("@UploadUser", SqlDbType.VarChar) { Value = userId },
-                    new SqlParameter("@FileName", SqlDbType.NVarChar) { Value = originalFileName }
-                };
-                DbHelper.ExecuteNonQuery(insertSql, insertParams);
-            }
+
+            // 寫入 AuditLog 稽核日誌
+            AuditLogger.Log(
+                operatorUser: userId,
+                actionType: "WASH_REPORT_UPLOAD",
+                targetUser: facId,
+                clientIp: Request.UserHostAddress,
+                details: string.Format("洗掃月報表上傳：場所 {0}, 年度 {1}, 月份 {2}, 檔名 {3}",
+                    facId, year, month, targetFileName),
+                oldValue: null,
+                newValue: originalFileName
+            );
 
             Response.Write(jsonSerializer.Serialize(new
             {
@@ -762,6 +781,18 @@ namespace NTPC_FEC.Wash
             string delSql = "DELETE FROM RoadWash_UploadHis WHERE pID = @PID";
             var dParams = new SqlParameter[] { new SqlParameter("@PID", SqlDbType.Int) { Value = pid } };
             DbHelper.ExecuteNonQuery(delSql, dParams);
+
+            // 寫入 AuditLog 稽核日誌
+            AuditLogger.Log(
+                operatorUser: userId,
+                actionType: "WASH_REPORT_DELETE",
+                targetUser: facId,
+                clientIp: Request.UserHostAddress,
+                details: string.Format("洗掃月報表刪除：紀錄序號 {0}, 場所 {1}, 年度 {2}, 月份 {3}",
+                    pid, facId, year, month),
+                oldValue: string.Format("{0}年{1}月", year, month),
+                newValue: null
+            );
 
             Response.Write(jsonSerializer.Serialize(new
             {

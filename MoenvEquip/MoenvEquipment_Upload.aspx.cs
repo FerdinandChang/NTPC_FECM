@@ -10,6 +10,7 @@ using System.Web.Configuration;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
@@ -93,6 +94,17 @@ namespace NTPC_FEC.MoenvEquip
                     return;
                 }
 
+                // [安全校驗] Magic Bytes 檔案頭校驗: .xlsx 實質為 ZIP 封裝，前 4 位元組必須為 0x50, 0x4B, 0x03, 0x04 (PK..)
+                byte[] headerBytes = new byte[4];
+                int bytesRead = file.InputStream.Read(headerBytes, 0, 4);
+                file.InputStream.Position = 0; // 重設串流位置供後續 NPOI 讀取
+                if (bytesRead < 4 || headerBytes[0] != 0x50 || headerBytes[1] != 0x4B || headerBytes[2] != 0x03 || headerBytes[3] != 0x04)
+                {
+                    responseData["message"] = "檔案格式驗證失敗！該檔案內容並非標準合法的 Excel (.xlsx) 檔案。";
+                    SendJsonResponse(responseData);
+                    return;
+                }
+
                 string defaultPlanType = Request.Form["defaultPlanType"];
                 if (string.IsNullOrEmpty(defaultPlanType))
                 {
@@ -100,6 +112,32 @@ namespace NTPC_FEC.MoenvEquip
                 }
 
                 Dictionary<string, object> importResult = MoenvEquipment_Helper.ImportExcel(file.InputStream, defaultPlanType);
+
+                // 匯入成功後寫入雙軌 AuditLog
+                if (importResult != null && importResult.ContainsKey("success") && Convert.ToBoolean(importResult["success"]))
+                {
+                    string curUser = (Session["LoginUser"] != null && !string.IsNullOrEmpty(Session["LoginUser"].ToString()))
+                        ? Session["LoginUser"].ToString().Trim()
+                        : ((Session["User"] != null) ? Session["User"].ToString().Trim() : "系統使用者");
+
+                    int total = importResult.ContainsKey("total") ? Convert.ToInt32(importResult["total"]) : 0;
+                    int mainIns = importResult.ContainsKey("mainInserted") ? Convert.ToInt32(importResult["mainInserted"]) : 0;
+                    int mainUpd = importResult.ContainsKey("mainUpdated") ? Convert.ToInt32(importResult["mainUpdated"]) : 0;
+                    int unqIns = importResult.ContainsKey("unqInserted") ? Convert.ToInt32(importResult["unqInserted"]) : 0;
+                    int unqUpd = importResult.ContainsKey("unqUpdated") ? Convert.ToInt32(importResult["unqUpdated"]) : 0;
+
+                    AuditLogger.Log(
+                        operatorUser: curUser,
+                        actionType: "MOENV_EQUIP_UPLOAD",
+                        targetUser: "MoenvEquipment",
+                        clientIp: Request.UserHostAddress,
+                        details: string.Format("環境部施工機具資料匯入成功，檔案：{0}，共解析 {1} 筆 (合格新增:{2}/更新:{3}，未通過新增:{4}/更新:{5})",
+                            Path.GetFileName(file.FileName), total, mainIns, mainUpd, unqIns, unqUpd),
+                        oldValue: null,
+                        newValue: null
+                    );
+                }
+
                 SendJsonResponse(importResult);
             }
             catch (System.Threading.ThreadAbortException)
@@ -700,6 +738,11 @@ namespace NTPC_FEC.MoenvEquip
                         maxIdBeforeImportUnqualified = Convert.ToInt32(cmdMaxUnq.ExecuteScalar());
                     }
 
+                    using (SqlTransaction trans = conn.BeginTransaction())
+                    {
+                        try
+                        {
+
                     for (int r = 1; r <= sheet.LastRowNum; r++)
                     {
                         IRow row = sheet.GetRow(r);
@@ -769,7 +812,7 @@ namespace NTPC_FEC.MoenvEquip
                                 "(LTRIM(RTRIM(ISNULL([PlateNumber], ''))) = @PlateNumber OR (LTRIM(RTRIM(ISNULL([PlateNumber], ''))) IN ('', '無', '無資料') AND @PlateNumber = '')) AND " +
                                 "LEFT(REPLACE(ISNULL(CONVERT(NVARCHAR(50), [TestDate], 120), ''), '/', '-'), 10) = @TestDateNorm";
 
-                            using (SqlCommand matchCmd = new SqlCommand(matchSql, conn))
+                            using (SqlCommand matchCmd = new SqlCommand(matchSql, conn, trans))
                             {
                                 matchCmd.Parameters.AddWithValue("@MaxId", currentMaxId);
                                 matchCmd.Parameters.AddWithValue("@TaxId", normTaxId);
@@ -793,7 +836,7 @@ namespace NTPC_FEC.MoenvEquip
                                 "LTRIM(RTRIM(ISNULL([BadgeNumber], ''))) = @BadgeNumber AND " +
                                 "LEFT(REPLACE(ISNULL(CONVERT(NVARCHAR(50), [TestDate], 120), ''), '/', '-'), 10) = @TestDateNorm";
 
-                            using (SqlCommand matchCmd = new SqlCommand(matchSql, conn))
+                            using (SqlCommand matchCmd = new SqlCommand(matchSql, conn, trans))
                             {
                                 matchCmd.Parameters.AddWithValue("@MaxId", currentMaxId);
                                 matchCmd.Parameters.AddWithValue("@BadgeNumber", excelBadgeNumStr);
@@ -817,7 +860,7 @@ namespace NTPC_FEC.MoenvEquip
                         {
                             bool needsUpdate = false;
                             string readSql = "SELECT * FROM [" + targetTable + "] WHERE [Id] = @Id";
-                            using (SqlCommand readCmd = new SqlCommand(readSql, conn))
+                            using (SqlCommand readCmd = new SqlCommand(readSql, conn, trans))
                             {
                                 readCmd.Parameters.AddWithValue("@Id", matchId);
                                 using (SqlDataReader reader = readCmd.ExecuteReader())
@@ -921,7 +964,7 @@ namespace NTPC_FEC.MoenvEquip
                                     "[ProjectType] = @ProjectType, [IsQualified] = @IsQualified, [ModifyDate] = GETDATE() " +
                                     "WHERE [Id] = @Id";
 
-                                using (SqlCommand updCmd = new SqlCommand(updateSql, conn))
+                                using (SqlCommand updCmd = new SqlCommand(updateSql, conn, trans))
                                 {
                                     updCmd.Parameters.AddWithValue("@Id", matchId);
                                     BindAllRowParameters(updCmd, rowVals, insertProjectType, isQualified);
@@ -956,7 +999,7 @@ namespace NTPC_FEC.MoenvEquip
                                 "@IssueDate,@BadgeLevel,@BadgeStatus,@BuyDoc,@EmissionDoc," +
                                 "@BadgePhoto,@RecordDoc,@ProjectType,@IsQualified,GETDATE(),GETDATE())";
 
-                            using (SqlCommand insCmd = new SqlCommand(insertSql, conn))
+                            using (SqlCommand insCmd = new SqlCommand(insertSql, conn, trans))
                             {
                                 BindAllRowParameters(insCmd, rowVals, insertProjectType, isQualified);
                                 insCmd.ExecuteNonQuery();
@@ -970,6 +1013,15 @@ namespace NTPC_FEC.MoenvEquip
                                     mainInsertCount++;
                                 }
                             }
+                        }
+                    }
+
+                            trans.Commit();
+                        }
+                        catch (Exception exTrans)
+                        {
+                            try { trans.Rollback(); } catch { }
+                            throw new Exception("資料庫寫入交易失敗，已完整復原：" + exTrans.Message);
                         }
                     }
                 }

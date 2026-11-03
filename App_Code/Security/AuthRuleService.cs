@@ -35,6 +35,7 @@ namespace NTPC_FEC.Security
             if (normPath.Equals("MainPage.aspx", StringComparison.OrdinalIgnoreCase) ||
                 normPath.Equals("OutLink.aspx", StringComparison.OrdinalIgnoreCase) ||
                 normPath.Equals("ChangePassword.aspx", StringComparison.OrdinalIgnoreCase) ||
+                normPath.Equals("Modules/Manager/PasswordChange.aspx", StringComparison.OrdinalIgnoreCase) ||
                 normPath.Equals("Default.aspx", StringComparison.OrdinalIgnoreCase) ||
                 normPath.Equals("ClientLogin.aspx", StringComparison.OrdinalIgnoreCase) ||
                 normPath.Equals("Logout.aspx", StringComparison.OrdinalIgnoreCase))
@@ -61,50 +62,22 @@ namespace NTPC_FEC.Security
                 normPath.StartsWith("Manager/Check_Step1.aspx", StringComparison.OrdinalIgnoreCase) ||
                 normPath.StartsWith("Manager/Check_Step1_Mac.aspx", StringComparison.OrdinalIgnoreCase))
             {
-                string invState = (request != null && request["INV_State"] != null ? request["INV_State"].ToString().ToUpper() : "");
-                if (invState == "INV1")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "CASE_INV1", 3)) return true;
-                    denyReason = "您無權限存取【案件初審】功能！";
-                    return false;
-                }
-                if (invState == "INV2")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "CASE_INV2", 4)) return true;
-                    denyReason = "您無權限存取【案件複審】功能！";
-                    return false;
-                }
-                if (invState == "INV3")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "CASE_INV3", 5)) return true;
-                    denyReason = "您無權限存取【案件三審】功能！";
-                    return false;
-                }
-                if (invState == "MAC1")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "MAC_INV1", 6)) return true;
-                    denyReason = "您無權限存取【作業機具初審】功能！";
-                    return false;
-                }
-                if (invState == "MAC2")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "MAC_INV2", 6)) return true;
-                    denyReason = "您無權限存取【作業機具複審】功能！";
-                    return false;
-                }
-                if (invState == "MAC3")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "MAC_INV3", 6)) return true;
-                    denyReason = "您無權限存取【作業機具三審】功能！";
-                    return false;
-                }
-
                 if (PermissionService.HasPermission(userId, lic, "CASE_INV1", 3) ||
                     PermissionService.HasPermission(userId, lic, "CASE_INV2", 4) ||
                     PermissionService.HasPermission(userId, lic, "CASE_INV3", 5) ||
                     PermissionService.HasPermission(userId, lic, "MAC_INV1", 6) ||
+                    PermissionService.HasPermission(userId, lic, "MAC_INV2", 6) ||
+                    PermissionService.HasPermission(userId, lic, "MAC_INV3", 6) ||
                     PermissionService.HasPermission(userId, lic, "CASE_CHECK_RUN", 0) ||
-                    PermissionService.HasPermission(userId, lic, "CASE_SEARCH_LIST", 42))
+                    PermissionService.HasPermission(userId, lic, "CASE_SEARCH_LIST", 42) ||
+                    PermissionService.HasPermission(userId, lic, "MAC_DRAFT_VIEW", 1) ||
+                    PermissionService.HasPermission(userId, lic, "MAC_SEARCH_LIST", 43) ||
+                    MenuService.CheckLicense(lic, 3) ||
+                    MenuService.CheckLicense(lic, 4) ||
+                    MenuService.CheckLicense(lic, 5) ||
+                    MenuService.CheckLicense(lic, 6) ||
+                    MenuService.CheckLicense(lic, 13) ||
+                    MenuService.CheckLicense(lic, 14))
                 {
                     return true;
                 }
@@ -116,31 +89,16 @@ namespace NTPC_FEC.Security
             if (normPath.StartsWith("Manager/managerList_Bare.aspx", StringComparison.OrdinalIgnoreCase) ||
                 normPath.StartsWith("Manager/Check_Step1_Bare.aspx", StringComparison.OrdinalIgnoreCase))
             {
-                string mode = (request != null && request["mode"] != null ? request["mode"].ToString().ToUpper() : "");
-                if (mode == "INV1")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "BARE_INV1", 18)) return true;
-                    denyReason = "您無權限存取裸露地【案件初審】功能！";
-                    return false;
-                }
-                if (mode == "INV2")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "BARE_INV2", 19)) return true;
-                    denyReason = "您無權限存取裸露地【案件複審】功能！";
-                    return false;
-                }
-                if (mode == "INV3")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "BARE_INV3", 20)) return true;
-                    denyReason = "您無權限存取裸露地【案件三審】功能！";
-                    return false;
-                }
-
                 if (PermissionService.HasPermission(userId, lic, "BARE_INV1", 18) ||
                     PermissionService.HasPermission(userId, lic, "BARE_INV2", 19) ||
                     PermissionService.HasPermission(userId, lic, "BARE_INV3", 20) ||
                     PermissionService.HasPermission(userId, lic, "BARE_NEW_CHECK", 17) ||
-                    PermissionService.HasPermission(userId, lic, "BARE_SEARCH_LIST", 44))
+                    PermissionService.HasPermission(userId, lic, "BARE_SEARCH_LIST", 44) ||
+                    MenuService.CheckLicense(lic, 17) ||
+                    MenuService.CheckLicense(lic, 18) ||
+                    MenuService.CheckLicense(lic, 19) ||
+                    MenuService.CheckLicense(lic, 20) ||
+                    MenuService.CheckLicense(lic, 44))
                 {
                     return true;
                 }
@@ -151,23 +109,27 @@ namespace NTPC_FEC.Security
             // 6. 巡查任務派遣 (防制設施查核)
             if (normPath.StartsWith("Case/", StringComparison.OrdinalIgnoreCase))
             {
-                string mode = (request != null && request["mode"] != null ? request["mode"].ToString().ToLower() : "");
-                if (normPath.IndexOf("Case_Sum", StringComparison.OrdinalIgnoreCase) >= 0 || mode == "search" || mode == "project")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "CASE_SEARCH_LIST", 42) ||
-                        PermissionService.HasPermission(userId, lic, "CASE_PROJECT_ZONE", 42) ||
-                        PermissionService.HasPermission(userId, lic, "CASE_SUM_STATS", 42) ||
-                        PermissionService.HasPermission(userId, lic, "CASE_SUM_MANAGE", 42)) return true;
-                    denyReason = "您無權限存取查核列表或統計查詢功能！";
-                    return false;
-                }
                 if (PermissionService.HasPermission(userId, lic, "CASE_CHECK_RUN", 0) ||
                     PermissionService.HasPermission(userId, lic, "CASE_DRAFT_VIEW", 0) ||
                     PermissionService.HasPermission(userId, lic, "CASE_BACK_LIST", 0) ||
                     PermissionService.HasPermission(userId, lic, "CASE_SEARCH_LIST", 42) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_PROJECT_ZONE", 42) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_SUM_STATS", 42) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_SUM_MANAGE", 42) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_DISPATCH_SET", 0) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_MISSION_7DAY", 0) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_MISSION_2TIMES", 0) ||
                     PermissionService.HasPermission(userId, lic, "CASE_INV1", 3) ||
                     PermissionService.HasPermission(userId, lic, "CASE_INV2", 4) ||
-                    PermissionService.HasPermission(userId, lic, "CASE_INV3", 5))
+                    PermissionService.HasPermission(userId, lic, "CASE_INV3", 5) ||
+                    PermissionService.HasPermission(userId, lic, "FAC_LIST_READ", 41) ||
+                    PermissionService.HasPermission(userId, lic, "FAC_BUFFER_MAP", 41) ||
+                    MenuService.CheckLicense(lic, 0) ||
+                    MenuService.CheckLicense(lic, 3) ||
+                    MenuService.CheckLicense(lic, 4) ||
+                    MenuService.CheckLicense(lic, 5) ||
+                    MenuService.CheckLicense(lic, 41) ||
+                    MenuService.CheckLicense(lic, 42))
                 {
                     return true;
                 }
@@ -175,25 +137,21 @@ namespace NTPC_FEC.Security
                 return false;
             }
 
-            // 7. 作業機具調查
-            if (normPath.StartsWith("Machine/", StringComparison.OrdinalIgnoreCase))
+            // 7. 作業機具調查與環境部機具分析
+            if (normPath.StartsWith("Machine/", StringComparison.OrdinalIgnoreCase) ||
+                normPath.StartsWith("MoenvEquip/", StringComparison.OrdinalIgnoreCase))
             {
-                string mode = (request != null && request["mode"] != null ? request["mode"].ToString().ToLower() : "");
-                if (normPath.IndexOf("NewMac.aspx", StringComparison.OrdinalIgnoreCase) >= 0 || mode == "reject")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "MAC_DRAFT_VIEW", 1)) return true;
-                    denyReason = "您無權限存取【作業機具調查】功能！";
-                    return false;
-                }
-                if (mode == "search")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "MAC_SEARCH_LIST", 43)) return true;
-                    denyReason = "您無權限存取作業機具【調查成果列表】！";
-                    return false;
-                }
                 if (PermissionService.HasPermission(userId, lic, "MAC_DRAFT_VIEW", 1) ||
                     PermissionService.HasPermission(userId, lic, "MAC_SEARCH_LIST", 43) ||
-                    PermissionService.HasPermission(userId, lic, "MAC_INV1", 6))
+                    PermissionService.HasPermission(userId, lic, "MAC_SURVEY_FORM", 43) ||
+                    PermissionService.HasPermission(userId, lic, "MAC_MOENV_ANALYSIS", 43) ||
+                    PermissionService.HasPermission(userId, lic, "MAC_INV1", 6) ||
+                    PermissionService.HasPermission(userId, lic, "MAC_INV2", 6) ||
+                    PermissionService.HasPermission(userId, lic, "MAC_INV3", 6) ||
+                    MenuService.CheckLicense(lic, 1) ||
+                    MenuService.CheckLicense(lic, 6) ||
+                    MenuService.CheckLicense(lic, 43) ||
+                    MenuService.CheckLicense(lic, 59))
                 {
                     return true;
                 }
@@ -204,26 +162,20 @@ namespace NTPC_FEC.Security
             // 8. 裸露地調查
             if (normPath.StartsWith("BareGround/", StringComparison.OrdinalIgnoreCase))
             {
-                string mode = (request != null && request["mode"] != null ? request["mode"].ToString().ToLower() : "");
-                if (normPath.IndexOf("NewBare.aspx", StringComparison.OrdinalIgnoreCase) >= 0 || mode == "new" || mode == "reject" || mode == "back")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "BARE_NEW_CHECK", 17) ||
-                        PermissionService.HasPermission(userId, lic, "BARE_DRAFT_VIEW", 17) ||
-                        PermissionService.HasPermission(userId, lic, "BARE_BACK_LIST", 17)) return true;
-                    denyReason = "您無權限存取【裸露地調查】功能！";
-                    return false;
-                }
-                if (mode == "identify" || mode == "search")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "BARE_SEARCH_LIST", 44)) return true;
-                    denyReason = "您無權限存取裸露地【調查成果列表】！";
-                    return false;
-                }
                 if (PermissionService.HasPermission(userId, lic, "BARE_NEW_CHECK", 17) ||
+                    PermissionService.HasPermission(userId, lic, "BARE_DRAFT_VIEW", 17) ||
+                    PermissionService.HasPermission(userId, lic, "BARE_BACK_LIST", 17) ||
                     PermissionService.HasPermission(userId, lic, "BARE_SEARCH_LIST", 44) ||
                     PermissionService.HasPermission(userId, lic, "BARE_INV1", 18) ||
                     PermissionService.HasPermission(userId, lic, "BARE_INV2", 19) ||
-                    PermissionService.HasPermission(userId, lic, "BARE_INV3", 20))
+                    PermissionService.HasPermission(userId, lic, "BARE_INV3", 20) ||
+                    PermissionService.HasPermission(userId, lic, "MAP_NDVI_SAT", 41) ||
+                    MenuService.CheckLicense(lic, 17) ||
+                    MenuService.CheckLicense(lic, 18) ||
+                    MenuService.CheckLicense(lic, 19) ||
+                    MenuService.CheckLicense(lic, 20) ||
+                    MenuService.CheckLicense(lic, 41) ||
+                    MenuService.CheckLicense(lic, 44))
                 {
                     return true;
                 }
@@ -231,32 +183,26 @@ namespace NTPC_FEC.Security
                 return false;
             }
 
-            // 9. 工廠基本資料
-            if (normPath.StartsWith("FAC/", StringComparison.OrdinalIgnoreCase))
+            // 9. 工廠基本資料與環域查詢
+            if (normPath.StartsWith("FAC/", StringComparison.OrdinalIgnoreCase) ||
+                normPath.StartsWith("BufferAnalysis/", StringComparison.OrdinalIgnoreCase))
             {
-                string mode = (request != null && request["mode"] != null ? request["mode"].ToString().ToLower() : "");
-                if (mode == "edit")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "FAC_LIST_EDIT", 2)) return true;
-                    denyReason = "您無權限維護逸散源未列管基本資料！";
-                    return false;
-                }
-                if (mode == "mission")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "CASE_DISPATCH_SET", 0) || MenuService.CheckLicense(lic, 10)) return true;
-                    denyReason = "您無權限進行案件派遣設定！";
-                    return false;
-                }
-                if (normPath.IndexOf("oFAC_List.aspx", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    if (PermissionService.HasPermission(userId, lic, "FAC_LICENSE_QUERY", 10) || PermissionService.HasPermission(userId, lic, "FAC_LIST_READ", 41)) return true;
-                    denyReason = "您無權限查詢許可證資訊！";
-                    return false;
-                }
                 if (PermissionService.HasPermission(userId, lic, "FAC_LIST_READ", 41) ||
+                    PermissionService.HasPermission(userId, lic, "FAC_LIST_READ", 2) ||
                     PermissionService.HasPermission(userId, lic, "FAC_LIST_EDIT", 2) ||
                     PermissionService.HasPermission(userId, lic, "FAC_LICENSE_QUERY", 10) ||
-                    PermissionService.HasPermission(userId, lic, "FAC_STATS", 41))
+                    PermissionService.HasPermission(userId, lic, "FAC_LICENSE_QUERY", 41) ||
+                    PermissionService.HasPermission(userId, lic, "FAC_STATS", 41) ||
+                    PermissionService.HasPermission(userId, lic, "FAC_BUFFER_MAP", 41) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_DISPATCH_SET", 0) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_CHECK_RUN", 0) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_SEARCH_LIST", 42) ||
+                    MenuService.CheckLicense(lic, 0) ||
+                    MenuService.CheckLicense(lic, 1) ||
+                    MenuService.CheckLicense(lic, 2) ||
+                    MenuService.CheckLicense(lic, 10) ||
+                    MenuService.CheckLicense(lic, 41) ||
+                    MenuService.CheckLicense(lic, 42))
                 {
                     return true;
                 }
@@ -267,107 +213,75 @@ namespace NTPC_FEC.Security
             // 10. 道路潔淨巡檢、道路髒污、破損、覆土
             if (normPath.StartsWith("RoadClean/", StringComparison.OrdinalIgnoreCase))
             {
-                string mode = (request != null && request["mode"] != null ? request["mode"].ToString().ToLower() : "");
-                if (normPath.IndexOf("Dirty", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    if (mode.IndexOf("improve", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_IMPROVE", 23)) return true;
-                        denyReason = "您無權限存取【路污改善回報】！";
-                        return false;
-                    }
-                    if (mode.IndexOf("finish", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_FINISH", 24)) return true;
-                        denyReason = "您無權限存取【路污改善成果】！";
-                        return false;
-                    }
-                    if (PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_NEW", 21) ||
-                        PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_DRAFT", 21) ||
-                        PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_IMPROVE", 23) ||
-                        PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_FINISH", 24)) return true;
-                    denyReason = "您無權限存取【道路髒污管理】！";
-                    return false;
-                }
-                // 道路潔淨
-                if (normPath.IndexOf("RoadClean_Sum", StringComparison.OrdinalIgnoreCase) >= 0 || mode == "search")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_STATS", 24) ||
-                        PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_SEARCH", 24) ||
-                        MenuService.CheckLicense(lic, 22)) return true;
-                    denyReason = "您無權限存取道路潔淨成果或統計！";
-                    return false;
-                }
                 if (PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_NEW", 21) ||
                     PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_DRAFT", 22) ||
+                    PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_BACK", 22) ||
                     PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_EXAM", 22) ||
-                    PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_SEARCH", 24)) return true;
-                denyReason = "您無權限存取道路潔淨查核！";
+                    PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_SEARCH", 24) ||
+                    PermissionService.HasPermission(userId, lic, "ROAD_CLEAN_STATS", 24) ||
+                    PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_NEW", 21) ||
+                    PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_DRAFT", 21) ||
+                    PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_IMPROVE", 23) ||
+                    PermissionService.HasPermission(userId, lic, "ROAD_DIRTY_FINISH", 24) ||
+                    MenuService.CheckLicense(lic, 21) ||
+                    MenuService.CheckLicense(lic, 22) ||
+                    MenuService.CheckLicense(lic, 23) ||
+                    MenuService.CheckLicense(lic, 24))
+                {
+                    return true;
+                }
+                denyReason = "您無權限存取道路潔淨與髒污管理功能！";
                 return false;
             }
 
             if (normPath.StartsWith("RoadBreak/", StringComparison.OrdinalIgnoreCase))
             {
-                string mode = (request != null && request["mode"] != null ? request["mode"].ToString().ToLower() : "");
-                if (mode.IndexOf("improve", StringComparison.OrdinalIgnoreCase) >= 0 || mode.IndexOf("finish", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    if (PermissionService.HasPermission(userId, lic, "ROAD_BREAK_IMPROVE", 27) ||
-                        PermissionService.HasPermission(userId, lic, "ROAD_BREAK_FINISH", 27)) return true;
-                    denyReason = "您無權限存取【破損改善成果】！";
-                    return false;
-                }
                 if (PermissionService.HasPermission(userId, lic, "ROAD_BREAK_NEW", 26) ||
                     PermissionService.HasPermission(userId, lic, "ROAD_BREAK_DRAFT", 26) ||
-                    PermissionService.HasPermission(userId, lic, "ROAD_BREAK_IMPROVE", 27)) return true;
+                    PermissionService.HasPermission(userId, lic, "ROAD_BREAK_IMPROVE", 27) ||
+                    PermissionService.HasPermission(userId, lic, "ROAD_BREAK_FINISH", 27) ||
+                    MenuService.CheckLicense(lic, 26) ||
+                    MenuService.CheckLicense(lic, 27))
+                {
+                    return true;
+                }
                 denyReason = "您無權限存取【道路破損通報】！";
                 return false;
             }
 
             if (normPath.StartsWith("RoadBSC/", StringComparison.OrdinalIgnoreCase))
             {
-                string mode = (request != null && request["mode"] != null ? request["mode"].ToString().ToLower() : "");
-                if (mode.IndexOf("improve", StringComparison.OrdinalIgnoreCase) >= 0 || mode.IndexOf("finish", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    if (PermissionService.HasPermission(userId, lic, "ROAD_BSC_IMPROVE", 29) ||
-                        PermissionService.HasPermission(userId, lic, "ROAD_BSC_FINISH", 29)) return true;
-                    denyReason = "您無權限存取【覆土改善成果】！";
-                    return false;
-                }
                 if (PermissionService.HasPermission(userId, lic, "ROAD_BSC_NEW", 28) ||
                     PermissionService.HasPermission(userId, lic, "ROAD_BSC_DRAFT", 28) ||
-                    PermissionService.HasPermission(userId, lic, "ROAD_BSC_IMPROVE", 29)) return true;
-                denyReason = "您無權限存取【裸露覆土通報】！";
+                    PermissionService.HasPermission(userId, lic, "ROAD_BSC_IMPROVE", 29) ||
+                    PermissionService.HasPermission(userId, lic, "ROAD_BSC_FINISH", 29) ||
+                    MenuService.CheckLicense(lic, 28) ||
+                    MenuService.CheckLicense(lic, 29))
+                {
+                    return true;
+                }
+                denyReason = "您無權限存取【人行道/落塵清理通報】！";
                 return false;
             }
 
             // 11. 自主管理回報、洗掃、空品不良
             if (normPath.StartsWith("OwnReport/", StringComparison.OrdinalIgnoreCase))
             {
-                string mode = (request != null && request["mode"] != null ? request["mode"].ToString().ToLower() : "");
-                if (normPath.IndexOf("AirQuality", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    if (PermissionService.HasPermission(userId, lic, "OWN_AIR_INPUT", 45) ||
-                        PermissionService.HasPermission(userId, lic, "OWN_AIR_LIST", 45)) return true;
-                    denyReason = "您無權限存取【空品應變】功能！";
-                    return false;
-                }
-                if (mode == "wrong")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "OWN_DEFECT_INPUT", 15) ||
-                        PermissionService.HasPermission(userId, lic, "OWN_DEFECT_LIST", 15)) return true;
-                    denyReason = "您無權限存取【缺失改善】功能！";
-                    return false;
-                }
-                if (mode == "own")
-                {
-                    if (PermissionService.HasPermission(userId, lic, "OWN_REPORT_INPUT", 8) ||
-                        PermissionService.HasPermission(userId, lic, "OWN_REPORT_LIST", 8)) return true;
-                    denyReason = "您無權限存取【自主維護】功能！";
-                    return false;
-                }
-                if (PermissionService.HasPermission(userId, lic, "OWN_REPORT_INPUT", 8) ||
+                bool hasFacId = !string.IsNullOrEmpty(user.FacID);
+                if (hasFacId ||
+                    PermissionService.HasPermission(userId, lic, "OWN_REPORT_INPUT", 8) ||
+                    PermissionService.HasPermission(userId, lic, "OWN_REPORT_LIST", 8) ||
                     PermissionService.HasPermission(userId, lic, "OWN_DEFECT_INPUT", 15) ||
-                    PermissionService.HasPermission(userId, lic, "OWN_AIR_INPUT", 45))
+                    PermissionService.HasPermission(userId, lic, "OWN_DEFECT_LIST", 15) ||
+                    PermissionService.HasPermission(userId, lic, "OWN_AIR_INPUT", 45) ||
+                    PermissionService.HasPermission(userId, lic, "OWN_AIR_LIST", 45) ||
+                    PermissionService.HasPermission(userId, lic, "FAC_LIST_READ", 41) ||
+                    PermissionService.HasPermission(userId, lic, "CASE_SEARCH_LIST", 42) ||
+                    MenuService.CheckLicense(lic, 8) ||
+                    MenuService.CheckLicense(lic, 9) ||
+                    MenuService.CheckLicense(lic, 15) ||
+                    MenuService.CheckLicense(lic, 16) ||
+                    MenuService.CheckLicense(lic, 45))
                 {
                     return true;
                 }
@@ -377,17 +291,33 @@ namespace NTPC_FEC.Security
 
             if (normPath.StartsWith("Wash/", StringComparison.OrdinalIgnoreCase))
             {
-                if (PermissionService.HasPermission(userId, lic, "OWN_WASH_INPUT", 12) ||
+                bool hasFacId = !string.IsNullOrEmpty(user.FacID);
+                if (hasFacId ||
+                    PermissionService.HasPermission(userId, lic, "OWN_WASH_INPUT", 12) ||
                     PermissionService.HasPermission(userId, lic, "OWN_WASH_UPLOAD", 13) ||
                     PermissionService.HasPermission(userId, lic, "OWN_WASH_LIST", 14) ||
-                    PermissionService.HasPermission(userId, lic, "MAP_WASH_GIS", 41)) return true;
+                    PermissionService.HasPermission(userId, lic, "OWN_WASH_RECORD_LIST", 14) ||
+                    PermissionService.HasPermission(userId, lic, "MAP_WASH_GIS", 41) ||
+                    MenuService.CheckLicense(lic, 12) ||
+                    MenuService.CheckLicense(lic, 13) ||
+                    MenuService.CheckLicense(lic, 14) ||
+                    MenuService.CheckLicense(lic, 21) ||
+                    MenuService.CheckLicense(lic, 22) ||
+                    MenuService.CheckLicense(lic, 41))
+                {
+                    return true;
+                }
                 denyReason = "您無權限存取道路洗掃認養功能！";
                 return false;
             }
 
             if (normPath.StartsWith("LINE/", StringComparison.OrdinalIgnoreCase))
             {
-                if (PermissionService.HasPermission(userId, lic, "OWN_LINE_ALERT", 45)) return true;
+                if (PermissionService.HasPermission(userId, lic, "OWN_LINE_ALERT", 45) ||
+                    MenuService.CheckLicense(lic, 45))
+                {
+                    return true;
+                }
                 denyReason = "您無權限存取 LINE 通報設定！";
                 return false;
             }
@@ -395,7 +325,15 @@ namespace NTPC_FEC.Security
             // 12. NDVI 植被衛星影像
             if (normPath.StartsWith("NDVI/", StringComparison.OrdinalIgnoreCase))
             {
-                if (PermissionService.HasPermission(userId, lic, "MAP_NDVI_SAT", 41)) return true;
+                if (PermissionService.HasPermission(userId, lic, "MAP_NDVI_SAT", 41) ||
+                    PermissionService.HasPermission(userId, lic, "BARE_NEW_CHECK", 17) ||
+                    PermissionService.HasPermission(userId, lic, "BARE_SEARCH_LIST", 44) ||
+                    MenuService.CheckLicense(lic, 17) ||
+                    MenuService.CheckLicense(lic, 41) ||
+                    MenuService.CheckLicense(lic, 44))
+                {
+                    return true;
+                }
                 denyReason = "您無權限存取 NDVI 植被衛星影像！";
                 return false;
             }

@@ -4,6 +4,45 @@
 
 ---
 
+## [2.1.0] - 2026-11-03
+
+### 🚀 版本概述
+新北市固定逸散源管理平台（NTPC_FECM）發布 2.1.0 版本。本版本著重於「道路破損規格對標工務局路平報馬仔標準」與「IIS 運作環境暨 Session 穩定性重大突破」：全系列道路破損巡查頁面擴充損壞類別、性質、長寬尺寸、地點描述與車道資訊；核心配置導入 `fcnMode="Disabled"` 徹底根除照片上傳觸發 AppDomain 重啟與登出痛點；實作跨瀏覽器分頁廣播與 1 分鐘高頻心跳保活；優化安全圖片代理帶參解析，並全面提升全站業務模組之後端容錯與自適應性。
+
+### ✨ 主要歷程與改動
+
+#### 1. 道路破損規格全面升級對標「路平報馬仔」與工務局標準 (`RoadBreak/`, `DB/`)
+- **資料庫欄位全規格擴充 (`DB/Update_RoadBreak_Fields.sql`)**：
+  - 新增損壞類別（路面損壞 / 交通標線損壞不良）、性質（坑洞、龜裂、凹陷、人手孔蓋週邊破損、人手孔蓋欠平順、補綻(臨補)）。
+  - 新增損壞尺寸長寬（公尺，decimal(8,2)）、地點描述（地標/路燈編號）、車道詳細資訊（路口、車道1~5、車道交界處、全車道）。
+  - 新增通報人電話、主旨、改善前中後相片與審查備註，保留舊資料平滑向下相容。
+- **全系列道路破損巡查頁面全面升級**：
+  - 填報通報（`NewBreak.aspx` / `.cs`）、清單查詢（`Break_List.aspx` / `.cs`）、詳情檢視（`BreakDetail.aspx` / `.cs`）、派工通報（`SetSG_Break.aspx` / `.cs`）與改善回報（`ImproveBreak.aspx` / `.cs`）全面對齊新標準，支援改善前、中、後多張現場照片上傳對比與完整報表檢視。
+
+#### 2. IIS AppDomain 與 Session 防斷線架構重大突破 (`Web.config.template`)
+- **徹底杜絕檔案變更觸發 AppDomain 重啟 (`fcnMode="Disabled"`)**：
+  - 外勤人員巡查大量上傳或刪除現場照片時，Windows 檔案變更通知（FCN）常導致 ASP.NET AppDomain 意外回收，洗刷在線使用者 Session 造成莫名被登出。
+  - 於 `httpRuntime` 配置 `fcnMode="Disabled"`，徹底阻斷圖檔 I/O 引起的 AppDomain 重啟，大幅提升正式機穩定性。
+- **資安合規標頭強化**：
+  - 加入 `enableVersionHeader="false"` 移除敏感版本標頭，並配置 `sessionState cookieSameSite="Lax"`，完全符合政府機關資通安全檢測規範。
+
+#### 3. 跨瀏覽器分頁活動廣播與 1 分鐘高頻智慧心跳 (`MainPage.Master`, `KeepAlive.ashx`)
+- **跨分頁活動時間廣播 (`localStorage: ntpc_fec_last_active`)**：
+  - 使用者同時開啟多個工作分頁時，只要在任一分頁有滑鼠或鍵盤活動，即時透過 `localStorage` 廣播同步更新所有分頁之最後活動時間，徹底解決背景分頁提前逾時跳出登出彈窗問題。
+- **高頻智慧心跳展延**：
+  - 心跳間隔自 5 分鐘縮短至 1 分鐘（`HEARTBEAT_INTERVAL_MS = 60000`），前後端 Session 滑動過期（Sliding Expiration）完全同步。
+  - `KeepAlive.ashx` 增設 `AuthService.GetCurrentUser` 智慧補齊 Session 機制，確保弱網與長表單作業不中斷。
+
+#### 4. 安全圖片代理路徑與參數解析強化 (`ViewImageHandler.cs`, `PathHelper.cs`)
+- **QueryString 精準分離**：
+  - 修正傳入路徑帶有時間戳或版本參數（如 `?v=...`）時之解析邏輯，自動分離純圖檔路徑與查詢後綴，防止目錄遍歷防禦機制誤判，確保動態圖檔順暢串流輸出。
+
+#### 5. 各業務模組自適應與後端效能強化 (RoadClean, RoadBSC, Case, FAC, Machine, Wash, OwnReport)
+- **全面強化後端防呆與容錯**：
+  - 對道路洗掃、車行路段、營建工程、固定污染源、施工機具、洗車台與自主申報各模組之後端 CodeBehind 進行防禦性檢查補強，杜絕因資料庫空值或非預期型別轉換引發之例外錯誤。
+
+---
+
 ## [2.0.0] - 2026-10-31
 
 ### 🚀 版本概述

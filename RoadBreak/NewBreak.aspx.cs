@@ -89,7 +89,7 @@ namespace NTPC_FEC.RoadBreak
                     SaveCase();
                     break;
                 case "deletephoto":
-                    DeletePhoto(Request["id"], Request["filename"]);
+                    DeletePhoto(Request["id"], Request["slot"], Request["filename"]);
                     break;
                 default:
                     Response.Write(json.Serialize(new { Success = false, Message = "未知的指令：" + action }));
@@ -97,18 +97,15 @@ namespace NTPC_FEC.RoadBreak
             }
         }
 
-        // 1. 取得頁面初始選單與資料
+        // 1. 取得頁面初始選單與資料 (全面支援對標新規格 + 保留舊選項相容)
         private void GetInitData()
         {
             var towns = new List<object>();
-            var smoothOptions = new List<object>();
-            var holeOptions = new List<object>();
-            var roadLvOptions = new List<string> { "省道", "市道", "區道", "市區道路", "其他" };
 
             // 1. 行政區
             try
             {
-                string sqlTown = "SELECT TOWN_NO, TOWN_NA FROM C_TOWN ORDER BY TOWN_NO";
+                string sqlTown = "SELECT TOWN_NO, TOWN_NA FROM C_TOWN WHERE COUNTRY = 'F' OR TOWN_NO LIKE '65%' ORDER BY TOWN_NO";
                 DataTable dtTown = DbHelper.ExecuteDataTable(sqlTown);
                 foreach (DataRow row in dtTown.Rows)
                 {
@@ -139,73 +136,17 @@ namespace NTPC_FEC.RoadBreak
                 }
             }
 
-            // 2. 道路鋪面平整度選項
-            try
-            {
-                string sqlSmooth = "SELECT Code, Val FROM Dictionary WHERE CodeType = 'RoadBreak_Smooth' ORDER BY Code";
-                DataTable dtSmooth = DbHelper.ExecuteDataTable(sqlSmooth);
-                if (dtSmooth.Rows.Count > 0)
-                {
-                    foreach (DataRow row in dtSmooth.Rows)
-                    {
-                        smoothOptions.Add(new
-                        {
-                            Code = row["Code"].ToString().Trim(),
-                            Val = row["Val"].ToString().Trim()
-                        });
-                    }
-                }
-                else
-                {
-                    smoothOptions.Add(new { Code = "1", Val = "平整良好" });
-                    smoothOptions.Add(new { Code = "2", Val = "輕微龜裂/破損" });
-                    smoothOptions.Add(new { Code = "3", Val = "中度凹陷/波浪" });
-                    smoothOptions.Add(new { Code = "4", Val = "嚴重坑洞/破損" });
-                }
-            }
-            catch
-            {
-                smoothOptions.Add(new { Code = "1", Val = "平整良好" });
-                smoothOptions.Add(new { Code = "2", Val = "輕微龜裂/破損" });
-                smoothOptions.Add(new { Code = "3", Val = "中度凹陷/波浪" });
-                smoothOptions.Add(new { Code = "4", Val = "嚴重坑洞/破損" });
-            }
+            // 對標別機關之規格選項清單
+            var damageCategories = new List<string> { "路面損壞", "交通標線損壞不良" };
+            var damageTypes = new List<string> { "坑洞", "龜裂", "凹陷", "人手孔蓋週邊破損", "人手孔蓋欠平順", "補綻(臨補)" };
+            var laneOptions = new List<string> { "路口", "車道1", "車道2", "車道3", "車道4", "車道5", "車道交界處", "全車道" };
+            var directionOptions = new List<string> { "單號", "雙號", "無法判定" };
+            var roadTypeOptions = new List<string> { "平面", "非平面" };
 
-            // 3. 道路鋪面與孔蓋銜接狀況選項
-            try
-            {
-                string sqlHole = "SELECT Code, Val FROM Dictionary WHERE CodeType = 'RoadBreak_Hole_Conn_St' ORDER BY Code";
-                DataTable dtHole = DbHelper.ExecuteDataTable(sqlHole);
-                if (dtHole.Rows.Count > 0)
-                {
-                    foreach (DataRow row in dtHole.Rows)
-                    {
-                        holeOptions.Add(new
-                        {
-                            Code = row["Code"].ToString().Trim(),
-                            Val = row["Val"].ToString().Trim()
-                        });
-                    }
-                }
-                else
-                {
-                    holeOptions.Add(new { Code = "1", Val = "平順密合" });
-                    holeOptions.Add(new { Code = "2", Val = "高低落差 (>1cm)" });
-                    holeOptions.Add(new { Code = "3", Val = "孔蓋周邊瀝青龜裂破損" });
-                    holeOptions.Add(new { Code = "4", Val = "孔蓋鬆動或異音" });
-                    holeOptions.Add(new { Code = "5", Val = "其他" });
-                }
-            }
-            catch
-            {
-                holeOptions.Add(new { Code = "1", Val = "平順密合" });
-                holeOptions.Add(new { Code = "2", Val = "高低落差 (>1cm)" });
-                holeOptions.Add(new { Code = "3", Val = "孔蓋周邊瀝青龜裂破損" });
-                holeOptions.Add(new { Code = "4", Val = "孔蓋鬆動或異音" });
-                holeOptions.Add(new { Code = "5", Val = "其他" });
-            }
+            // 舊版選項保留相容
+            var roadLvOptions = new List<string> { "省道", "市道", "區道", "市區道路", "其他" };
 
-            // 4. 自動預生新增案號
+            // 自動預生新增案號
             string newCaseId = DateTime.Now.ToString("yyyyMMddHHmmss") + "001";
             try
             {
@@ -224,10 +165,7 @@ namespace NTPC_FEC.RoadBreak
                     }
                 }
             }
-            catch
-            {
-                // 資料庫離線時直接使用預生案號
-            }
+            catch { }
 
             Response.Write(json.Serialize(new
             {
@@ -236,16 +174,19 @@ namespace NTPC_FEC.RoadBreak
                 {
                     CurrentUser = GetCurrentUser(),
                     Towns = towns,
+                    DamageCategories = damageCategories,
+                    DamageTypes = damageTypes,
+                    LaneOptions = laneOptions,
+                    DirectionOptions = directionOptions,
+                    RoadTypeOptions = roadTypeOptions,
                     RoadLvOptions = roadLvOptions,
-                    SmoothOptions = smoothOptions,
-                    HoleOptions = holeOptions,
                     GeneratedCaseId = newCaseId,
                     ReportDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm")
                 }
             }));
         }
 
-        // 2. 取得指定案件資料 (編輯模式)
+        // 2. 取得指定案件資料 (編輯模式，新舊相容)
         private void GetCaseData(string breakId)
         {
             if (string.IsNullOrEmpty(breakId))
@@ -265,26 +206,13 @@ namespace NTPC_FEC.RoadBreak
             DataRow row = dt.Rows[0];
             double utmE = 0;
             double utmN = 0;
-            if (row["S_UTME"] != DBNull.Value)
-            {
-                double.TryParse(row["S_UTME"].ToString(), out utmE);
-            }
-            if (row["S_UTMN"] != DBNull.Value)
-            {
-                double.TryParse(row["S_UTMN"].ToString(), out utmN);
-            }
+            if (row["S_UTME"] != DBNull.Value) double.TryParse(row["S_UTME"].ToString(), out utmE);
+            if (row["S_UTMN"] != DBNull.Value) double.TryParse(row["S_UTMN"].ToString(), out utmN);
 
-            // 經緯度處理 (優先取資料庫，若無則由 TWD97 自動反算)
             double lat = 0;
             double lon = 0;
-            if (row.Table.Columns.Contains("Lat") && row["Lat"] != DBNull.Value)
-            {
-                double.TryParse(row["Lat"].ToString(), out lat);
-            }
-            if (row.Table.Columns.Contains("Lon") && row["Lon"] != DBNull.Value)
-            {
-                double.TryParse(row["Lon"].ToString(), out lon);
-            }
+            if (row.Table.Columns.Contains("Lat") && row["Lat"] != DBNull.Value) double.TryParse(row["Lat"].ToString(), out lat);
+            if (row.Table.Columns.Contains("Lon") && row["Lon"] != DBNull.Value) double.TryParse(row["Lon"].ToString(), out lon);
             if ((lat <= 0 || lon <= 0) && utmE > 0 && utmN > 0)
             {
                 Twd97ToWgs84(utmE, utmN, out lat, out lon);
@@ -303,25 +231,86 @@ namespace NTPC_FEC.RoadBreak
             string memo = row["Memo"] != DBNull.Value ? row["Memo"].ToString() : "";
             memo = memo.Replace("<br />", "\r\n").Replace("<br>", "\r\n");
 
-            // 讀取既有佐證照片
+            // 讀取新對標欄位 (若無則依歷史舊欄位智慧回填)
+            string damageCat = GetRowString(row, "Damage_Category", "路面損壞");
+            string damageType = GetRowString(row, "Damage_Type", "");
+            string damageLength = GetRowString(row, "Damage_Length", "");
+            string damageWidth = GetRowString(row, "Damage_Width", "");
+            string locationDesc = GetRowString(row, "Location_Desc", "");
+            string laneInfo = GetRowString(row, "Lane_Info", "全車道");
+            string direction = GetRowString(row, "Direction", "無法判定");
+            string roadType = GetRowString(row, "Road_Type", "平面");
+
+            // 歷史案件兼容映射：若 Damage_Type 為空，透過舊平整度或孔蓋狀態回填
+            if (string.IsNullOrEmpty(damageType))
+            {
+                string oldHole = GetRowString(row, "Hole_Conn_St", "");
+                string oldSmooth = GetRowString(row, "Smooth", "");
+                if (oldHole == "3" || oldHole == "4")
+                {
+                    damageType = "人手孔蓋週邊破損";
+                }
+                else if (oldHole == "2")
+                {
+                    damageType = "人手孔蓋欠平順";
+                }
+                else if (oldSmooth == "4")
+                {
+                    damageType = "坑洞";
+                }
+                else if (oldSmooth == "2")
+                {
+                    damageType = "龜裂";
+                }
+                else if (oldSmooth == "3")
+                {
+                    damageType = "凹陷";
+                }
+                else
+                {
+                    damageType = "坑洞";
+                }
+            }
+
+            // 讀取既有佐證照片 (對標 7 格槽位規格)
             var photos = new List<object>();
             string picDir = PathHelper.FindDirectory("Upload/RoadBreakPIC/" + breakId);
             if (Directory.Exists(picDir))
             {
                 DirectoryInfo dir = new DirectoryInfo(picDir);
-                FileInfo[] files = dir.GetFiles("佐證照片*.*");
-                Array.Sort(files, delegate(FileInfo a, FileInfo b) { return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase); });
-                int idx = 1;
-                foreach (FileInfo f in files)
+                for (int slot = 1; slot <= 7; slot++)
                 {
-                    photos.Add(new
+                    FileInfo[] matched = dir.GetFiles(string.Format("佐證照片_{0}.*", slot));
+                    if (matched.Length > 0)
                     {
-                        Index = idx,
-                        FileName = f.Name,
-                        Url = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}", breakId, f.Name)),
-                        Size = f.Length
-                    });
-                    idx++;
+                        photos.Add(new
+                        {
+                            Slot = slot,
+                            FileName = matched[0].Name,
+                            Url = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}?v={2}", breakId, matched[0].Name, DateTime.Now.Ticks)),
+                            Size = matched[0].Length
+                        });
+                    }
+                }
+
+                // 兼容歷史命名 (佐證照片.jpg 或 佐證照片_N.jpg)
+                if (photos.Count == 0)
+                {
+                    FileInfo[] allFiles = dir.GetFiles("佐證照片*.*");
+                    Array.Sort(allFiles, delegate (FileInfo a, FileInfo b) { return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase); });
+                    int slotIdx = 1;
+                    foreach (FileInfo f in allFiles)
+                    {
+                        if (slotIdx > 7) break;
+                        photos.Add(new
+                        {
+                            Slot = slotIdx,
+                            FileName = f.Name,
+                            Url = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}?v={2}", breakId, f.Name, DateTime.Now.Ticks)),
+                            Size = f.Length
+                        });
+                        slotIdx++;
+                    }
                 }
             }
 
@@ -338,8 +327,14 @@ namespace NTPC_FEC.RoadBreak
                 TOWN_CODE = row["TOWN_CODE"] != DBNull.Value ? row["TOWN_CODE"].ToString().Trim() : "",
                 ROAD_LV = row["ROAD_LV"] != DBNull.Value ? row["ROAD_LV"].ToString().Trim() : "市區道路",
                 ROAD_Name = row["ROAD_Name"] != DBNull.Value ? row["ROAD_Name"].ToString().Trim() : "",
-                Smooth = row["Smooth"] != DBNull.Value ? row["Smooth"].ToString().Trim() : "",
-                Hole_Conn_St = row["Hole_Conn_St"] != DBNull.Value ? row["Hole_Conn_St"].ToString().Trim() : "",
+                Damage_Category = damageCat,
+                Damage_Type = damageType,
+                Damage_Length = damageLength,
+                Damage_Width = damageWidth,
+                Location_Desc = locationDesc,
+                Lane_Info = laneInfo,
+                Direction = direction,
+                Road_Type = roadType,
                 Memo = memo,
                 Photos = photos
             };
@@ -349,6 +344,16 @@ namespace NTPC_FEC.RoadBreak
                 Success = true,
                 Data = caseData
             }));
+        }
+
+        private static string GetRowString(DataRow row, string colName, string defVal)
+        {
+            if (row.Table.Columns.Contains(colName) && row[colName] != DBNull.Value)
+            {
+                string v = row[colName].ToString().Trim();
+                if (!string.IsNullOrEmpty(v)) return v;
+            }
+            return defVal;
         }
 
         // 3. 儲存通報單 (新增 / 編輯)
@@ -369,37 +374,66 @@ namespace NTPC_FEC.RoadBreak
             Dictionary<string, object> req = json.Deserialize<Dictionary<string, object>>(body);
             string mode = req.ContainsKey("Mode") && req["Mode"] != null ? req["Mode"].ToString().Trim().ToLower() : "new";
             string breakId = req.ContainsKey("Break_ID") && req["Break_ID"] != null ? req["Break_ID"].ToString().Trim() : "";
+
+            // 對標新規格欄位
+            string damageCat = req.ContainsKey("Damage_Category") && req["Damage_Category"] != null ? req["Damage_Category"].ToString().Trim() : "路面損壞";
+            string damageType = req.ContainsKey("Damage_Type") && req["Damage_Type"] != null ? req["Damage_Type"].ToString().Trim() : "";
+            string damageLenStr = req.ContainsKey("Damage_Length") && req["Damage_Length"] != null ? req["Damage_Length"].ToString().Trim() : "";
+            string damageWidStr = req.ContainsKey("Damage_Width") && req["Damage_Width"] != null ? req["Damage_Width"].ToString().Trim() : "";
+
             string townCode = req.ContainsKey("TOWN_CODE") && req["TOWN_CODE"] != null ? req["TOWN_CODE"].ToString().Trim() : "";
-            string roadLv = req.ContainsKey("ROAD_LV") && req["ROAD_LV"] != null ? req["ROAD_LV"].ToString().Trim() : "";
             string roadName = req.ContainsKey("ROAD_Name") && req["ROAD_Name"] != null ? req["ROAD_Name"].ToString().Trim() : "";
-            string smooth = req.ContainsKey("Smooth") && req["Smooth"] != null ? req["Smooth"].ToString().Trim() : "";
-            string holeSt = req.ContainsKey("Hole_Conn_St") && req["Hole_Conn_St"] != null ? req["Hole_Conn_St"].ToString().Trim() : "";
+            string locationDesc = req.ContainsKey("Location_Desc") && req["Location_Desc"] != null ? req["Location_Desc"].ToString().Trim() : "";
+
+            string laneInfo = req.ContainsKey("Lane_Info") && req["Lane_Info"] != null ? req["Lane_Info"].ToString().Trim() : "";
+            string direction = req.ContainsKey("Direction") && req["Direction"] != null ? req["Direction"].ToString().Trim() : "";
+            string roadType = req.ContainsKey("Road_Type") && req["Road_Type"] != null ? req["Road_Type"].ToString().Trim() : "平面";
             string memo = req.ContainsKey("Memo") && req["Memo"] != null ? req["Memo"].ToString().Trim() : "";
+
             string utmEStr = req.ContainsKey("S_UTME") && req["S_UTME"] != null ? req["S_UTME"].ToString().Trim() : "0";
             string utmNStr = req.ContainsKey("S_UTMN") && req["S_UTMN"] != null ? req["S_UTMN"].ToString().Trim() : "0";
+
+            // 數值與必填驗證
+            if (string.IsNullOrEmpty(damageCat))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "請選擇路面損壞類別" }));
+                return;
+            }
+            if (string.IsNullOrEmpty(damageType))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "請選擇路面損壞性質" }));
+                return;
+            }
+            if (string.IsNullOrEmpty(townCode))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "請選擇反映地點之所屬區" }));
+                return;
+            }
+            if (string.IsNullOrEmpty(roadName))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "請輸入地址、路段或地標" }));
+                return;
+            }
+            if (string.IsNullOrEmpty(laneInfo))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "請至少選取一個車道" }));
+                return;
+            }
+            if (string.IsNullOrEmpty(direction))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "請選取方向 (單號 / 雙號 / 無法判定)" }));
+                return;
+            }
+            if (string.IsNullOrEmpty(roadType))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "請選取道路型態 (平面 / 非平面)" }));
+                return;
+            }
 
             double utmE = 0;
             double utmN = 0;
             double.TryParse(utmEStr, out utmE);
             double.TryParse(utmNStr, out utmN);
-
-            if (utmE < 100000 || utmN < 100000)
-            {
-                Response.Write(json.Serialize(new { Success = false, Message = "通報座標不正確，請確認已點擊地圖或定位" }));
-                return;
-            }
-
-            if (string.IsNullOrEmpty(townCode))
-            {
-                Response.Write(json.Serialize(new { Success = false, Message = "請選擇行政區" }));
-                return;
-            }
-
-            if (string.IsNullOrEmpty(roadName))
-            {
-                Response.Write(json.Serialize(new { Success = false, Message = "請輸入道路名稱" }));
-                return;
-            }
 
             string latStr = req.ContainsKey("Lat") && req["Lat"] != null ? req["Lat"].ToString().Trim() : "";
             string lonStr = req.ContainsKey("Lon") && req["Lon"] != null ? req["Lon"].ToString().Trim() : "";
@@ -408,22 +442,51 @@ namespace NTPC_FEC.RoadBreak
             double.TryParse(latStr, out lat);
             double.TryParse(lonStr, out lon);
 
-            // 經緯度座標處理 (優先取前端傳入值，若無則由 TWD97 自動反算補齊)
-            if ((lat <= 0 || lon <= 0) && utmE > 0 && utmN > 0)
+            // 雙向防呆推導：若 TWD97 坐標異常但有有效 WGS84 經緯度，由經緯度自動計算 TWD97
+            if ((utmE < 100000 || utmN < 100000) && lat > 0 && lon > 0)
+            {
+                Wgs84ToTwd97(lat, lon, out utmE, out utmN);
+            }
+            // 若 WGS84 缺漏但有有效 TWD97 坐標，由 TWD97 計算經緯度
+            if ((lat <= 0 || lon <= 0) && utmE > 100000 && utmN > 100000)
             {
                 Twd97ToWgs84(utmE, utmN, out lat, out lon);
             }
 
+            if (utmE < 100000 || utmN < 100000)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "通報座標不正確，請確認已點擊地圖或定位" }));
+                return;
+            }
+
+            decimal? damageLength = null;
+            decimal? damageWidth = null;
+            decimal dLen, dWid;
+            if (decimal.TryParse(damageLenStr, out dLen) && dLen >= 0) damageLength = dLen;
+            if (decimal.TryParse(damageWidStr, out dWid) && dWid >= 0) damageWidth = dWid;
+
+            // 舊欄位向下相容推導回填
+            string roadLv = req.ContainsKey("ROAD_LV") && req["ROAD_LV"] != null ? req["ROAD_LV"].ToString().Trim() : "市區道路";
+            if (string.IsNullOrEmpty(roadLv)) roadLv = "市區道路";
+
+            string smooth = "1";
+            string holeSt = "1";
+            if (damageType == "坑洞") smooth = "4";
+            else if (damageType == "凹陷") smooth = "3";
+            else if (damageType == "龜裂") smooth = "2";
+            else if (damageType == "補綻(臨補)") smooth = "2";
+
+            if (damageType == "人手孔蓋週邊破損") holeSt = "3";
+            else if (damageType == "人手孔蓋欠平順") holeSt = "2";
+
             string currentUser = GetCurrentUser();
             string memoFormatted = memo.Replace("\r\n", "<br />").Replace("\n", "<br />").Replace("\r", "<br />");
 
+            // 檢查資料庫是否已完成新欄位擴充
+            bool hasNewCols = CheckIfNewColumnsExist();
+
             if (mode == "new")
             {
-                string sqlInsert = @"INSERT INTO RoadBreak_CaseMain 
-                    (Break_ID, Show_ID, Report_Date, Report_User, S_UTME, S_UTMN, Lat, Lon, TOWN_CODE, ROAD_LV, ROAD_Name, Smooth, Hole_Conn_St, Memo)
-                    VALUES
-                    (@Break_ID, @Show_ID, @Report_Date, @Report_User, @S_UTME, @S_UTMN, @Lat, @Lon, @TOWN_CODE, @ROAD_LV, @ROAD_Name, @Smooth, @Hole_Conn_St, @Memo)";
-
                 int maxRetries = 5;
                 bool inserted = false;
 
@@ -452,27 +515,57 @@ namespace NTPC_FEC.RoadBreak
 
                     breakId = prefix + seq.ToString("000");
 
-                    SqlParameter[] pars = new SqlParameter[]
+                    string sqlInsert;
+                    List<SqlParameter> pars = new List<SqlParameter>();
+                    pars.Add(new SqlParameter("@Break_ID", breakId));
+                    pars.Add(new SqlParameter("@Show_ID", breakId));
+                    pars.Add(new SqlParameter("@Report_Date", DateTime.Now));
+                    pars.Add(new SqlParameter("@Report_User", currentUser));
+                    pars.Add(new SqlParameter("@S_UTME", utmE));
+                    pars.Add(new SqlParameter("@S_UTMN", utmN));
+                    pars.Add(new SqlParameter("@Lat", lat > 0 ? (object)lat : DBNull.Value));
+                    pars.Add(new SqlParameter("@Lon", lon > 0 ? (object)lon : DBNull.Value));
+                    pars.Add(new SqlParameter("@TOWN_CODE", townCode));
+                    pars.Add(new SqlParameter("@ROAD_LV", roadLv));
+                    pars.Add(new SqlParameter("@ROAD_Name", roadName));
+                    pars.Add(new SqlParameter("@Smooth", smooth));
+                    pars.Add(new SqlParameter("@Hole_Conn_St", holeSt));
+                    pars.Add(new SqlParameter("@Memo", memoFormatted));
+
+                    if (hasNewCols)
                     {
-                        new SqlParameter("@Break_ID", breakId),
-                        new SqlParameter("@Show_ID", breakId),
-                        new SqlParameter("@Report_Date", DateTime.Now),
-                        new SqlParameter("@Report_User", currentUser),
-                        new SqlParameter("@S_UTME", utmE),
-                        new SqlParameter("@S_UTMN", utmN),
-                        new SqlParameter("@Lat", lat > 0 ? (object)lat : DBNull.Value),
-                        new SqlParameter("@Lon", lon > 0 ? (object)lon : DBNull.Value),
-                        new SqlParameter("@TOWN_CODE", townCode),
-                        new SqlParameter("@ROAD_LV", roadLv),
-                        new SqlParameter("@ROAD_Name", roadName),
-                        new SqlParameter("@Smooth", smooth),
-                        new SqlParameter("@Hole_Conn_St", holeSt),
-                        new SqlParameter("@Memo", memoFormatted)
-                    };
+                        sqlInsert = @"INSERT INTO RoadBreak_CaseMain 
+                            (Break_ID, Show_ID, Report_Date, Report_User, S_UTME, S_UTMN, Lat, Lon, TOWN_CODE, ROAD_LV, ROAD_Name, Smooth, Hole_Conn_St, Memo,
+                             Damage_Category, Damage_Type, Damage_Length, Damage_Width, Location_Desc, Lane_Info, Direction, Road_Type)
+                            VALUES
+                            (@Break_ID, @Show_ID, @Report_Date, @Report_User, @S_UTME, @S_UTMN, @Lat, @Lon, @TOWN_CODE, @ROAD_LV, @ROAD_Name, @Smooth, @Hole_Conn_St, @Memo,
+                             @Damage_Category, @Damage_Type, @Damage_Length, @Damage_Width, @Location_Desc, @Lane_Info, @Direction, @Road_Type)";
+
+                        pars.Add(new SqlParameter("@Damage_Category", damageCat));
+                        pars.Add(new SqlParameter("@Damage_Type", damageType));
+                        pars.Add(new SqlParameter("@Damage_Length", damageLength.HasValue ? (object)damageLength.Value : DBNull.Value));
+                        pars.Add(new SqlParameter("@Damage_Width", damageWidth.HasValue ? (object)damageWidth.Value : DBNull.Value));
+                        pars.Add(new SqlParameter("@Location_Desc", locationDesc));
+                        pars.Add(new SqlParameter("@Lane_Info", laneInfo));
+                        pars.Add(new SqlParameter("@Direction", direction));
+                        pars.Add(new SqlParameter("@Road_Type", roadType));
+                    }
+                    else
+                    {
+                        // 若尚未執行 DDL，將新屬性整合進 Memo 確保零中斷
+                        string memoWithProps = string.Format("{0}<br />【對標規格】類別:{1}|性質:{2}|長寬:{3}x{4}m|描述:{5}|車道:{6}|方向:{7}|型態:{8}",
+                            memoFormatted, damageCat, damageType, damageLenStr, damageWidStr, locationDesc, laneInfo, direction, roadType);
+                        pars[pars.Count - 1].Value = memoWithProps;
+
+                        sqlInsert = @"INSERT INTO RoadBreak_CaseMain 
+                            (Break_ID, Show_ID, Report_Date, Report_User, S_UTME, S_UTMN, Lat, Lon, TOWN_CODE, ROAD_LV, ROAD_Name, Smooth, Hole_Conn_St, Memo)
+                            VALUES
+                            (@Break_ID, @Show_ID, @Report_Date, @Report_User, @S_UTME, @S_UTMN, @Lat, @Lon, @TOWN_CODE, @ROAD_LV, @ROAD_Name, @Smooth, @Hole_Conn_St, @Memo)";
+                    }
 
                     try
                     {
-                        DbHelper.ExecuteNonQuery(sqlInsert, pars);
+                        DbHelper.ExecuteNonQuery(sqlInsert, pars.ToArray());
                         inserted = true;
                         break;
                     }
@@ -495,109 +588,196 @@ namespace NTPC_FEC.RoadBreak
             }
             else
             {
-                // 編輯更新
+                // 編輯模式
                 if (string.IsNullOrEmpty(breakId))
                 {
                     Response.Write(json.Serialize(new { Success = false, Message = "編輯模式缺少通報案號" }));
                     return;
                 }
 
-                string sqlUpdate = @"UPDATE RoadBreak_CaseMain SET 
-                    Report_User = @Report_User,
-                    S_UTME = @S_UTME,
-                    S_UTMN = @S_UTMN,
-                    Lat = @Lat,
-                    Lon = @Lon,
-                    TOWN_CODE = @TOWN_CODE,
-                    ROAD_LV = @ROAD_LV,
-                    ROAD_Name = @ROAD_Name,
-                    Smooth = @Smooth,
-                    Hole_Conn_St = @Hole_Conn_St,
-                    Memo = @Memo
-                    WHERE Break_ID = @Break_ID";
+                string sqlUpdate;
+                List<SqlParameter> pars = new List<SqlParameter>();
+                pars.Add(new SqlParameter("@Break_ID", breakId));
+                pars.Add(new SqlParameter("@Report_User", currentUser));
+                pars.Add(new SqlParameter("@S_UTME", utmE));
+                pars.Add(new SqlParameter("@S_UTMN", utmN));
+                pars.Add(new SqlParameter("@Lat", lat > 0 ? (object)lat : DBNull.Value));
+                pars.Add(new SqlParameter("@Lon", lon > 0 ? (object)lon : DBNull.Value));
+                pars.Add(new SqlParameter("@TOWN_CODE", townCode));
+                pars.Add(new SqlParameter("@ROAD_LV", roadLv));
+                pars.Add(new SqlParameter("@ROAD_Name", roadName));
+                pars.Add(new SqlParameter("@Smooth", smooth));
+                pars.Add(new SqlParameter("@Hole_Conn_St", holeSt));
+                pars.Add(new SqlParameter("@Memo", memoFormatted));
 
-                SqlParameter[] pars = new SqlParameter[]
+                if (hasNewCols)
                 {
-                    new SqlParameter("@Break_ID", breakId),
-                    new SqlParameter("@Report_User", currentUser),
-                    new SqlParameter("@S_UTME", utmE),
-                    new SqlParameter("@S_UTMN", utmN),
-                    new SqlParameter("@Lat", lat > 0 ? (object)lat : DBNull.Value),
-                    new SqlParameter("@Lon", lon > 0 ? (object)lon : DBNull.Value),
-                    new SqlParameter("@TOWN_CODE", townCode),
-                    new SqlParameter("@ROAD_LV", roadLv),
-                    new SqlParameter("@ROAD_Name", roadName),
-                    new SqlParameter("@Smooth", smooth),
-                    new SqlParameter("@Hole_Conn_St", holeSt),
-                    new SqlParameter("@Memo", memoFormatted)
-                };
+                    sqlUpdate = @"UPDATE RoadBreak_CaseMain SET 
+                        Report_User = @Report_User,
+                        S_UTME = @S_UTME,
+                        S_UTMN = @S_UTMN,
+                        Lat = @Lat,
+                        Lon = @Lon,
+                        TOWN_CODE = @TOWN_CODE,
+                        ROAD_LV = @ROAD_LV,
+                        ROAD_Name = @ROAD_Name,
+                        Smooth = @Smooth,
+                        Hole_Conn_St = @Hole_Conn_St,
+                        Memo = @Memo,
+                        Damage_Category = @Damage_Category,
+                        Damage_Type = @Damage_Type,
+                        Damage_Length = @Damage_Length,
+                        Damage_Width = @Damage_Width,
+                        Location_Desc = @Location_Desc,
+                        Lane_Info = @Lane_Info,
+                        Direction = @Direction,
+                        Road_Type = @Road_Type
+                        WHERE Break_ID = @Break_ID";
 
-                DbHelper.ExecuteNonQuery(sqlUpdate, pars);
-            }
-
-            // 處理上傳照片 (Base64 清單)
-            if (req.ContainsKey("Photos") && req["Photos"] is System.Collections.ArrayList)
-            {
-                var photosList = (System.Collections.ArrayList)req["Photos"];
-                string targetDir = Server.MapPath("~/Upload/RoadBreakPIC/" + breakId);
-                if (!Directory.Exists(targetDir))
+                    pars.Add(new SqlParameter("@Damage_Category", damageCat));
+                    pars.Add(new SqlParameter("@Damage_Type", damageType));
+                    pars.Add(new SqlParameter("@Damage_Length", damageLength.HasValue ? (object)damageLength.Value : DBNull.Value));
+                    pars.Add(new SqlParameter("@Damage_Width", damageWidth.HasValue ? (object)damageWidth.Value : DBNull.Value));
+                    pars.Add(new SqlParameter("@Location_Desc", locationDesc));
+                    pars.Add(new SqlParameter("@Lane_Info", laneInfo));
+                    pars.Add(new SqlParameter("@Direction", direction));
+                    pars.Add(new SqlParameter("@Road_Type", roadType));
+                }
+                else
                 {
-                    Directory.CreateDirectory(targetDir);
+                    sqlUpdate = @"UPDATE RoadBreak_CaseMain SET 
+                        Report_User = @Report_User,
+                        S_UTME = @S_UTME,
+                        S_UTMN = @S_UTMN,
+                        Lat = @Lat,
+                        Lon = @Lon,
+                        TOWN_CODE = @TOWN_CODE,
+                        ROAD_LV = @ROAD_LV,
+                        ROAD_Name = @ROAD_Name,
+                        Smooth = @Smooth,
+                        Hole_Conn_St = @Hole_Conn_St,
+                        Memo = @Memo
+                        WHERE Break_ID = @Break_ID";
                 }
 
-                int pIndex = 1;
-                foreach (object pItem in photosList)
-                {
-                    if (pItem is Dictionary<string, object>)
-                    {
-                        var pDict = (Dictionary<string, object>)pItem;
-                        if (pDict.ContainsKey("Base64") && pDict["Base64"] != null)
-                        {
-                            string rawBase64 = pDict["Base64"].ToString();
-                            if (!string.IsNullOrEmpty(rawBase64))
-                            {
-                                // 清洗 Data URI 標頭
-                                string cleanBase64 = Regex.Replace(rawBase64, @"^data:image\/[a-zA-Z]+;base64,", "");
-                                byte[] imgBytes = Convert.FromBase64String(cleanBase64);
-                                string targetFileName = string.Format("佐證照片_{0}.jpg", pIndex);
-                                string filePath = Path.Combine(targetDir, targetFileName);
-                                File.WriteAllBytes(filePath, imgBytes);
-                            }
-                        }
-                    }
-                    pIndex++;
-                }
+                DbHelper.ExecuteNonQuery(sqlUpdate, pars.ToArray());
             }
+
+            // 處理現場 7 格獨立照片
+            SavePhotosToSlots(breakId, req);
 
             Response.Write(json.Serialize(new
             {
                 Success = true,
-                Message = (mode == "new" ? "通報單新增成功！" : "通報單更新成功！"),
+                Message = (mode == "new" ? "道路破損通報單新增成功！" : "道路破損通報單更新成功！"),
                 Break_ID = breakId
             }));
         }
 
-        // 4. 刪除指定照片 (嚴格防禦路徑遍歷與任意檔案刪除)
-        private void DeletePhoto(string breakId, string fileName)
+        // 檢查資料庫是否已具備新版欄位
+        private static bool CheckIfNewColumnsExist()
         {
-            if (string.IsNullOrEmpty(breakId) || string.IsNullOrEmpty(fileName))
+            try
+            {
+                string sqlCheck = "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RoadBreak_CaseMain' AND COLUMN_NAME = 'Damage_Type'";
+                object obj = DbHelper.ExecuteScalar(sqlCheck);
+                return obj != null && obj != DBNull.Value;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // 處理 7 格獨立照片槽位 (支援替換、清除、自動相容)
+        private void SavePhotosToSlots(string breakId, Dictionary<string, object> req)
+        {
+            if (!req.ContainsKey("Photos") || req["Photos"] == null) return;
+            if (!(req["Photos"] is System.Collections.ArrayList)) return;
+
+            var photosList = (System.Collections.ArrayList)req["Photos"];
+            string targetDir = Server.MapPath("~/Upload/RoadBreakPIC/" + breakId);
+            if (!Directory.Exists(targetDir))
+            {
+                Directory.CreateDirectory(targetDir);
+            }
+
+            int defaultSlot = 1;
+            foreach (object pItem in photosList)
+            {
+                if (pItem is Dictionary<string, object>)
+                {
+                    var pDict = (Dictionary<string, object>)pItem;
+                    int slot = defaultSlot;
+                    if (pDict.ContainsKey("Slot") && pDict["Slot"] != null)
+                    {
+                        int.TryParse(pDict["Slot"].ToString(), out slot);
+                    }
+                    if (slot < 1 || slot > 7) slot = defaultSlot;
+
+                    bool deleted = false;
+                    if (pDict.ContainsKey("Deleted") && pDict["Deleted"] != null)
+                    {
+                        bool.TryParse(pDict["Deleted"].ToString(), out deleted);
+                    }
+
+                    string targetFileName = string.Format("佐證照片_{0}.jpg", slot);
+                    string targetFilePath = Path.Combine(targetDir, targetFileName);
+
+                    if (deleted)
+                    {
+                        if (File.Exists(targetFilePath))
+                        {
+                            try { File.Delete(targetFilePath); } catch { }
+                        }
+                    }
+                    else if (pDict.ContainsKey("Base64") && pDict["Base64"] != null)
+                    {
+                        string rawBase64 = pDict["Base64"].ToString().Trim();
+                        if (!string.IsNullOrEmpty(rawBase64))
+                        {
+                            string cleanBase64 = Regex.Replace(rawBase64, @"^data:image\/[a-zA-Z]+;base64,", "");
+                            byte[] imgBytes = Convert.FromBase64String(cleanBase64);
+                            File.WriteAllBytes(targetFilePath, imgBytes);
+                        }
+                    }
+                }
+                defaultSlot++;
+            }
+        }
+
+        // 4. 刪除指定照片
+        private void DeletePhoto(string breakId, string slotStr, string fileName)
+        {
+            if (string.IsNullOrEmpty(breakId))
             {
                 Response.Write(json.Serialize(new { Success = false, Message = "參數不完整" }));
                 return;
             }
 
             breakId = FileSecurityHelper.SanitizeFileName(breakId);
-            string safeFileName = FileSecurityHelper.SanitizeFileName(fileName);
+            string targetDir = Server.MapPath("~/Upload/RoadBreakPIC/" + breakId);
 
-            if (string.IsNullOrEmpty(breakId) || string.IsNullOrEmpty(safeFileName) || !Regex.IsMatch(breakId, @"^[a-zA-Z0-9_\-]+$"))
+            int slot = 0;
+            int.TryParse(slotStr, out slot);
+
+            string targetFileName = "";
+            if (slot >= 1 && slot <= 7)
             {
-                Response.Write(json.Serialize(new { Success = false, Message = "無效的案號或檔名參數" }));
+                targetFileName = string.Format("佐證照片_{0}.jpg", slot);
+            }
+            else if (!string.IsNullOrEmpty(fileName))
+            {
+                targetFileName = FileSecurityHelper.SanitizeFileName(fileName);
+            }
+
+            if (string.IsNullOrEmpty(targetFileName))
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "找不到欲刪除的檔案指定槽位" }));
                 return;
             }
 
-            string targetDir = Server.MapPath("~/Upload/RoadBreakPIC/" + breakId);
-            string filePath = Path.Combine(targetDir, safeFileName);
-
+            string filePath = Path.Combine(targetDir, targetFileName);
             if (FileSecurityHelper.IsSafePath(targetDir, filePath) && File.Exists(filePath))
             {
                 try { File.Delete(filePath); } catch { }
@@ -609,7 +789,7 @@ namespace NTPC_FEC.RoadBreak
             }
         }
 
-        // 5. TWD97 轉 WGS84 標準演算法 (二度分帶逆算)
+        // 5. TWD97 轉 WGS84 標準演算法
         public static void Twd97ToWgs84(double x, double y, out double lat, out double lon)
         {
             if (x <= 0 || y <= 0) { lat = 0; lon = 0; return; }
@@ -648,7 +828,7 @@ namespace NTPC_FEC.RoadBreak
             lon = lonRad * 180.0 / Math.PI;
         }
 
-        // 6. WGS84 轉 TWD97 標準演算法 (二度分帶正算)
+        // 6. WGS84 轉 TWD97 標準演算法
         public static void Wgs84ToTwd97(double lat, double lon, out double x, out double y)
         {
             if (lat <= 0 || lon <= 0) { x = 0; y = 0; return; }
@@ -681,5 +861,3 @@ namespace NTPC_FEC.RoadBreak
         }
     }
 }
-
-

@@ -9,6 +9,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.UI;
 using NTPC_FEC.Helpers;
+using NTPC_FEC.Security;
 using NTPC_FEC.Models;
 using NTPC_FEC.Services;
 using NPOI.HSSF.UserModel;
@@ -1139,6 +1140,9 @@ namespace NTPC_FEC.FAC
                     new SqlParameter("@Edit_User", GetCurrentUser()));
             }
 
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("FAC_UPDATE", model.FacId, string.Format("修改公私場所基本資料 (場所編號:{0}, 名稱:{1})", model.FacId, model.FacName ?? ""));
+
             Response.Write(json.Serialize(new
             {
                 Success = true,
@@ -1147,40 +1151,90 @@ namespace NTPC_FEC.FAC
         }
         #endregion
 
-        #region 10. 新增場所
+        #region 10. 新增場所 (5 次併發重試與交易保護)
         private void AddFac()
         {
             string prefix = "F" + DateTime.Today.ToString("yyyyMMdd");
-            string sqlMax = "SELECT TOP 1 FAC_ID FROM FAC_Main WHERE FAC_ID LIKE @Prefix + '%' ORDER BY FAC_ID DESC";
-            object maxObj = DbHelper.ExecuteScalar(sqlMax, new SqlParameter("@Prefix", prefix));
+            string newFacId = "";
+            int maxRetry = 5;
+            bool success = false;
+            string currentUser = GetCurrentUser();
 
-            int nextNum = 1;
-            if (maxObj != null && !string.IsNullOrEmpty(maxObj.ToString()))
+            for (int attempt = 1; attempt <= maxRetry; attempt++)
             {
-                string maxStr = maxObj.ToString();
-                if (maxStr.Length > 9)
+                string sqlMax = "SELECT TOP 1 FAC_ID FROM FAC_Main WITH (UPDLOCK, HOLDLOCK) WHERE FAC_ID LIKE @Prefix + '%' ORDER BY FAC_ID DESC";
+                object maxObj = DbHelper.ExecuteScalar(sqlMax, new SqlParameter("@Prefix", prefix));
+
+                int nextNum = attempt;
+                if (maxObj != null && !string.IsNullOrEmpty(maxObj.ToString()))
                 {
-                    int.TryParse(maxStr.Substring(9), out nextNum);
-                    nextNum++;
+                    string maxStr = maxObj.ToString();
+                    if (maxStr.Length > 9)
+                    {
+                        int currentMax = 0;
+                        if (int.TryParse(maxStr.Substring(9), out currentMax))
+                        {
+                            nextNum = currentMax + 1;
+                        }
+                    }
+                }
+
+                newFacId = prefix + nextNum.ToString("00000");
+
+                try
+                {
+                    using (SqlConnection conn = DbHelper.GetOpenConnection())
+                    {
+                        using (SqlTransaction trans = conn.BeginTransaction())
+                        {
+                            try
+                            {
+                                string sqlInsertFac = @"
+                                    INSERT INTO FAC_Main(FAC_ID, FAC_NAME, FAC_Type)
+                                    VALUES(@FAC_ID, '新增場所', '非列管')";
+                                SqlCommand cmdFac = new SqlCommand(sqlInsertFac, conn, trans);
+                                cmdFac.Parameters.Add("@FAC_ID", SqlDbType.VarChar).Value = newFacId;
+                                cmdFac.ExecuteNonQuery();
+
+                                string sqlInsertHis = @"
+                                    INSERT INTO FAC_EditHis(FAC_ID, FAC_NAME, Edit_User, Edit_Date)
+                                    VALUES(@FAC_ID, '新增場所', @Edit_User, GETDATE())";
+                                SqlCommand cmdHis = new SqlCommand(sqlInsertHis, conn, trans);
+                                cmdHis.Parameters.Add("@FAC_ID", SqlDbType.VarChar).Value = newFacId;
+                                cmdHis.Parameters.Add("@Edit_User", SqlDbType.VarChar).Value = currentUser;
+                                cmdHis.ExecuteNonQuery();
+
+                                trans.Commit();
+                                success = true;
+                                break;
+                            }
+                            catch (SqlException sqlex)
+                            {
+                                trans.Rollback();
+                                if (sqlex.Number == 2627 || sqlex.Number == 2601)
+                                {
+                                    System.Threading.Thread.Sleep(50 * attempt);
+                                    continue;
+                                }
+                                throw;
+                            }
+                        }
+                    }
+                }
+                catch (SqlException)
+                {
+                    if (attempt == maxRetry) throw;
                 }
             }
 
-            string newFacId = prefix + nextNum.ToString("00000");
-            string currentUser = GetCurrentUser();
+            if (!success)
+            {
+                Response.Write(json.Serialize(new { Success = false, Message = "場所代碼取號併發衝突，請稍後再試！" }));
+                return;
+            }
 
-            // 插入 FAC_Main
-            string sqlInsertFac = @"
-                INSERT INTO FAC_Main(FAC_ID, FAC_NAME, FAC_Type)
-                VALUES(@FAC_ID, '新增場所', '非列管')";
-            DbHelper.ExecuteNonQuery(sqlInsertFac, new SqlParameter("@FAC_ID", newFacId));
-
-            // 插入 FAC_EditHis
-            string sqlInsertHis = @"
-                INSERT INTO FAC_EditHis(FAC_ID, FAC_NAME, Edit_User, Edit_Date)
-                VALUES(@FAC_ID, '新增場所', @Edit_User, GETDATE())";
-            DbHelper.ExecuteNonQuery(sqlInsertHis, 
-                new SqlParameter("@FAC_ID", newFacId),
-                new SqlParameter("@Edit_User", currentUser));
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("FAC_ADD", newFacId, string.Format("新增公私場所 (場所編號:{0})", newFacId));
 
             Response.Write(json.Serialize(new
             {
@@ -1231,6 +1285,9 @@ namespace NTPC_FEC.FAC
                     countSuccess++;
                 }
             }
+
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("FAC_DISPATCH_MISSION", "INV_Mission", string.Format("批次指派巡查任務 共 {0} 個場所 (指派原因:{1})", countSuccess, reason));
 
             Response.Write(json.Serialize(new
             {
@@ -1670,6 +1727,9 @@ namespace NTPC_FEC.FAC
                 sheet.SetColumnWidth(13, 36 * 256);
                 sheet.SetColumnWidth(14, 24 * 256);
                 sheet.SetColumnWidth(15, 28 * 256);
+
+                // 記錄雙軌 AuditLog
+                AuditLogger.Log("FAC_EXPORT_EXCEL", "FAC_Main", string.Format("匯出固定源場所清單 Excel (總筆數:{0})", dt != null ? dt.Rows.Count : 0));
 
                 string filename = "固定源場所清單_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".xls";
                 ExcelExportHelper.ExportToResponse(workbook, filename, Response);

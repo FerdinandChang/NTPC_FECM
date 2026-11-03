@@ -9,12 +9,15 @@ using NTPC_FEC.Helpers;
 namespace NTPC_FEC.Security
 {
     /// <summary>
-    /// 蝟餌絞?寞???閬?雿里?豢隤?? (Sys_AuditLog & File Audit Trail)
-    /// 閬?嚗絞銝閮? Operator?ction?arget?P?????詨??批捆 (OldValue)???詨??批捆 (NewValue)??閮?    /// ?寞改?
-    /// 1. ???脣?嚗??神??SQL Server (Sys_AuditLog) ?璈?獢?(App_Data/Logs/audit_*.log)
-    /// 2. ?芸?撱箄” (Auto DDL)嚗?甈∪?怨?炎?乩蒂撱箇? Sys_AuditLog 鞈?銵刻? 4 蝯??蝝Ｗ?
-    /// 3. ??摰寥 (Fail-Safe)嚗隤神?亦?遙雿??澈??IO 靘????敹?蝯?銝剜璆剖?銝餅?蝔?    /// 4. ?湔蝚血? C# 5.0 閬? (?∪?銝脫??潦 Null 璇辣??摮?
-    /// 5. ?瑕? 90 憭拇隤???雁霅?    /// </summary>
+    /// 系統權限與重要操作稽核日誌記錄器 (Sys_AuditLog & File Audit Trail)
+    /// 規範：統一記錄 Operator、Action、Target、IP、時間、變更前內容 (OldValue)、變更後內容 (NewValue)、備註
+    /// 特性：
+    /// 1. 雙軌保存：同時寫入 SQL Server (Sys_AuditLog) 與本機檔案 (App_Data/Logs/audit_*.log)
+    /// 2. 自動建表 (Auto DDL)：首次呼叫自動檢查並建立 Sys_AuditLog 資料表與 4 組高效能索引
+    /// 3. 靜默容錯 (Fail-Safe)：日誌寫入發生任何資料庫或 IO 例外時自動忽略，絕不中斷業務主流程
+    /// 4. 嚴格符合 C# 5.0 規範 (無字串插值、無 Null 條件運算子)
+    /// 5. 超過 90 天日誌自動清理維護
+    /// </summary>
     public static class AuditLogger
     {
         private static readonly object FileAuditLock = new object();
@@ -22,10 +25,10 @@ namespace NTPC_FEC.Security
         private static bool s_isTableInitialized = false;
         private static DateTime s_lastCleanDate = DateTime.MinValue;
 
-        #region 1. 撣貊閮??寞? (Log Overloads)
+        #region 1. 常用記錄方法 (Log Overloads)
 
         /// <summary>
-        /// 閮??桃??? (?芸????嗅?????
+        /// 記錄單純操作 (自動取得當前操作者)
         /// </summary>
         public static void Log(string actionType, string targetUser, string details)
         {
@@ -33,7 +36,7 @@ namespace NTPC_FEC.Security
         }
 
         /// <summary>
-        /// 閮?霈?? (????敺摰?
+        /// 記錄變更操作 (包含變更前/後內容)
         /// </summary>
         public static void Log(string actionType, string targetUser, string details, string oldValue, string newValue)
         {
@@ -44,7 +47,7 @@ namespace NTPC_FEC.Security
         }
 
         /// <summary>
-        /// 摰閮??? (?舀?????? IP嚗????畾?憓矽??
+        /// 完整記錄操作 (支援指定操作者與 IP，如登入或特殊情境調用)
         /// </summary>
         public static void Log(string operatorUser, string actionType, string targetUser, string clientIp, string details, string oldValue, string newValue)
         {
@@ -53,19 +56,19 @@ namespace NTPC_FEC.Security
             string target = string.IsNullOrEmpty(targetUser) ? null : targetUser.Trim();
             string ip = string.IsNullOrEmpty(clientIp) ? "127.0.0.1" : clientIp.Trim();
 
-            // 1. 撖怠 SQL 鞈?摨?(Sys_AuditLog)
+            // 1. 寫入 SQL 資料庫 (Sys_AuditLog)
             WriteToSql(op, act, target, ip, details, oldValue, newValue);
 
-            // 2. ??撖怠?砍?亥? (App_Data/Logs/audit_*.log)
+            // 2. 雙軌寫入本地日誌 (App_Data/Logs/audit_*.log)
             WriteToFile(op, act, target, ip, details, oldValue, newValue);
         }
 
         #endregion
 
-        #region 2. SQL 撖怠??遣銵?(Auto DDL)
+        #region 2. SQL 寫入與自動建表 (Auto DDL)
 
         /// <summary>
-        /// 蝣箔? Sys_AuditLog 鞈?銵刻?蝝Ｗ?摮
+        /// 確保 Sys_AuditLog 資料表與索引存在
         /// </summary>
         private static void EnsureTableExists()
         {
@@ -120,13 +123,13 @@ END";
                 }
                 catch
                 {
-                    // ?亦甈⊿???啣虜嚗?閮剖? flag嚗?甈∪?怠?岫
+                    // 若當次連線異常，不設定 flag，下次呼叫可重試
                 }
             }
         }
 
         /// <summary>
-        /// ??神??SQL Server Sys_AuditLog
+        /// 參數化寫入 SQL Server Sys_AuditLog
         /// </summary>
         private static void WriteToSql(string operatorUser, string actionType, string targetUser, string clientIp, string details, string oldValue, string newValue)
         {
@@ -160,10 +163,10 @@ VALUES
 
         #endregion
 
-        #region 3. ?砍?亥?撖怠??????(File Audit Trail)
+        #region 3. 本地日誌寫入與定期清理 (File Audit Trail)
 
         /// <summary>
-        /// 撖怠?砍 Log 瑼? (App_Data/Logs/audit_yyyyMM.log)
+        /// 寫入本地 Log 檔案 (App_Data/Logs/audit_yyyyMM.log)
         /// </summary>
         private static void WriteToFile(string operatorUser, string actionType, string targetUser, string clientIp, string details, string oldValue, string newValue)
         {
@@ -176,7 +179,7 @@ VALUES
                     Directory.CreateDirectory(logDir);
                 }
 
-                // ?芸?皜? 90 憭拐誑銝??亥?
+                // 自動清理 90 天以上舊日誌
                 TryCleanExpiredLogs(logDir);
 
                 string logPath = Path.Combine(logDir, string.Format("audit_{0:yyyyMM}.log", DateTime.Today));
@@ -203,12 +206,12 @@ VALUES
             }
             catch
             {
-                // ?砍?亥?撖怠?啣虜摰??
+                // 本地日誌寫入異常安全忽略
             }
         }
 
         /// <summary>
-        /// ?芸?皜? 90 憭拐誑銝??亥? (瘥?銵?甈?
+        /// 自動清理 90 天以上舊日誌 (每日僅執行一次)
         /// </summary>
         private static void TryCleanExpiredLogs(string logDir)
         {
@@ -245,10 +248,11 @@ VALUES
 
         #endregion
 
-        #region 4. ????靘? IP 閫??頛
+        #region 4. 操作者與來源 IP 解析輔助
 
         /// <summary>
-        /// 閫???嗅????董??        /// </summary>
+        /// 解析當前操作者帳號
+        /// </summary>
         public static string ResolveCurrentOperator()
         {
             HttpContext ctx = HttpContext.Current;
@@ -269,7 +273,7 @@ VALUES
         }
 
         /// <summary>
-        /// 閫???祕 Client IP 雿? (?舀 Reverse Proxy ??X-Forwarded-For 蝛輸?
+        /// 解析真實 Client IP 位址 (支援 Reverse Proxy 與 X-Forwarded-For 轉發)
         /// </summary>
         public static string ResolveClientIp()
         {
@@ -281,7 +285,7 @@ VALUES
                 string ip = ctx.Request.ServerVariables["HTTP_X_FORWARDED_FOR"];
                 if (!string.IsNullOrEmpty(ip))
                 {
-                    // ?交?憭?IP (頧??嚗?撌血?箏?憪?Client IP
+                    // 若有多個 IP (轉發鏈)，最左側為原始 Client IP
                     string[] parts = ip.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length > 0)
                     {
@@ -309,10 +313,10 @@ VALUES
 
         #endregion
 
-        #region 5. 蝔賣?亥??亥岷 (靘??啁恣??隤輸??
+        #region 5. 稽核日誌查詢 (供後台管理頁面調用)
 
         /// <summary>
-        /// ?亥岷 Sys_AuditLog 蝔賣蝝??(??/?蕪)
+        /// 查詢 Sys_AuditLog 稽核紀錄 (分頁/過濾)
         /// </summary>
         public static DataTable QueryLogs(string operatorUser, string actionType, string targetUser, DateTime? startDate, DateTime? endDate, int topCount = 500)
         {
@@ -361,4 +365,3 @@ VALUES
         #endregion
     }
 }
-

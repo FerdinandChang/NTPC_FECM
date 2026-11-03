@@ -14,6 +14,7 @@ using NPOI.SS.UserModel;
 using NPOI.SS.Util;
 using NTPC_FEC.Helpers;
 using NTPC_FEC.Models;
+using NTPC_FEC.Security;
 using NTPC_FEC.Services;
 
 namespace NTPC_FEC.Wash
@@ -274,16 +275,16 @@ namespace NTPC_FEC.Wash
 
         #endregion
 
-        #region 初始化資訊讀取 (工廠選單、年份、當前身分)
+        #region 使用者角色與權限查核
 
-        private void GetInitData()
+        private void GetUserAuthInfo(out bool isManager, out string userFacId, out string userName)
         {
+            isManager = false;
+            userFacId = string.Empty;
+            userName = string.Empty;
+
             UserAccount currentUser = Session["UserAccount"] as UserAccount;
             string loginUserId = Session["LoginUser"] as string;
-            bool isManager = false;
-            string userFacId = string.Empty;
-            string userFacName = string.Empty;
-            string userName = string.Empty;
 
             if (currentUser != null)
             {
@@ -305,6 +306,20 @@ namespace NTPC_FEC.Wash
                     userName = r["Name"] != DBNull.Value ? r["Name"].ToString().Trim() : string.Empty;
                 }
             }
+        }
+
+        #endregion
+
+        #region 初始化資訊讀取 (工廠選單、年份、當前身分)
+
+        private void GetInitData()
+        {
+            bool isManager = false;
+            string userFacId = string.Empty;
+            string userFacName = string.Empty;
+            string userName = string.Empty;
+
+            GetUserAuthInfo(out isManager, out userFacId, out userName);
 
             // 取得所選廠場代碼 (若有傳入 id 且具有權限)
             string reqFacId = Request["id"];
@@ -391,14 +406,15 @@ namespace NTPC_FEC.Wash
             string keyword = Request["keyword"];
             if (keyword != null) keyword = keyword.Trim();
 
-            // 權限檢查
-            UserAccount currentUser = Session["UserAccount"] as UserAccount;
-            if (currentUser != null && !MenuService.CheckLicense(currentUser.Lic, 9))
+            // 權限檢查 (杜絕 Session 漏洞)
+            bool isManager = false;
+            string userFacId = string.Empty;
+            string userName = string.Empty;
+            GetUserAuthInfo(out isManager, out userFacId, out userName);
+
+            if (!isManager && !string.IsNullOrEmpty(userFacId))
             {
-                if (!string.IsNullOrEmpty(currentUser.FacID))
-                {
-                    facId = currentUser.FacID.Trim();
-                }
+                facId = userFacId;
             }
 
             if (string.IsNullOrEmpty(facId))
@@ -707,12 +723,15 @@ namespace NTPC_FEC.Wash
                 return;
             }
 
-            // 權限檢查：一般業者禁止刪除其他廠場資料
-            UserAccount currentUser = Session["UserAccount"] as UserAccount;
-            if (currentUser != null && !MenuService.CheckLicense(currentUser.Lic, 9))
+            // 權限檢查：一般業者禁止刪除其他廠場資料 (杜絕 Session 漏洞)
+            bool isManager = false;
+            string userFacId = string.Empty;
+            string userName = string.Empty;
+            GetUserAuthInfo(out isManager, out userFacId, out userName);
+
+            if (!isManager && !string.IsNullOrEmpty(userFacId))
             {
-                if (!string.IsNullOrEmpty(currentUser.FacID) &&
-                    !string.Equals(currentUser.FacID.Trim(), facId, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(userFacId, facId, StringComparison.OrdinalIgnoreCase))
                 {
                     Response.Write(json.Serialize(new { Success = false, Message = "權限不足：您只能刪除自身列管廠場之洗掃紀錄！" }));
                     return;
@@ -732,7 +751,7 @@ namespace NTPC_FEC.Wash
                 string targetDirPhysical = Server.MapPath(targetDirVirtual);
                 if (Directory.Exists(targetDirPhysical))
                 {
-                    Directory.Delete(targetDirPhysical, true);
+                    string[] filesToDel = Directory.GetFiles(targetDirPhysical, "*", SearchOption.AllDirectories); for (int i = 0; i < filesToDel.Length; i++) { try { File.Delete(filesToDel[i]); } catch { } }
                 }
             }
             catch (Exception ex)
@@ -740,6 +759,9 @@ namespace NTPC_FEC.Wash
                 // 照片檔案刪除若遇鎖定不阻擋主紀錄刪除
                 System.Diagnostics.Trace.WriteLine("刪除洗掃照片實體檔案時發生錯誤：" + ex.Message);
             }
+
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("WASH_RECORD_DELETE", facId, string.Format("刪除洗掃日誌紀錄 (廠場:{0}, 序號:{1}, 影響筆數:{2})", facId, pIndex, affected));
 
             Response.Write(json.Serialize(new
             {
@@ -763,14 +785,15 @@ namespace NTPC_FEC.Wash
             string yearStr = Request["year"];
             string monthStr = Request["month"];
 
-            // 權限檢查
-            UserAccount currentUser = Session["UserAccount"] as UserAccount;
-            if (currentUser != null && !MenuService.CheckLicense(currentUser.Lic, 9))
+            // 權限檢查 (杜絕 Session 漏洞)
+            bool isManager = false;
+            string userFacId = string.Empty;
+            string userName = string.Empty;
+            GetUserAuthInfo(out isManager, out userFacId, out userName);
+
+            if (!isManager && !string.IsNullOrEmpty(userFacId))
             {
-                if (!string.IsNullOrEmpty(currentUser.FacID))
-                {
-                    facId = currentUser.FacID.Trim();
-                }
+                facId = userFacId;
             }
 
             if (string.IsNullOrEmpty(facId))
@@ -1054,6 +1077,9 @@ namespace NTPC_FEC.Wash
             // 輸出串流
             string fileName = string.Format("洗掃里程日誌_{0}_{1}年{2:00}月.xls", facId, rocYear, month);
             string encodedName = HttpUtility.UrlEncode(fileName, Encoding.UTF8);
+
+            // 記錄雙軌 AuditLog
+            AuditLogger.Log("WASH_RECORD_EXPORT", facId, string.Format("匯出洗掃日誌 Excel 報表 (廠場:{0}, 年度:{1}, 月份:{2})", facId, rocYear, month));
 
             Response.Clear();
             Response.Buffer = true;

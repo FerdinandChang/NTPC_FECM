@@ -418,9 +418,8 @@ namespace NTPC_FEC.RoadClean
                 Directory.CreateDirectory(physDir);
             }
 
-            // 儲存/刪除改善照片
+            // 儲存/刪除改善照片 (嚴格限制僅能操作改善後照片，現場原始照片禁止異動)
             SavePhotos(physDir, input.ImprovePhotos);
-            SavePhotos(physDir, input.EvidencePhotos);
 
             if (isBack)
             {
@@ -445,6 +444,13 @@ namespace NTPC_FEC.RoadClean
 
                 // 發送退回通報通知信
                 SendNotificationEmail(dirtyId, true, input.G_Memo);
+
+                // 寫入 AuditLog 稽核日誌
+                AuditLogger.Log(
+                    "ROAD_DIRTY_IMPROVE_BACK",
+                    dirtyId,
+                    string.Format("道路髒污案件退回重新派工，案號:{0}, 人員:{1}, 備註:{2}", dirtyId, loginUser, input.G_Memo ?? "")
+                );
 
                 Response.Write(json.Serialize(new
                 {
@@ -500,12 +506,16 @@ namespace NTPC_FEC.RoadClean
             {
                 if (item == null) continue;
 
-                // 若標記為刪除
+                // 若標記為刪除 (白名單防禦：嚴禁刪除非改善佐證之原始現場檔案)
                 if (item.IsDeleted)
                 {
                     if (!string.IsNullOrEmpty(item.FileName))
                     {
                         string cleanFileName = FileSecurityHelper.SanitizeFileName(item.FileName);
+                        if (cleanFileName.IndexOf("改善", StringComparison.OrdinalIgnoreCase) < 0)
+                        {
+                            continue;
+                        }
                         string delPath = Path.Combine(physDir, cleanFileName);
                         if (FileSecurityHelper.IsSafePath(physDir, delPath) && File.Exists(delPath))
                         {

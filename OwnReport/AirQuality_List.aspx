@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="AirQuality_List.aspx.cs" Inherits="NTPC_FEC.OwnReport.AirQuality_List" EnableSessionState="ReadOnly" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="AirQuality_List.aspx.cs" Inherits="NTPC_FEC.OwnReport.AirQuality_List" %>
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head runat="server">

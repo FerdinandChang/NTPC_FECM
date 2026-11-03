@@ -17,18 +17,16 @@
 
     <style>
         :root {
-            --brand-primary: #0099e5;     /* 新北天空青藍 */
-            --brand-blue: #0284c7;        /* 科技藍 */
-            --brand-dark-blue: #0b1f7d;   /* 海軍深藍 */
-            --brand-navy: #0f172a;        /* 標題文字主色 */
-            --bg-canvas: #f1f5f9;         /* 頁面灰底 */
-            --surface: #ffffff;           /* 卡片純白底色 */
-            --border-color: #e2e8f0;      /* 邊框線條 */
-            --text-main: #0f172a;         /* 內文主要文字 */
-            --text-muted: #64748b;        /* 次要說明文字 */
-            --accent-success: #10b981;    /* 綠色成功/合格 */
-            --accent-warning: #f59e0b;    /* 黃橘色注意 */
-            --accent-danger: #ef4444;     /* 紅色缺失/危險 */
+            --brand-primary: #0284c7;     /* 主色調藍 */
+            --brand-dark-blue: #0b1f7d;   /* 深藍 */
+            --brand-navy: #0f172a;        /* 標題深色 */
+            --bg-canvas: #f8fafc;         /* 底色 */
+            --surface: #ffffff;           /* 白色基底 */
+            --border-color: #cbd5e1;      /* 邊框線 */
+            --text-main: #1e293b;         /* 內文主要 */
+            --text-muted: #64748b;        /* 次要文字 */
+            --accent-req: #dc2626;        /* 必填紅星標記 */
+            --accent-orange: #d97706;     /* 提示黃橘 */
         }
 
         * {
@@ -51,452 +49,426 @@
 
         /* 頂部導覽列 */
         .top-navbar {
-            background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: #ffffff;
-            height: 56px;
+            height: 54px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 16px;
-            box-shadow: 0 2px 10px rgba(0, 153, 229, 0.25);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
             position: sticky;
             top: 0;
             z-index: 1020;
         }
 
         .top-navbar .brand-title {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: 700;
-            letter-spacing: 0.5px;
             margin: 0;
             display: flex;
             align-items: center;
-            gap: 10px;
         }
 
         .nav-btn {
             background: rgba(255, 255, 255, 0.18);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.35);
             color: #ffffff;
-            border-radius: 8px;
-            padding: 6px 14px;
-            font-size: 0.9rem;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 0.88rem;
             font-weight: 600;
             transition: all 0.2s ease;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             cursor: pointer;
         }
 
         .nav-btn:hover {
-            background: rgba(255, 255, 255, 0.28);
+            background: rgba(255, 255, 255, 0.3);
             color: #ffffff;
             text-decoration: none;
         }
 
         .mode-badge {
             font-size: 0.75rem;
-            font-weight: 700;
             padding: 3px 8px;
-            border-radius: 6px;
-            text-transform: uppercase;
-        }
-        .mode-badge.badge-new { background-color: #10b981; color: #ffffff; }
-        .mode-badge.badge-edit { background-color: #f59e0b; color: #ffffff; }
-
-        /* 主容器佈局 */
-        .main-container {
-            max-width: 1480px;
-            margin: 0 auto;
-            padding: 16px;
-        }
-
-        /* 現代卡片 */
-        .card-modern {
-            background: var(--surface);
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(15, 23, 42, 0.05);
-            margin-bottom: 16px;
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-            transition: box-shadow 0.2s ease;
-        }
-
-        .card-modern:hover {
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 8px 20px rgba(15, 23, 42, 0.08);
-        }
-
-        .card-modern-header {
-            padding: 12px 18px;
-            background: #ffffff;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .card-modern-title {
-            font-size: 1rem;
             font-weight: 700;
-            color: var(--brand-navy);
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        }
+        .badge-new { background-color: #10b981; color: #ffffff; }
+        .badge-edit { background-color: #f59e0b; color: #1e293b; }
+
+        /* 主容器 */
+        .main-container {
+            max-width: 1280px;
+            margin: 16px auto 70px auto;
+            padding: 0 12px;
         }
 
-        .card-modern-body {
-            padding: 18px;
-        }
-
-        /* 桌面端左欄 Sticky 固頂 */
-        @media screen and (min-width: 1200px) {
-            .sticky-sidebar {
-                position: sticky;
-                top: 72px;
-                max-height: calc(100vh - 88px);
-                overflow-y: auto;
-                padding-right: 4px;
-            }
-        }
-
-        /* 地圖控制與收合 */
-        #map {
+        /* 專案標準表單排版 (符合 inspection-ui-standard card-modern 規範) */
+        .break-form-table {
             width: 100%;
-            height: 380px;
-            border-radius: 8px;
-            z-index: 10;
-            transition: height 0.3s ease;
+            background-color: var(--surface);
+            border: 1px solid var(--border-color);
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(15, 23, 42, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
         }
 
-        #map.map-collapsed {
-            height: 120px !important;
+        .break-form-table tr {
+            border-bottom: 1px solid var(--border-color);
         }
 
-        /* 座標晶片列 */
-        .coord-chip-row {
+        .break-form-table td.field-header {
+            width: 160px;
+            min-width: 140px;
+            background-color: #f8fafc;
+            color: #334155;
+            font-weight: 700;
+            font-size: 0.96rem;
+            padding: 14px 18px;
+            vertical-align: top;
+            border-right: 1px solid var(--border-color);
+            line-height: 1.4;
+        }
+
+        .break-form-table td.field-header .req-star {
+            color: #dc2626;
+            margin-right: 2px;
+            font-size: 1.05rem;
+        }
+
+        .break-form-table td.field-body {
+            background-color: #ffffff;
+            padding: 14px 18px;
+            font-size: 0.95rem;
+            vertical-align: middle;
+            color: var(--text-main);
+        }
+
+        /* 單選與核取方塊排版 */
+        .radio-options-row, .checkbox-options-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            background: #f8fafc;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-top: 12px;
+            align-items: center;
+            gap: 16px;
         }
 
-        .coord-chip-item {
-            flex: 1;
-            min-width: 140px;
-        }
-
-        .coord-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 2px;
-        }
-
-        .coord-value {
+        .custom-check-item {
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            margin: 0;
+            user-select: none;
             font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--brand-navy);
-            font-family: monospace, sans-serif;
         }
 
-        /* 表單輸入項 */
-        .form-label-custom {
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: var(--brand-navy);
-            margin-bottom: 6px;
+        .custom-check-item input[type="radio"],
+        .custom-check-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 6px;
+            cursor: pointer;
+            accent-color: #0284c7;
+        }
+
+        /* 尺寸輸入框 (科技淡藍底) */
+        .dimension-row {
             display: flex;
             align-items: center;
-            gap: 6px;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #f0f9ff;
+            border-radius: 6px;
+            border: 1px solid #bae6fd;
         }
 
-        .form-label-custom .badge-req {
-            font-size: 0.7rem;
-            background: #fee2e2;
-            color: #ef4444;
-            padding: 2px 6px;
+        .dimension-input {
+            width: 90px;
+            padding: 5px 8px;
+            font-size: 0.92rem;
+            border: 1px solid #cbd5e1;
             border-radius: 4px;
+            background-color: #ffffff;
+            text-align: right;
             font-weight: 600;
         }
 
-        .form-control-custom {
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: 0.95rem;
-            transition: border-color 0.15s, box-shadow 0.15s;
-            width: 100%;
-        }
-
-        .form-control-custom:focus {
+        .dimension-input:focus {
+            border-color: #0284c7;
             outline: none;
-            border-color: var(--brand-blue);
             box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
         }
 
-        /* 道路級別與狀態晶片組 (Segmented / Score Chips) */
-        .chips-group {
+        /* 反映地點各列排版 */
+        .location-grid-row {
             display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
             flex-wrap: wrap;
-            gap: 8px;
         }
 
-        .chip-btn {
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
+        .location-grid-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .loc-label {
+            min-width: 140px;
             color: #334155;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 0.9rem;
             font-weight: 600;
+            font-size: 0.92rem;
+        }
+
+        .input-subtle {
+            border: 1px solid #cbd5e1;
+            background-color: #fffefb;
+            padding: 6px 10px;
+            font-size: 0.92rem;
+            border-radius: 4px;
+            color: #1e293b;
+            transition: all 0.2s ease;
+        }
+
+        .input-subtle:focus {
+            border-color: #0284c7;
+            background-color: #ffffff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        }
+
+        .coord-input {
+            width: 150px;
+            text-align: center;
+            font-family: monospace;
+            font-weight: 700;
+        }
+
+        /* 地圖點選按鈕 */
+        .btn-map-picker {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.88rem;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            min-height: 42px;
-            transition: all 0.15s ease;
-            user-select: none;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
+            transition: all 0.2s ease;
         }
 
-        .chip-btn:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
+        .btn-map-picker:hover {
+            filter: brightness(1.1);
+            color: #ffffff;
+            text-decoration: none;
         }
 
-        .chip-btn.active-primary {
-            background: #f0f9ff;
-            border-color: var(--brand-blue);
-            color: #0369a1;
-            font-weight: 700;
-            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
-        }
-
-        .chip-btn.active-success {
-            background: #ecfdf5;
-            border-color: #10b981;
-            color: #047857;
-            font-weight: 700;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-        }
-
-        .chip-btn.active-warning {
-            background: #fffbeb;
-            border-color: #f59e0b;
-            color: #b45309;
-            font-weight: 700;
-            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
-        }
-
-        .chip-btn.active-danger {
-            background: #fef2f2;
-            border-color: #ef4444;
-            color: #b91c1c;
-            font-weight: 700;
-            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
-        }
-
-        /* 照片上傳與展示網格 */
-        .photo-grid {
+        /* 現場照片 7 格上傳卡片區 */
+        .photo-slots-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
             gap: 14px;
             margin-top: 10px;
         }
 
-        .photo-card {
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            overflow: hidden;
+        .photo-slot-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
             background: #ffffff;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
+            transition: all 0.2s ease;
             position: relative;
         }
 
-        .photo-preview-box {
-            width: 100%;
-            height: 140px;
-            background: #f8fafc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
-            cursor: pointer;
+        .photo-slot-card:hover {
+            border-color: #0284c7;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
         }
 
-        .photo-preview-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.2s ease;
-        }
-
-        .photo-preview-box:hover img {
-            transform: scale(1.05);
-        }
-
-        .photo-badge {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            background: rgba(15, 23, 42, 0.75);
-            color: #ffffff;
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-
-        .photo-footer {
-            padding: 8px 10px;
-            background: #ffffff;
+        .slot-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-top: 1px solid var(--border-color);
+            margin-bottom: 8px;
         }
 
-        .photo-title {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #475569;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .btn-del-photo {
-            border: none;
-            background: #fee2e2;
-            color: #ef4444;
-            border-radius: 6px;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-        .btn-del-photo:hover {
-            background: #fecaca;
-        }
-
-        /* 新增照片上傳按鈕方塊 */
-        .photo-add-box {
-            border: 2px dashed #cbd5e1;
-            border-radius: 10px;
-            min-height: 180px;
-            background: #f8fafc;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: #64748b;
-            text-align: center;
-            padding: 16px;
-        }
-
-        .photo-add-box:hover {
-            border-color: var(--brand-blue);
-            background: #f0f9ff;
-            color: var(--brand-blue);
-        }
-
-        .photo-add-box i {
-            font-size: 2rem;
-        }
-
-        /* 動作按鈕群 */
-        .btn-action-primary {
-            background: linear-gradient(135deg, #0099e5 0%, #0284c7 100%);
-            color: #ffffff;
-            border: none;
+        .slot-title {
             font-weight: 700;
-            border-radius: 8px;
-            padding: 12px 28px;
-            font-size: 1rem;
+            font-size: 0.9rem;
+            color: #0369a1;
+        }
+
+        .slot-preview-area {
+            height: 140px;
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
             cursor: pointer;
-            display: inline-flex;
+        }
+
+        .slot-preview-area img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .slot-empty-hint {
+            color: #94a3b8;
+            font-size: 0.82rem;
+            text-align: center;
+            padding: 8px;
+        }
+
+        .slot-empty-hint i {
+            font-size: 1.8rem;
+            display: block;
+            margin-bottom: 4px;
+            color: #cbd5e1;
+        }
+
+        .slot-controls {
+            display: flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
-            transition: all 0.2s ease;
+            margin-top: 8px;
         }
 
-        .btn-action-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
-            color: #ffffff;
-        }
-
-        .btn-action-secondary {
-            background: #ffffff;
-            color: #475569;
+        .btn-upload-file {
+            background-color: #f1f5f9;
             border: 1px solid #cbd5e1;
+            color: #334155;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.82rem;
             font-weight: 600;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-size: 1rem;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
             transition: all 0.15s ease;
         }
 
-        .btn-action-secondary:hover {
-            background: #f1f5f9;
-            color: #1e293b;
+        .btn-upload-file:hover {
+            background-color: #e2e8f0;
+            color: #0f172a;
         }
 
-        /* 手機行動端底部懸浮動作列 */
-        @media screen and (max-width: 991px) {
-            body {
-                padding-bottom: 76px;
-            }
-            .mobile-bottom-bar {
-                display: flex;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                z-index: 1010;
-                background: #ffffff;
-                border-top: 1px solid var(--border-color);
-                box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
-                padding: 10px 16px;
-                padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-                gap: 10px;
-            }
-            .mobile-bottom-bar .btn {
-                flex: 1;
-                font-weight: 700;
-                padding: 10px;
-                border-radius: 8px;
-            }
+        .btn-clear-slot {
+            background: none;
+            border: none;
+            color: #dc2626;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
         }
 
-        /* 燈箱視窗 (Lightbox) */
+        .btn-clear-slot:hover {
+            background: #fee2e2;
+        }
+
+        /* 提示備註小字 */
+        .notice-text {
+            color: #b45309;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin: 4px 0 0 0;
+        }
+
+        .notice-danger {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        /* 地圖彈窗 Modal */
+        .map-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.65);
+            z-index: 1050;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .map-modal-dialog {
+            width: 95vw;
+            max-width: 1000px;
+            height: 85vh;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .map-modal-header {
+            padding: 12px 18px;
+            background: #0284c7;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .map-modal-header h5 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .map-modal-body {
+            flex: 1;
+            position: relative;
+            background: #e2e8f0;
+        }
+
+        #modalMap {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-modal-footer {
+            padding: 10px 18px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        /* 照片燈箱 Lightbox */
         .lightbox-modal {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 2000;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.88);
+            z-index: 1090;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -506,43 +478,38 @@
         .lightbox-img {
             max-width: 95vw;
             max-height: 90vh;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border-radius: 6px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
         }
 
         .lightbox-close {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 16px;
+            right: 16px;
             background: rgba(255, 255, 255, 0.25);
             color: #ffffff;
             border: none;
             border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            font-size: 1.4rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* 地圖標記 Pin */
-        .custom-map-marker {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        /* 標記 Pin */
         .marker-pin {
-            width: 34px;
-            height: 34px;
+            width: 32px;
+            height: 32px;
             border-radius: 50% 50% 50% 0;
-            background: #ef4444;
+            background: #dc2626;
             position: absolute;
             transform: rotate(-45deg);
             left: 50%;
             top: 50%;
-            margin: -22px 0 0 -17px;
+            margin: -20px 0 0 -16px;
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
             border: 2px solid #ffffff;
             display: flex;
@@ -553,7 +520,303 @@
         .marker-icon {
             transform: rotate(45deg);
             color: #ffffff;
-            font-size: 14px;
+            font-size: 13px;
+        }
+
+        /* 尺寸與坐標通用類別 */
+        .dimension-item-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .coord-inputs-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .coord-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* =========================================================
+           小尺寸螢幕 RWD 現代化極致體驗 (iPhone 16 / 手機直式 / 平板)
+           ========================================================= */
+        @media screen and (max-width: 767.98px) {
+            body {
+                padding-bottom: 76px !important;
+            }
+
+            .top-navbar {
+                height: 52px !important;
+                padding: 0 10px !important;
+            }
+
+            .top-navbar .brand-title {
+                font-size: 1rem !important;
+            }
+
+            .top-navbar .nav-btn {
+                padding: 4px 8px !important;
+                font-size: 0.8rem !important;
+            }
+
+            .main-container {
+                margin: 8px auto 80px auto !important;
+                padding: 0 6px !important;
+            }
+
+            /* 表單表格全面轉為單欄流動卡片 (Full-width Mobile Stack) */
+            .break-form-table {
+                border: 1px solid var(--border-color) !important;
+                border-radius: 12px !important;
+                display: block !important;
+                width: 100% !important;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+            }
+
+            .break-form-table tbody {
+                display: block !important;
+                width: 100% !important;
+            }
+
+            .break-form-table tr {
+                display: block !important;
+                width: 100% !important;
+                border-bottom: 1px solid var(--border-color) !important;
+                background-color: #ffffff !important;
+            }
+
+            .break-form-table tr:last-child {
+                border-bottom: none !important;
+            }
+
+            .break-form-table td.field-header {
+                display: block !important;
+                width: 100% !important;
+                min-width: 100% !important;
+                border-right: none !important;
+                border-bottom: 1px solid #f1f5f9 !important;
+                background-color: #f8fafc !important;
+                color: #1e293b !important;
+                font-size: 0.96rem !important;
+                font-weight: 700 !important;
+                padding: 10px 14px !important;
+            }
+
+            .break-form-table td.field-body {
+                display: block !important;
+                width: 100% !important;
+                padding: 12px 10px !important;
+            }
+
+            /* 單選與複選項目大熱區晶片 (Touch-friendly Chip Buttons >= 44px) */
+            .radio-options-row, .checkbox-options-row {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+                width: 100% !important;
+            }
+
+            .custom-check-item {
+                background: #f8fafc !important;
+                border: 1px solid #cbd5e1 !important;
+                border-radius: 8px !important;
+                padding: 10px 10px !important;
+                min-height: 44px !important;
+                display: flex !important;
+                align-items: center !important;
+                font-size: 13.5px !important;
+                line-height: 1.25 !important;
+                margin: 0 !important;
+                word-break: break-all !important;
+                transition: all 0.15s ease !important;
+            }
+
+            .custom-check-item:active {
+                background: #e0f2fe !important;
+                border-color: #0284c7 !important;
+            }
+
+            .custom-check-item input[type="radio"],
+            .custom-check-item input[type="checkbox"] {
+                width: 20px !important;
+                height: 20px !important;
+                margin-right: 8px !important;
+                flex-shrink: 0 !important;
+                accent-color: #0284c7 !important;
+            }
+
+            /* 尺寸長寬在手機端自適應雙欄並列 */
+            .dimension-row {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+                padding: 10px !important;
+                width: 100% !important;
+            }
+
+            .dimension-item-wrap {
+                display: flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+                width: 100% !important;
+            }
+
+            .dimension-input {
+                flex: 1 !important;
+                width: 100% !important;
+                height: 42px !important;
+                font-size: 16px !important; /* 防止 iOS Safari 自動放大網頁 */
+                padding: 6px 10px !important;
+                text-align: center !important;
+            }
+
+            .area-calc-pill {
+                grid-column: span 2 !important;
+                text-align: center !important;
+                margin-top: 4px !important;
+            }
+
+            /* 反映地點直立式展開，輸入框高度 42px 好點擊 */
+            .location-grid-row {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 6px !important;
+                margin-bottom: 12px !important;
+            }
+
+            .loc-label {
+                min-width: 100% !important;
+                font-size: 13px !important;
+                font-weight: 700 !important;
+                color: #475569 !important;
+                margin-bottom: 2px !important;
+            }
+
+            .input-subtle {
+                width: 100% !important;
+                min-width: 100% !important;
+                height: 42px !important;
+                font-size: 15px !important;
+                padding: 8px 12px !important;
+            }
+
+            .coord-inputs-group {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+                width: 100% !important;
+            }
+
+            .coord-item {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 4px !important;
+                width: 100% !important;
+            }
+
+            .coord-input {
+                width: 100% !important;
+                height: 42px !important;
+                font-size: 15px !important;
+                text-align: center !important;
+            }
+
+            .btn-map-picker {
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-top: 8px !important;
+                height: 44px !important;
+                font-size: 14px !important;
+                justify-content: center !important;
+            }
+
+            /* 7 格照片上傳在手機端以 2 欄整齊排列 */
+            .photo-slots-container {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+            }
+
+            .photo-slot-card {
+                padding: 6px !important;
+            }
+
+            .slot-header {
+                margin-bottom: 4px !important;
+            }
+
+            .slot-title {
+                font-size: 12px !important;
+            }
+
+            .slot-preview-area {
+                height: 105px !important;
+            }
+
+            .slot-empty-hint {
+                padding: 4px !important;
+                font-size: 11px !important;
+            }
+
+            .slot-empty-hint i {
+                font-size: 1.3rem !important;
+                margin-bottom: 2px !important;
+            }
+
+            .slot-controls {
+                margin-top: 4px !important;
+            }
+
+            .btn-upload-file {
+                width: 100% !important;
+                justify-content: center !important;
+                padding: 6px 4px !important;
+                font-size: 11.5px !important;
+            }
+
+            .btn-clear-slot {
+                padding: 2px 4px !important;
+                font-size: 11px !important;
+            }
+
+            /* 手機端底部常駐懸浮工具列 (Mobile Sticky Action Bar) */
+            .mobile-bottom-bar {
+                display: flex !important;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1010;
+                background: #ffffff;
+                border-top: 1px solid #e2e8f0;
+                box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+                padding: 8px 12px;
+                padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+                gap: 8px;
+            }
+
+            .mobile-bottom-bar .btn {
+                flex: 1;
+                font-weight: 700;
+                padding: 10px 6px;
+                border-radius: 8px;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 42px;
+            }
+        }
+
+        @media screen and (min-width: 768px) {
+            .mobile-bottom-bar {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -568,271 +831,303 @@
                         <span class="d-none d-sm-inline">回首頁</span>
                     </a>
                     <h1 class="brand-title">
-                        <i class="fas fa-road text-white mr-1"></i>
+                        <i class="fas fa-road mr-2"></i>
                         <span>道路破損現場通報</span>
                         <span class="mode-badge ml-2" :class="mode === 'new' ? 'badge-new' : 'badge-edit'">
                             {{ mode === 'new' ? '新增通報' : '案件編輯' }}
                         </span>
                     </h1>
                 </div>
-                <div class="d-none d-md-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-warning btn-sm font-weight-bold px-3" v-on:click="submitForm" :disabled="isSubmitting">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-warning btn-sm font-weight-bold px-3 shadow-sm" v-on:click="submitForm" :disabled="isSubmitting">
                         <i class="fas fa-paper-plane mr-1" :class="{ 'fa-spin': isSubmitting }"></i>
                         {{ isSubmitting ? '儲存中...' : '送出通報' }}
                     </button>
                 </div>
             </header>
 
-            <!-- 主作業容器 -->
+            <!-- 主表單內容 -->
             <main class="main-container">
-                <!-- 提示訊息橫幅 -->
+                <!-- 狀態警示橫幅 -->
                 <div v-if="alertMessage" class="alert alert-dismissible fade show" :class="'alert-' + alertType" role="alert">
                     <i class="fas" :class="alertType === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'"></i>
                     <strong class="ml-1">{{ alertMessage }}</strong>
                     <button type="button" class="close" v-on:click="alertMessage = ''">&times;</button>
                 </div>
 
-                <div class="row">
-                    <!-- 左欄：現場地圖與定位資訊 (桌面固頂) -->
-                    <div class="col-12 col-xl-5">
-                        <div class="sticky-sidebar">
-                            <!-- 地圖卡片 -->
-                            <div class="card-modern">
-                                <div class="card-modern-header">
-                                    <h2 class="card-modern-title">
-                                        <i class="fas fa-map-marked-alt text-primary"></i> 現場位置定位
-                                    </h2>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <button type="button" class="btn btn-sm btn-outline-primary" v-on:click="getCurrentLocation" title="取得 GPS 定位">
-                                            <i class="fas fa-crosshairs"></i> GPS 定位
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="resetMapView" title="重設地圖全景">
-                                            <i class="fas fa-redo-alt"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-info d-xl-none" v-on:click="toggleMapCollapse">
-                                            <i class="fas" :class="isMapCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="card-modern-body p-2">
-                                    <!-- Leaflet 容器 -->
-                                    <div id="map" :class="{ 'map-collapsed': isMapCollapsed }"></div>
+                <!-- 1:1 對標經典公務表格結構 -->
+                <table class="break-form-table">
+                    <!-- 1. 路面損壞-類別 -->
+                    <tr>
+                        <td class="field-header">
+                            <span class="req-star">*</span>路面損壞-類別
+                        </td>
+                        <td class="field-body">
+                            <div class="radio-options-row">
+                                <label v-for="cat in damageCategories" :key="cat" class="custom-check-item">
+                                    <input type="radio" name="Damage_Category" :value="cat" v-model="form.Damage_Category" />
+                                    <span>{{ cat }}</span>
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
 
-                                    <!-- 坐標晶片列 -->
-                                    <div class="coord-chip-row">
-                                        <div class="coord-chip-item">
-                                            <div class="coord-label">TWD97 X (E)</div>
-                                            <div class="coord-value text-primary">{{ form.S_UTME || '尚未定位' }}</div>
-                                        </div>
-                                        <div class="coord-chip-item">
-                                            <div class="coord-label">TWD97 Y (N)</div>
-                                            <div class="coord-value text-primary">{{ form.S_UTMN || '尚未定位' }}</div>
-                                        </div>
-                                        <div class="coord-chip-item" v-if="form.Lat && form.Lon">
-                                            <div class="coord-label">WGS84 經緯度</div>
-                                            <div class="coord-value text-muted" style="font-size: 0.85rem;">
-                                                {{ Number(form.Lat).toFixed(5) }}, {{ Number(form.Lon).toFixed(5) }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <small class="text-muted d-block mt-2 px-1">
-                                        <i class="fas fa-info-circle text-info"></i> 提示：點擊地圖任意位置可快速標記，或拖拉紅色座標釘進行微調。
-                                    </small>
-                                </div>
+                    <!-- 2. 路面損壞-性質 -->
+                    <tr>
+                        <td class="field-header">
+                            <span class="req-star">*</span>路面損壞-性質
+                        </td>
+                        <td class="field-body">
+                            <div class="radio-options-row">
+                                <label v-for="dt in damageTypes" :key="dt" class="custom-check-item">
+                                    <input type="radio" name="Damage_Type" :value="dt" v-model="form.Damage_Type" />
+                                    <span>{{ dt }}</span>
+                                </label>
                             </div>
 
-                            <!-- 案件基本狀態卡片 -->
-                            <div class="card-modern">
-                                <div class="card-modern-header">
-                                    <h2 class="card-modern-title">
-                                        <i class="fas fa-clipboard-check text-info"></i> 通報狀態
-                                    </h2>
+                            <!-- 提示文字 -->
+                            <p class="notice-text mt-2" v-if="isManholeType">
+                                (如為人手孔蓋損壞，請於說明欄註明人手孔蓋形狀及單位標誌)
+                            </p>
+                            <p class="notice-text mt-2" v-else>
+                                (如為人手孔蓋損壞，請於說明欄註明人手孔蓋形狀及單位標誌)
+                            </p>
+
+                            <!-- 尺寸長度與寬度 -->
+                            <div class="dimension-row">
+                                <div class="dimension-item-wrap">
+                                    <span class="font-weight-bold text-dark">長：</span>
+                                    <input type="number" step="0.1" min="0" inputmode="decimal" class="dimension-input" v-model="form.Damage_Length" placeholder="0.0" />
+                                    <span class="text-muted font-weight-bold">m</span>
                                 </div>
-                                <div class="card-modern-body">
-                                    <div class="row">
-                                        <div class="col-6 mb-2">
-                                            <small class="text-muted d-block font-weight-bold">通報案號</small>
-                                            <span class="font-weight-bold text-dark">{{ form.Break_ID || '自動生成' }}</span>
-                                        </div>
-                                        <div class="col-6 mb-2">
-                                            <small class="text-muted d-block font-weight-bold">查核人員</small>
-                                            <span class="font-weight-bold text-dark">{{ currentUser }}</span>
-                                        </div>
-                                        <div class="col-12">
-                                            <small class="text-muted d-block font-weight-bold">通報時間</small>
-                                            <span class="text-secondary">{{ form.Report_Date || '送出時自動記錄當前時間' }}</span>
-                                        </div>
-                                    </div>
+                                <div class="dimension-item-wrap">
+                                    <span class="font-weight-bold text-dark">寬：</span>
+                                    <input type="number" step="0.1" min="0" inputmode="decimal" class="dimension-input" v-model="form.Damage_Width" placeholder="0.0" />
+                                    <span class="text-muted font-weight-bold">m</span>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 右欄：通報表單與現場照片作業區 -->
-                    <div class="col-12 col-xl-7">
-                        <!-- 基本資料卡片 -->
-                        <div class="card-modern">
-                            <div class="card-modern-header">
-                                <h2 class="card-modern-title">
-                                    <i class="fas fa-edit text-primary"></i> 道路通報資料
-                                </h2>
-                            </div>
-                            <div class="card-modern-body">
-                                <div class="row">
-                                    <!-- 行政區 -->
-                                    <div class="col-12 col-md-6 mb-3">
-                                        <label class="form-label-custom">
-                                            行政區 <span class="badge-req">必填</span>
-                                        </label>
-                                        <select class="form-control-custom" v-model="form.TOWN_CODE">
-                                            <option value="">-- 請選擇行政區 --</option>
-                                            <option v-for="t in towns" :key="t.TownNo" :value="t.TownNo">
-                                                {{ t.TownName }}
-                                            </option>
-                                        </select>
-                                    </div>
-
-                                    <!-- 道路名稱 -->
-                                    <div class="col-12 col-md-6 mb-3">
-                                        <label class="form-label-custom">
-                                            道路名稱 <span class="badge-req">必填</span>
-                                        </label>
-                                        <input type="text" class="form-control-custom" v-model.trim="form.ROAD_Name" placeholder="例如：文化路一段、中正路等" />
-                                    </div>
-
-                                    <!-- 道路級別 -->
-                                    <div class="col-12 mb-3">
-                                        <label class="form-label-custom">
-                                            道路級別 <span class="badge-req">必選</span>
-                                        </label>
-                                        <div class="chips-group">
-                                            <button v-for="lv in roadLvOptions" :key="lv" type="button" class="chip-btn"
-                                                    :class="{ 'active-primary': form.ROAD_LV === lv }"
-                                                    v-on:click="form.ROAD_LV = lv">
-                                                <i class="fas" :class="form.ROAD_LV === lv ? 'fa-check-circle' : 'fa-circle text-muted'" style="font-size: 0.8rem;"></i>
-                                                {{ lv }}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 破損現況查核卡片 -->
-                        <div class="card-modern">
-                            <div class="card-modern-header">
-                                <h2 class="card-modern-title">
-                                    <i class="fas fa-exclamation-circle text-warning"></i> 破損與銜接現況
-                                </h2>
-                            </div>
-                            <div class="card-modern-body">
-                                <!-- 道路鋪面平整度 -->
-                                <div class="mb-4">
-                                    <label class="form-label-custom">
-                                        道路鋪面平整度 <span class="badge-req">必選</span>
-                                    </label>
-                                    <div class="chips-group">
-                                        <button v-for="opt in smoothOptions" :key="opt.Code" type="button" class="chip-btn"
-                                                :class="getSmoothChipClass(opt.Code)"
-                                                v-on:click="form.Smooth = opt.Code">
-                                            <i class="fas" :class="getSmoothIcon(opt.Code)"></i>
-                                            {{ opt.Val }}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- 人手孔蓋銜接處狀況 -->
-                                <div class="mb-3">
-                                    <label class="form-label-custom">
-                                        道路鋪面與人手孔蓋銜接處狀況 <span class="badge-req">必選</span>
-                                    </label>
-                                    <div class="chips-group">
-                                        <button v-for="h in holeOptions" :key="h.Code" type="button" class="chip-btn"
-                                                :class="getHoleChipClass(h.Code)"
-                                                v-on:click="form.Hole_Conn_St = h.Code">
-                                            <i class="fas" :class="getHoleIcon(h.Code)"></i>
-                                            {{ h.Val }}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- 補充說明 -->
-                                <div class="mt-3">
-                                    <label class="form-label-custom">
-                                        通報補充說明
-                                    </label>
-                                    <textarea class="form-control-custom" rows="3" v-model="form.Memo" placeholder="請填寫破損位置特徵、長度深度或特殊注意事項..."></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 現場佐證照片卡片 -->
-                        <div class="card-modern">
-                            <div class="card-modern-header">
-                                <h2 class="card-modern-title">
-                                    <i class="fas fa-camera text-primary"></i> 現場佐證照片
-                                    <span class="badge badge-pill badge-light border ml-2">
-                                        {{ photos.length }} / 6 張
+                                <div v-if="calcArea > 0" class="area-calc-pill">
+                                    <span class="badge badge-info px-2 py-1 font-weight-bold">
+                                        估算面積：{{ calcArea }} 平方公尺
                                     </span>
-                                </h2>
-                                <span class="text-muted small">支援手機直接拍照與自動壓縮</span>
+                                </div>
                             </div>
-                            <div class="card-modern-body">
-                                <input type="file" ref="fileInput" accept="image/*" capture="environment" multiple style="display: none;" v-on:change="onFilesSelected" />
+                        </td>
+                    </tr>
 
-                                <div class="photo-grid">
-                                    <!-- 既有/已選取照片卡片 -->
-                                    <div v-for="(p, idx) in photos" :key="idx" class="photo-card">
-                                        <div class="photo-preview-box" v-on:click="openLightbox(p.PreviewUrl || p.Url)">
-                                            <img :src="p.PreviewUrl || p.Url" :alt="'佐證照片 ' + (idx + 1)" />
-                                            <div class="photo-badge">佐證照片 {{ idx + 1 }}</div>
-                                        </div>
-                                        <div class="photo-footer">
-                                            <span class="photo-title" :title="p.FileName || ('佐證照片_' + (idx + 1))">
-                                                {{ p.FileName || ('佐證照片_' + (idx + 1)) }}
-                                            </span>
-                                            <button type="button" class="btn-del-photo" v-on:click="removePhoto(idx)" title="刪除照片">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
+                    <!-- 3. 反映地點 -->
+                    <tr>
+                        <td class="field-header">
+                            <span class="req-star">*</span>反映地點
+                        </td>
+                        <td class="field-body">
+                            <!-- 所屬區 -->
+                            <div class="location-grid-row">
+                                <span class="loc-label">所屬區：</span>
+                                <select class="input-subtle" style="min-width: 160px;" v-model="form.TOWN_CODE">
+                                    <option value="">-- 請選擇所屬區 --</option>
+                                    <option v-for="t in towns" :key="t.TownNo" :value="t.TownNo">
+                                        {{ t.TownName }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- 地址、路段或地標 -->
+                            <div class="location-grid-row">
+                                <span class="loc-label">地址、路段或地標：</span>
+                                <input type="text" class="input-subtle" style="flex: 1; min-width: 280px;" v-model.trim="form.ROAD_Name" placeholder="例如：中興路一段、新莊中正路等" />
+                            </div>
+
+                            <!-- 地點描述 (寬度與地址列完全一致對齊) -->
+                            <div class="location-grid-row" style="align-items: flex-start;">
+                                <span class="loc-label pt-md-1">地點描述：</span>
+                                <div style="flex: 1; min-width: 280px;">
+                                    <input type="text" class="input-subtle w-100" v-model.trim="form.Location_Desc" placeholder="輸入地點特徵 (例如：便利商店前、路燈編號370050前方...)" />
+                                    <div class="text-muted small mt-1">(例如便利商店前、路燈編號370050前方...)</div>
+                                </div>
+                            </div>
+
+                            <!-- 座標X、座標Y 與地圖按鈕 -->
+                            <div class="location-grid-row">
+                                <div class="coord-inputs-group">
+                                    <div class="coord-item">
+                                        <span class="loc-label">坐標X (TWD97)：</span>
+                                        <input type="text" class="input-subtle coord-input" v-model="form.S_UTME" placeholder="X 坐標" v-on:change="onManualCoordChange" />
+                                    </div>
+                                    <div class="coord-item">
+                                        <span class="loc-label">坐標Y (TWD97)：</span>
+                                        <input type="text" class="input-subtle coord-input" v-model="form.S_UTMN" placeholder="Y 坐標" v-on:change="onManualCoordChange" />
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-map-picker" v-on:click="openMapModal">
+                                    <i class="fas fa-map-marked-alt mr-1"></i> 電子地圖-點選座標
+                                </button>
+                            </div>
+                            <p class="notice-text">
+                                (請在電子地圖上點選反映地點，或直接輸入經緯度坐標)
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- 4. 車道 -->
+                    <tr>
+                        <td class="field-header">
+                            <span class="req-star">*</span>車道
+                        </td>
+                        <td class="field-body">
+                            <div class="checkbox-options-row">
+                                <label v-for="lane in laneOptions" :key="lane" class="custom-check-item">
+                                    <input type="checkbox" :value="lane" v-model="selectedLanes" v-on:change="onLaneChange(lane)" />
+                                    <span>{{ lane }}</span>
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 5. 方向 -->
+                    <tr>
+                        <td class="field-header">
+                            <span class="req-star">*</span>方向
+                        </td>
+                        <td class="field-body">
+                            <div class="radio-options-row">
+                                <label v-for="dir in directionOptions" :key="dir" class="custom-check-item">
+                                    <input type="radio" name="Direction" :value="dir" v-model="form.Direction" />
+                                    <span>{{ dir }}</span>
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 6. 道路型態 -->
+                    <tr>
+                        <td class="field-header">
+                            <span class="req-star">*</span>道路型態
+                        </td>
+                        <td class="field-body">
+                            <div class="radio-options-row">
+                                <label v-for="rt in roadTypeOptions" :key="rt" class="custom-check-item">
+                                    <input type="radio" name="Road_Type" :value="rt" v-model="form.Road_Type" />
+                                    <span>{{ rt }}</span>
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 7. 其他說明 -->
+                    <tr>
+                        <td class="field-header">
+                            其他說明
+                        </td>
+                        <td class="field-body">
+                            <textarea class="input-subtle w-100" rows="4" v-model="form.Memo" placeholder="請補充現場相關狀況或特殊備註說明..."></textarea>
+                        </td>
+                    </tr>
+
+                    <!-- 8. 現場照片 (對標 7 格照片獨立上傳規格) -->
+                    <tr>
+                        <td class="field-header">
+                            現場照片
+                        </td>
+                        <td class="field-body">
+                            <p class="notice-danger mb-1">
+                                檔案類型限 jpg,jpeg,png,gif,heic，單一檔案上傳上限為15MB
+                            </p>
+
+                            <!-- 隱藏的獨立檔案上傳 input -->
+                            <input type="file" ref="slotFileInput" accept="image/jpeg,image/png,image/gif,image/heic,image/*" capture="environment" style="display:none;" v-on:change="onSlotFileSelected" />
+
+                            <!-- 7 格獨立照片排版 -->
+                            <div class="photo-slots-container">
+                                <div v-for="slot in 7" :key="slot" class="photo-slot-card">
+                                    <div class="slot-header">
+                                        <span class="slot-title">{{ slot }}. 現場照片</span>
+                                        <button v-if="hasPhotoInSlot(slot)" type="button" class="btn-clear-slot" v-on:click="clearSlotPhoto(slot)" title="清除照片">
+                                            <i class="fas fa-trash-alt mr-1"></i> 清除
+                                        </button>
+                                    </div>
+
+                                    <!-- 預覽區塊 -->
+                                    <div class="slot-preview-area" v-on:click="handleSlotClick(slot)">
+                                        <img v-if="getSlotPhoto(slot)" :src="getSlotPhoto(slot).PreviewUrl || getSlotPhoto(slot).Url" :alt="'照片 ' + slot" />
+                                        <div v-else class="slot-empty-hint">
+                                            <i class="fas fa-camera"></i>
+                                            <span>點此拍照或選擇檔案</span>
                                         </div>
                                     </div>
 
-                                    <!-- 新增照片按鈕方塊 (最多 6 張) -->
-                                    <div v-if="photos.length < 6" class="photo-add-box" v-on:click="triggerFileSelect">
-                                        <i class="fas fa-camera-retro"></i>
-                                        <span class="font-weight-bold">拍照 / 上傳照片</span>
-                                        <small class="text-muted">點此開啟相機或相簿</small>
+                                    <!-- 控制項 -->
+                                    <div class="slot-controls">
+                                        <button type="button" class="btn-upload-file" v-on:click="triggerSlotUpload(slot)">
+                                            <i class="fas fa-folder-open"></i> 選擇檔案
+                                        </button>
+                                        <small class="text-truncate text-muted flex-1" style="max-width: 180px;">
+                                            {{ getSlotPhoto(slot) ? (getSlotPhoto(slot).FileName || '已選取檔案') : '沒有選擇檔案' }}
+                                        </small>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- 桌面端表單動作列 -->
-                        <div class="d-none d-md-flex align-items-center justify-content-end gap-3 mt-4 mb-5">
-                            <button type="button" class="btn-action-secondary" v-on:click="goBack">
-                                <i class="fas fa-times"></i> 取消離開
+                            <p class="notice-text mt-3">
+                                (若為建案工地，請上傳施工告示牌照片)
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- 底部按鈕列 (電腦端顯示) -->
+                <div class="d-none d-md-flex align-items-center justify-content-center gap-3 mt-4 mb-4">
+                    <button type="button" class="btn btn-secondary px-4 font-weight-bold" v-on:click="goBack">
+                        <i class="fas fa-arrow-left mr-1"></i> 返回清單
+                    </button>
+                    <button type="button" class="btn btn-primary px-5 font-weight-bold shadow" v-on:click="submitForm" :disabled="isSubmitting">
+                        <i class="fas fa-paper-plane mr-1" :class="{ 'fa-spin': isSubmitting }"></i>
+                        {{ isSubmitting ? '通報中...' : (mode === 'new' ? '確定送出通報' : '更新通報單') }}
+                    </button>
+                </div>
+            </main>
+
+            <!-- 手機端常駐底部懸浮動作列 (Mobile Sticky Action Bar) -->
+            <div class="mobile-bottom-bar no-print">
+                <button type="button" class="btn btn-secondary" v-on:click="goBack">
+                    <i class="fas fa-arrow-left mr-1"></i> 返回
+                </button>
+                <button type="button" class="btn btn-info text-white" v-on:click="openMapModal">
+                    <i class="fas fa-map-marked-alt mr-1"></i> 地圖
+                </button>
+                <button type="button" class="btn btn-warning font-weight-bold text-dark shadow-sm" v-on:click="submitForm" :disabled="isSubmitting">
+                    <i class="fas fa-paper-plane mr-1" :class="{ 'fa-spin': isSubmitting }"></i>
+                    {{ isSubmitting ? '儲存中...' : (mode === 'new' ? '送出通報' : '更新通報') }}
+                </button>
+            </div>
+
+            <!-- 電子地圖彈窗 (點選座標 Modal) -->
+            <div v-if="isMapModalOpen" class="map-modal-backdrop" v-on:click="closeMapModal">
+                <div class="map-modal-dialog" v-on:click.stop>
+                    <div class="map-modal-header">
+                        <h5><i class="fas fa-map-marked-alt mr-2"></i> 電子地圖 - 點選反映地點坐標</h5>
+                        <button type="button" class="close text-white" v-on:click="closeMapModal">&times;</button>
+                    </div>
+                    <div class="map-modal-body">
+                        <div id="modalMap"></div>
+                    </div>
+                    <div class="map-modal-footer">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="small font-weight-bold text-primary">
+                                目前選定坐標：
+                                X={{ form.S_UTME || '未選取' }} , Y={{ form.S_UTMN || '未選取' }}
+                                <span v-if="form.Lat" class="text-muted font-weight-normal">({{ Number(form.Lat).toFixed(5) }}, {{ Number(form.Lon).toFixed(5) }})</span>
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" v-on:click="getCurrentGpsLocation">
+                                <i class="fas fa-crosshairs mr-1"></i> GPS 定位
                             </button>
-                            <button type="button" class="btn-action-primary" v-on:click="submitForm" :disabled="isSubmitting">
-                                <i class="fas fa-paper-plane" :class="{ 'fa-spin': isSubmitting }"></i>
-                                {{ isSubmitting ? '儲存中...' : (mode === 'new' ? '確定送出通報' : '更新通報資料') }}
+                            <button type="button" class="btn btn-success btn-sm font-weight-bold px-3" v-on:click="closeMapModal">
+                                <i class="fas fa-check mr-1"></i> 確認帶回坐標
                             </button>
                         </div>
                     </div>
                 </div>
-            </main>
-
-            <!-- 手機端常駐浮動底部列 -->
-            <div class="mobile-bottom-bar d-flex d-md-none">
-                <button type="button" class="btn btn-outline-secondary" v-on:click="goBack">
-                    取消
-                </button>
-                <button type="button" class="btn btn-outline-primary" v-on:click="triggerFileSelect" :disabled="photos.length >= 6">
-                    <i class="fas fa-camera"></i> 拍照 ({{ photos.length }}/6)
-                </button>
-                <button type="button" class="btn btn-primary" v-on:click="submitForm" :disabled="isSubmitting">
-                    <i class="fas fa-paper-plane" :class="{ 'fa-spin': isSubmitting }"></i>
-                    {{ isSubmitting ? '送出中' : '確定送出' }}
-                </button>
             </div>
 
             <!-- 照片燈箱視窗 (Lightbox) -->
@@ -843,16 +1138,15 @@
         </div>
     </form>
 
-    <!-- 本地化 JS 核心依賴 -->
+    <!-- 本地化核心腳本庫 -->
     <script src="../Scripts/vue.global.prod.js"></script>
     <script src="../Scripts/axios.min.js"></script>
     <script src="../Scripts/leaflet/leaflet.js"></script>
-    <script src="../Scripts/fec-offline-sentinel.js?v=20261025_02"></script>
+    <script src="../Scripts/fec-offline-sentinel.js?v=20261102_01"></script>
 
     <script type="text/javascript">
-        // TWD97 與 WGS84 前端高精度雙向轉換函式
+        // TWD97 與 WGS84 高精度雙向轉換演算法
         const Twd97Wgs84Helper = {
-            // TWD97 (X, Y) 轉 WGS84 (Lat, Lon)
             twd97ToWgs84: function(x, y) {
                 if (!x || !y || x <= 0 || y <= 0) return { lat: 0, lon: 0 };
                 const a = 6378137.0;
@@ -891,7 +1185,6 @@
                 };
             },
 
-            // WGS84 (Lat, Lon) 轉 TWD97 (X, Y)
             wgs84ToTwd97: function(lat, lon) {
                 if (!lat || !lon || lat <= 0 || lon <= 0) return { x: 0, y: 0 };
                 const a = 6378137.0;
@@ -932,37 +1225,51 @@
         createApp({
             data() {
                 return {
-                    mode: 'new',            // 'new' | 'edit'
-                    draftSentinel: null,
+                    mode: 'new',
                     caseId: '',
+                    fromId: '',
                     currentUser: '系統查核員',
-                    towns: [],
-                    roadLvOptions: ['省道', '市道', '區道', '市區道路', '其他'],
-                    smoothOptions: [],
-                    holeOptions: [],
+                    draftSentinel: null,
 
-                    // 主表單模型
+                    // 下拉與核選清單
+                    towns: [],
+                    damageCategories: ['路面損壞', '交通標線損壞不良'],
+                    damageTypes: ['坑洞', '龜裂', '凹陷', '人手孔蓋週邊破損', '人手孔蓋欠平順', '補綻(臨補)'],
+                    laneOptions: ['路口', '車道1', '車道2', '車道3', '車道4', '車道5', '車道交界處', '全車道'],
+                    directionOptions: ['單號', '雙號', '無法判定'],
+                    roadTypeOptions: ['平面', '非平面'],
+
+                    // 車道多選模型
+                    selectedLanes: ['全車道'],
+
+                    // 主表單模型 (完全對標新規格)
                     form: {
                         Break_ID: '',
                         Show_ID: '',
                         Report_Date: '',
+                        Damage_Category: '路面損壞',
+                        Damage_Type: '坑洞',
+                        Damage_Length: '',
+                        Damage_Width: '',
                         TOWN_CODE: '',
-                        ROAD_LV: '市區道路',
                         ROAD_Name: '',
-                        Smooth: '',
-                        Hole_Conn_St: '',
-                        Memo: '',
+                        Location_Desc: '',
                         S_UTME: '',
                         S_UTMN: '',
                         Lat: '',
-                        Lon: ''
+                        Lon: '',
+                        Lane_Info: '全車道',
+                        Direction: '無法判定',
+                        Road_Type: '平面',
+                        Memo: ''
                     },
 
-                    // 佐證照片清單 [{ Index, FileName, Url, Base64, PreviewUrl }]
-                    photos: [],
+                    // 7 格照片模型槽位陣列: 每個元素為 { Slot: 1~7, FileName: '', Url: '', PreviewUrl: '', Base64: '', Deleted: false }
+                    photosSlots: [],
+                    activeUploadingSlot: 1,
 
                     // UI 狀態
-                    isMapCollapsed: false,
+                    isMapModalOpen: false,
                     isSubmitting: false,
                     alertMessage: '',
                     alertType: 'info',
@@ -970,42 +1277,90 @@
                 };
             },
 
+            computed: {
+                isManholeType() {
+                    return this.form.Damage_Type === '人手孔蓋週邊破損' || this.form.Damage_Type === '人手孔蓋欠平順';
+                },
+                calcArea() {
+                    const l = parseFloat(this.form.Damage_Length);
+                    const w = parseFloat(this.form.Damage_Width);
+                    if (!isNaN(l) && !isNaN(w) && l > 0 && w > 0) {
+                        return (l * w).toFixed(2);
+                    }
+                    return 0;
+                }
+            },
+
             created() {
-                // 非響應式屬性隔離 Leaflet 實例 (防止 Vue 3 Proxy 報錯)
-                this.leafletMap = null;
-                this.marker = null;
+                this.modalMap = null;
+                this.modalMarker = null;
+                this.initEmptySlots();
             },
 
             mounted() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const m = urlParams.get('mode');
+                this.fromId = urlParams.get('fromId') || '';
                 if (m && m.toLowerCase() === 'edit') {
+                    this.mode = 'edit';
+                    this.caseId = urlParams.get('id') || '';
+                } else if (!m && urlParams.get('id')) {
                     this.mode = 'edit';
                     this.caseId = urlParams.get('id') || '';
                 } else {
                     this.mode = 'new';
                 }
 
-                this.initMap();
                 this.loadInitData();
                 this.initDraftSentinel();
             },
 
             methods: {
+                // 初始化 7 個空槽位
+                initEmptySlots() {
+                    this.photosSlots = [];
+                    for (let i = 1; i <= 7; i++) {
+                        this.photosSlots.push({
+                            Slot: i,
+                            FileName: '',
+                            Url: '',
+                            PreviewUrl: '',
+                            Base64: '',
+                            Deleted: false
+                        });
+                    }
+                },
+
+                // 取得指定槽位照片
+                getSlotPhoto(slot) {
+                    const item = this.photosSlots.find(p => p.Slot === slot);
+                    if (item && (item.PreviewUrl || item.Url) && !item.Deleted) {
+                        return item;
+                    }
+                    return null;
+                },
+
+                hasPhotoInSlot(slot) {
+                    return this.getSlotPhoto(slot) !== null;
+                },
+
                 // 0. 初始化離線草稿守護器
                 initDraftSentinel() {
                     if (this.mode !== 'new' || typeof FecOfflineSentinel === 'undefined') return;
                     this.draftSentinel = FecOfflineSentinel.create({
-                        storageKey: 'FEC_DRAFT_NEWBREAK',
+                        storageKey: 'FEC_DRAFT_ROADBREAK_NEW',
                         bannerPosition: 'top',
                         getData: () => {
                             if (this.mode !== 'new') return null;
                             return {
                                 form: this.form,
-                                photos: this.photos.map(p => ({
+                                selectedLanes: this.selectedLanes,
+                                photosSlots: this.photosSlots.map(p => ({
+                                    Slot: p.Slot,
                                     FileName: p.FileName,
                                     PreviewUrl: p.PreviewUrl,
-                                    Base64: p.Base64
+                                    Base64: p.Base64,
+                                    Deleted: p.Deleted
                                 }))
                             };
                         },
@@ -1013,18 +1368,11 @@
                             if (saved && saved.form) {
                                 Object.assign(this.form, saved.form);
                             }
-                            if (saved && saved.photos && Array.isArray(saved.photos)) {
-                                this.photos = saved.photos;
+                            if (saved && saved.selectedLanes && Array.isArray(saved.selectedLanes)) {
+                                this.selectedLanes = saved.selectedLanes;
                             }
-                            if (this.form.Lat && this.form.Lon) {
-                                const lat = parseFloat(this.form.Lat);
-                                const lon = parseFloat(this.form.Lon);
-                                if (!isNaN(lat) && !isNaN(lon)) {
-                                    this.setMarkerPosition(lat, lon, true);
-                                    if (this.leafletMap) {
-                                        this.leafletMap.setView([lat, lon], 17);
-                                    }
-                                }
+                            if (saved && saved.photosSlots && Array.isArray(saved.photosSlots)) {
+                                this.photosSlots = saved.photosSlots;
                             }
                             this.showAlert('已自動還原上次儲存的離線草稿內容！', 'success');
                         }
@@ -1034,163 +1382,50 @@
                     }
                 },
 
-                // 1. 初始化 Leaflet 地圖
-                initMap() {
-                    const defaultCenter = [25.012363, 121.465715]; // 新北市政府中心
-                    this.leafletMap = L.map('map', {
-                        center: defaultCenter,
-                        zoom: 14,
-                        zoomControl: false
-                    });
-
-                    // 縮放控制按鈕配置在左下角，避開頂端
-                    L.control.zoom({ position: 'bottomright' }).addTo(this.leafletMap);
-
-                    // 圖層宣告
-                    const emapLayer = L.tileLayer('https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}', {
-                        maxZoom: 19,
-                        attribution: '&copy; 內政部國土測繪中心'
-                    });
-
-                    const photoLayer = L.tileLayer('https://wmts.nlsc.gov.tw/wmts/PHOTO2/default/GoogleMapsCompatible/{z}/{y}/{x}', {
-                        maxZoom: 19,
-                        attribution: '&copy; 內政部國土測繪中心'
-                    });
-
-                    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        maxZoom: 19,
-                        attribution: '&copy; OpenStreetMap'
-                    });
-
-                    emapLayer.addTo(this.leafletMap);
-
-                    const baseLayers = {
-                        "臺灣通用電子地圖": emapLayer,
-                        "正射影像圖": photoLayer,
-                        "OpenStreetMap": osmLayer
-                    };
-                    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(this.leafletMap);
-
-                    // 點擊地圖即時選點
-                    this.leafletMap.on('click', (e) => {
-                        this.setMarkerPosition(e.latlng.lat, e.latlng.lng, true);
-                    });
-                },
-
-                // 2. 設定座標標記 Pin (雙向同步 WGS84 與 TWD97)
-                setMarkerPosition(lat, lon, panTo) {
-                    if (!lat || !lon || isNaN(lat) || isNaN(lon)) return;
-
-                    const twd = Twd97Wgs84Helper.wgs84ToTwd97(lat, lon);
-                    this.form.Lat = lat.toFixed(6);
-                    this.form.Lon = lon.toFixed(6);
-                    this.form.S_UTME = twd.x;
-                    this.form.S_UTMN = twd.y;
-
-                    const iconHtml = '<div class="custom-map-marker"><div class="marker-pin"><i class="fas fa-exclamation-triangle marker-icon"></i></div></div>';
-                    const customIcon = L.divIcon({
-                        className: '',
-                        html: iconHtml,
-                        iconSize: [34, 34],
-                        iconAnchor: [17, 34]
-                    });
-
-                    if (this.marker) {
-                        this.marker.setLatLng([lat, lon]);
-                    } else {
-                        this.marker = L.marker([lat, lon], {
-                            icon: customIcon,
-                            draggable: true
-                        }).addTo(this.leafletMap);
-
-                        // 拖拉標記放開後更新座標
-                        this.marker.on('dragend', (e) => {
-                            const newPos = e.target.getLatLng();
-                            this.setMarkerPosition(newPos.lat, newPos.lng, false);
-                        });
-                    }
-
-                    if (panTo && this.leafletMap) {
-                        this.leafletMap.panTo([lat, lon]);
-                    }
-                },
-
-                // 3. 取得目前 GPS 定位
-                getCurrentLocation() {
-                    if (!navigator.geolocation) {
-                        this.showAlert('您的瀏覽器或設備不支援 GPS 定位功能', 'danger');
-                        return;
-                    }
-
-                    this.showAlert('正在透過 GPS 定位中，請稍候...', 'info');
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            const lat = position.coords.latitude;
-                            const lon = position.coords.longitude;
-                            this.setMarkerPosition(lat, lon, true);
-                            if (this.leafletMap) {
-                                this.leafletMap.setView([lat, lon], 17);
-                            }
-                            this.showAlert('GPS 定位成功！坐標已自動同步', 'success');
-                        },
-                        (error) => {
-                            let msg = '無法取得 GPS 定位';
-                            switch (error.code) {
-                                case error.PERMISSION_DENIED:
-                                    msg = '定位權限被拒絕，請確認瀏覽器已允許位置存取權限';
-                                    break;
-                                case error.POSITION_UNAVAILABLE:
-                                    msg = '無法獲取目前位置資訊';
-                                    break;
-                                case error.TIMEOUT:
-                                    msg = '定位請求逾時，請至收訊良好處重試';
-                                    break;
-                            }
-                            this.showAlert(msg, 'warning');
-                        },
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                    );
-                },
-
-                // 4. 重設地圖檢視
-                resetMapView() {
-                    if (this.form.Lat && this.form.Lon && this.leafletMap) {
-                        this.leafletMap.setView([this.form.Lat, this.form.Lon], 16);
-                    } else if (this.leafletMap) {
-                        this.leafletMap.setView([25.012363, 121.465715], 13);
-                    }
-                },
-
-                // 5. 地圖收合/展開
-                toggleMapCollapse() {
-                    this.isMapCollapsed = !this.isMapCollapsed;
-                    setTimeout(() => {
-                        if (this.leafletMap) {
-                            this.leafletMap.invalidateSize();
+                // 車道連動處理
+                onLaneChange(targetLane) {
+                    if (targetLane === '全車道') {
+                        if (this.selectedLanes.includes('全車道')) {
+                            this.selectedLanes = ['全車道'];
                         }
-                    }, 350);
+                    } else {
+                        // 若選取了其他車道，自動移除「全車道」
+                        const idx = this.selectedLanes.indexOf('全車道');
+                        if (idx >= 0) {
+                            this.selectedLanes.splice(idx, 1);
+                        }
+                    }
+                    this.form.Lane_Info = this.selectedLanes.join(',');
                 },
 
-                // 6. 載入初始化選單資料
+                // 載入初始選單
                 loadInitData() {
                     axios.get('NewBreak.aspx?action=getinit')
                         .then(res => {
                             if (res.data && res.data.Success) {
                                 const d = res.data.Data;
                                 this.towns = d.Towns || [];
-                                this.roadLvOptions = d.RoadLvOptions || this.roadLvOptions;
-                                this.smoothOptions = d.SmoothOptions || [];
-                                this.holeOptions = d.HoleOptions || [];
+                                if (d.DamageCategories) this.damageCategories = d.DamageCategories;
+                                if (d.DamageTypes) this.damageTypes = d.DamageTypes;
+                                if (d.LaneOptions) this.laneOptions = d.LaneOptions;
+                                if (d.DirectionOptions) this.directionOptions = d.DirectionOptions;
+                                if (d.RoadTypeOptions) this.roadTypeOptions = d.RoadTypeOptions;
                                 this.currentUser = d.CurrentUser || this.currentUser;
 
                                 if (this.mode === 'new') {
                                     this.form.Break_ID = d.GeneratedCaseId || '';
                                     this.form.Report_Date = d.ReportDate || '';
-                                    if (this.smoothOptions.length > 0) this.form.Smooth = this.smoothOptions[0].Code;
-                                    if (this.holeOptions.length > 0) this.form.Hole_Conn_St = this.holeOptions[0].Code;
-                                    
-                                    // 新增時自動嘗試 GPS 定位一次
-                                    this.getCurrentLocation();
+                                    if (this.fromId) {
+                                        this.loadFromPreviousCase(this.fromId);
+                                    } else {
+                                        if (this.towns.length > 0 && !this.form.TOWN_CODE) {
+                                            // 預設五股區 (6501500) 或第一個
+                                            const wugu = this.towns.find(t => t.TownName.includes('五股'));
+                                            this.form.TOWN_CODE = wugu ? wugu.TownNo : this.towns[0].TownNo;
+                                        }
+                                        // 自動嘗試定位
+                                        this.tryAutoGps();
+                                    }
                                 } else {
                                     this.loadCaseData(this.caseId);
                                 }
@@ -1204,7 +1439,38 @@
                         });
                 },
 
-                // 7. 載入案件資料 (編輯模式)
+                // 依前案建立後續持續追蹤複查通報
+                loadFromPreviousCase(prevId) {
+                    if (!prevId) return;
+                    axios.get('NewBreak.aspx?action=getcase&id=' + encodeURIComponent(prevId))
+                        .then(res => {
+                            if (res.data && res.data.Success) {
+                                const c = res.data.Data;
+                                this.form.TOWN_CODE = c.TOWN_CODE || this.form.TOWN_CODE;
+                                this.form.ROAD_Name = c.ROAD_Name || '';
+                                this.form.Location_Desc = c.Location_Desc || '';
+                                this.form.Damage_Category = c.Damage_Category || '路面損壞';
+                                this.form.Damage_Type = c.Damage_Type || '坑洞';
+                                this.form.Damage_Length = c.Damage_Length || '';
+                                this.form.Damage_Width = c.Damage_Width || '';
+                                this.form.Lane_Info = c.Lane_Info || '全車道';
+                                this.form.Direction = c.Direction || '無法判定';
+                                this.form.Road_Type = c.Road_Type || '平面';
+                                this.form.S_UTME = c.S_UTME || '';
+                                this.form.S_UTMN = c.S_UTMN || '';
+                                this.form.Lat = c.Lat || '';
+                                this.form.Lon = c.Lon || '';
+                                this.form.Memo = '【持續追蹤複查案件】原通報反映編號：' + (c.Show_ID || c.Break_ID) + (c.Memo ? '；原說明：' + c.Memo : '');
+                                if (this.form.Lane_Info) {
+                                    this.selectedLanes = this.form.Lane_Info.split(',').filter(x => x.trim().length > 0);
+                                }
+                                this.showAlert('已自動帶入原追蹤案件（' + (c.Show_ID || prevId) + '）之反映地點、坐標與損壞資訊，請上傳最新複查照片後送出！', 'info');
+                            }
+                        })
+                        .catch(err => console.error(err));
+                },
+
+                // 載入案件資料 (編輯模式)
                 loadCaseData(id) {
                     if (!id) return;
                     axios.get('NewBreak.aspx?action=getcase&id=' + encodeURIComponent(id))
@@ -1215,32 +1481,37 @@
                                 this.form.Show_ID = c.Show_ID;
                                 this.form.Report_Date = c.Report_Date;
                                 this.form.TOWN_CODE = c.TOWN_CODE;
-                                this.form.ROAD_LV = c.ROAD_LV || '市區道路';
                                 this.form.ROAD_Name = c.ROAD_Name;
-                                this.form.Smooth = c.Smooth;
-                                this.form.Hole_Conn_St = c.Hole_Conn_St;
-                                this.form.Memo = c.Memo;
-                                this.form.S_UTME = c.S_UTME;
-                                this.form.S_UTMN = c.S_UTMN;
-                                this.form.Lat = c.Lat;
-                                this.form.Lon = c.Lon;
+                                this.form.Location_Desc = c.Location_Desc || '';
+                                this.form.Damage_Category = c.Damage_Category || '路面損壞';
+                                this.form.Damage_Type = c.Damage_Type || '坑洞';
+                                this.form.Damage_Length = c.Damage_Length || '';
+                                this.form.Damage_Width = c.Damage_Width || '';
+                                this.form.Lane_Info = c.Lane_Info || '全車道';
+                                this.form.Direction = c.Direction || '無法判定';
+                                this.form.Road_Type = c.Road_Type || '平面';
+                                this.form.Memo = c.Memo || '';
+                                this.form.S_UTME = c.S_UTME || '';
+                                this.form.S_UTMN = c.S_UTMN || '';
+                                this.form.Lat = c.Lat || '';
+                                this.form.Lon = c.Lon || '';
 
-                                // 既有照片
-                                this.photos = (c.Photos || []).map(p => ({
-                                    FileName: p.FileName,
-                                    Url: p.Url,
-                                    PreviewUrl: p.Url,
-                                    Base64: null
-                                }));
+                                // 車道反解陣列
+                                if (this.form.Lane_Info) {
+                                    this.selectedLanes = this.form.Lane_Info.split(',').filter(x => x.trim().length > 0);
+                                }
 
-                                // 定位地圖
-                                if (c.Lat && c.Lon) {
-                                    const lat = parseFloat(c.Lat);
-                                    const lon = parseFloat(c.Lon);
-                                    this.setMarkerPosition(lat, lon, true);
-                                    if (this.leafletMap) {
-                                        this.leafletMap.setView([lat, lon], 17);
-                                    }
+                                // 7 格照片槽位填充
+                                if (c.Photos && Array.isArray(c.Photos)) {
+                                    c.Photos.forEach(p => {
+                                        const target = this.photosSlots.find(s => s.Slot === p.Slot);
+                                        if (target) {
+                                            target.FileName = p.FileName;
+                                            target.Url = p.Url;
+                                            target.PreviewUrl = p.Url;
+                                            target.Deleted = false;
+                                        }
+                                    });
                                 }
                             } else {
                                 this.showAlert(res.data.Message || '找不到案件資料', 'danger');
@@ -1252,123 +1523,223 @@
                         });
                 },
 
-                // 8. 樣式與圖標輔助
-                getSmoothChipClass(code) {
-                    if (this.form.Smooth === code) {
-                        if (code === '1') return 'active-success';
-                        if (code === '2') return 'active-primary';
-                        if (code === '3') return 'active-warning';
-                        return 'active-danger';
-                    }
-                    return '';
-                },
-
-                getSmoothIcon(code) {
-                    if (code === '1') return 'fa-check text-success';
-                    if (code === '2') return 'fa-wave-square text-info';
-                    if (code === '3') return 'fa-exclamation text-warning';
-                    return 'fa-ban text-danger';
-                },
-
-                getHoleChipClass(code) {
-                    if (this.form.Hole_Conn_St === code) {
-                        if (code === '1') return 'active-success';
-                        if (code === '2') return 'active-warning';
-                        return 'active-primary';
-                    }
-                    return '';
-                },
-
-                getHoleIcon(code) {
-                    if (code === '1') return 'fa-check text-success';
-                    if (code === '2') return 'fa-sort-amount-up text-warning';
-                    return 'fa-circle text-muted';
-                },
-
-                // 9. 圖片選擇與 Canvas 等比例壓縮
-                triggerFileSelect() {
-                    if (this.$refs.fileInput) {
-                        this.$refs.fileInput.click();
+                // 手動輸入坐標時反算經緯度
+                onManualCoordChange() {
+                    const x = parseFloat(this.form.S_UTME);
+                    const y = parseFloat(this.form.S_UTMN);
+                    if (!isNaN(x) && !isNaN(y) && x > 100000 && y > 100000) {
+                        const geo = Twd97Wgs84Helper.twd97ToWgs84(x, y);
+                        this.form.Lat = geo.lat.toFixed(6);
+                        this.form.Lon = geo.lon.toFixed(6);
                     }
                 },
 
-                onFilesSelected(e) {
+                // 電子地圖彈窗開啟
+                openMapModal() {
+                    this.isMapModalOpen = true;
+                    this.$nextTick(() => {
+                        this.initOrUpdateModalMap();
+                    });
+                },
+
+                closeMapModal() {
+                    this.isMapModalOpen = false;
+                },
+
+                initOrUpdateModalMap() {
+                    let centerLat = 25.012363;
+                    let centerLon = 121.465715;
+                    let zoom = 14;
+
+                    if (this.form.Lat && this.form.Lon) {
+                        centerLat = parseFloat(this.form.Lat);
+                        centerLon = parseFloat(this.form.Lon);
+                        zoom = 17;
+                    }
+
+                    if (!this.modalMap) {
+                        this.modalMap = L.map('modalMap', {
+                            center: [centerLat, centerLon],
+                            zoom: zoom,
+                            zoomControl: false
+                        });
+
+                        L.control.zoom({ position: 'bottomright' }).addTo(this.modalMap);
+
+                        const emap = L.tileLayer('https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}', {
+                            maxZoom: 19,
+                            attribution: '&copy; 內政部國土測繪中心'
+                        });
+                        const photo = L.tileLayer('https://wmts.nlsc.gov.tw/wmts/PHOTO2/default/GoogleMapsCompatible/{z}/{y}/{x}', {
+                            maxZoom: 19,
+                            attribution: '&copy; 內政部國土測繪中心'
+                        });
+                        emap.addTo(this.modalMap);
+
+                        L.control.layers({ "通用電子地圖": emap, "空拍正射影像": photo }, null, { position: 'topright' }).addTo(this.modalMap);
+
+                        this.modalMap.on('click', (e) => {
+                            this.setModalMarkerPosition(e.latlng.lat, e.latlng.lng, false);
+                        });
+                    } else {
+                        this.modalMap.invalidateSize();
+                        this.modalMap.setView([centerLat, centerLon], zoom);
+                    }
+
+                    if (this.form.Lat && this.form.Lon) {
+                        this.setModalMarkerPosition(parseFloat(this.form.Lat), parseFloat(this.form.Lon), true);
+                    }
+                },
+
+                setModalMarkerPosition(lat, lon, panTo) {
+                    if (!lat || !lon || isNaN(lat) || isNaN(lon)) return;
+
+                    const twd = Twd97Wgs84Helper.wgs84ToTwd97(lat, lon);
+                    this.form.Lat = lat.toFixed(6);
+                    this.form.Lon = lon.toFixed(6);
+                    this.form.S_UTME = twd.x;
+                    this.form.S_UTMN = twd.y;
+
+                    const iconHtml = '<div class="marker-pin"><i class="fas fa-exclamation-triangle marker-icon"></i></div>';
+                    const customIcon = L.divIcon({
+                        className: '',
+                        html: iconHtml,
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 32]
+                    });
+
+                    if (this.modalMarker) {
+                        this.modalMarker.setLatLng([lat, lon]);
+                    } else {
+                        this.modalMarker = L.marker([lat, lon], {
+                            icon: customIcon,
+                            draggable: true
+                        }).addTo(this.modalMap);
+
+                        this.modalMarker.on('dragend', (e) => {
+                            const pos = e.target.getLatLng();
+                            this.setModalMarkerPosition(pos.lat, pos.lng, false);
+                        });
+                    }
+
+                    if (panTo && this.modalMap) {
+                        this.modalMap.panTo([lat, lon]);
+                    }
+                },
+
+                tryAutoGps() {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            pos => {
+                                const lat = pos.coords.latitude;
+                                const lon = pos.coords.longitude;
+                                const twd = Twd97Wgs84Helper.wgs84ToTwd97(lat, lon);
+                                this.form.Lat = lat.toFixed(6);
+                                this.form.Lon = lon.toFixed(6);
+                                this.form.S_UTME = twd.x;
+                                this.form.S_UTMN = twd.y;
+                            },
+                            () => { },
+                            { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+                        );
+                    }
+                },
+
+                getCurrentGpsLocation() {
+                    if (!navigator.geolocation) {
+                        alert('您的裝置或瀏覽器不支援 GPS 定位');
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(
+                        pos => {
+                            const lat = pos.coords.latitude;
+                            const lon = pos.coords.longitude;
+                            this.setModalMarkerPosition(lat, lon, true);
+                            if (this.modalMap) this.modalMap.setView([lat, lon], 17);
+                        },
+                        err => {
+                            alert('無法取得 GPS 坐標，請確認已授權定位權限');
+                        },
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                },
+
+                // 槽位上傳控制
+                triggerSlotUpload(slot) {
+                    this.activeUploadingSlot = slot;
+                    if (this.$refs.slotFileInput) {
+                        this.$refs.slotFileInput.click();
+                    }
+                },
+
+                handleSlotClick(slot) {
+                    const p = this.getSlotPhoto(slot);
+                    if (p) {
+                        this.lightboxImg = p.PreviewUrl || p.Url;
+                    } else {
+                        this.triggerSlotUpload(slot);
+                    }
+                },
+
+                onSlotFileSelected(e) {
                     const files = e.target.files;
                     if (!files || files.length === 0) return;
 
-                    const remainSlots = 6 - this.photos.length;
-                    if (remainSlots <= 0) {
-                        this.showAlert('最多僅能上傳 6 張照片', 'warning');
+                    const file = files[0];
+                    // 檔案大小上限 15MB 檢查
+                    if (file.size > 15 * 1024 * 1024) {
+                        alert('單一照片檔案大小不可超過 15MB！');
+                        e.target.value = '';
                         return;
                     }
 
-                    const selectedFiles = Array.from(files).slice(0, remainSlots);
-                    selectedFiles.forEach(file => {
-                        this.compressAndAddPhoto(file);
-                    });
+                    const slot = this.activeUploadingSlot;
+                    const target = this.photosSlots.find(s => s.Slot === slot);
+                    if (!target) return;
 
-                    // 清空 input 讓重複選取同張檔案仍可觸發
-                    e.target.value = '';
-                },
-
-                compressAndAddPhoto(file) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         const img = new Image();
                         img.onload = () => {
+                            // Canvas 自動等比無損壓縮
                             const canvas = document.createElement('canvas');
-                            const maxDimension = 1920;
-                            let width = img.width;
-                            let height = img.height;
-
-                            if (width > maxDimension || height > maxDimension) {
-                                if (width > height) {
-                                    height = Math.round((height * maxDimension) / width);
-                                    width = maxDimension;
+                            const maxDim = 1920;
+                            let w = img.width;
+                            let h = img.height;
+                            if (w > maxDim || h > maxDim) {
+                                if (w > h) {
+                                    h = Math.round((h * maxDim) / w);
+                                    w = maxDim;
                                 } else {
-                                    width = Math.round((width * maxDimension) / height);
-                                    height = maxDimension;
+                                    w = Math.round((w * maxDim) / h);
+                                    h = maxDim;
                                 }
                             }
-
-                            canvas.width = width;
-                            canvas.height = height;
+                            canvas.width = w;
+                            canvas.height = h;
                             const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, width, height);
+                            ctx.drawImage(img, 0, 0, w, h);
 
                             const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
-                            this.photos.push({
-                                FileName: file.name,
-                                PreviewUrl: compressedBase64,
-                                Base64: compressedBase64
-                            });
+                            target.FileName = file.name;
+                            target.PreviewUrl = compressedBase64;
+                            target.Base64 = compressedBase64;
+                            target.Deleted = false;
                         };
                         img.src = event.target.result;
                     };
                     reader.readAsDataURL(file);
+
+                    e.target.value = '';
                 },
 
-                removePhoto(idx) {
-                    const p = this.photos[idx];
-                    if (p.Url && this.mode === 'edit') {
-                        // 既有檔案詢問刪除
-                        if (!confirm('是否確定刪除此張既有照片？')) return;
-                        axios.get('NewBreak.aspx?action=deletephoto&id=' + encodeURIComponent(this.form.Break_ID) + '&filename=' + encodeURIComponent(p.FileName))
-                            .then(res => {
-                                if (res.data && res.data.Success) {
-                                    this.photos.splice(idx, 1);
-                                    this.showAlert('照片已刪除', 'success');
-                                } else {
-                                    this.showAlert(res.data.Message || '刪除失敗', 'danger');
-                                }
-                            });
-                    } else {
-                        this.photos.splice(idx, 1);
+                clearSlotPhoto(slot) {
+                    const target = this.photosSlots.find(s => s.Slot === slot);
+                    if (target) {
+                        target.PreviewUrl = '';
+                        target.Base64 = '';
+                        target.Deleted = true;
                     }
-                },
-
-                openLightbox(imgSrc) {
-                    this.lightboxImg = imgSrc;
                 },
 
                 showAlert(msg, type) {
@@ -1377,53 +1748,74 @@
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
 
-                // 10. 送出表單
+                // 送出通報
                 submitForm() {
                     if (!navigator.onLine) {
                         alert('⚠️ 現場網路已離線！系統已自動保存本機最新草稿，請待恢復連線後再按送出。');
                         return;
                     }
-                    // 表單驗證
-                    if (!this.form.S_UTME || !this.form.S_UTMN || this.form.S_UTME < 100000 || this.form.S_UTMN < 100000) {
-                        this.showAlert('請先於地圖點擊標記或點選 GPS 定位取得通報坐標！', 'danger');
+
+                    // 1:1 對標嚴格驗證
+                    if (!this.form.Damage_Category) {
+                        this.showAlert('請選擇【路面損壞-類別】！', 'danger');
+                        return;
+                    }
+                    if (!this.form.Damage_Type) {
+                        this.showAlert('請選擇【路面損壞-性質】！', 'danger');
                         return;
                     }
                     if (!this.form.TOWN_CODE) {
-                        this.showAlert('請選擇行政區！', 'danger');
+                        this.showAlert('請選擇反映地點之【所屬區】！', 'danger');
                         return;
                     }
                     if (!this.form.ROAD_Name) {
-                        this.showAlert('請填寫道路名稱！', 'danger');
+                        this.showAlert('請填寫反映地點之【地址、路段或地標】！', 'danger');
                         return;
                     }
-                    if (!this.form.Smooth) {
-                        this.showAlert('請點選道路鋪面平整度！', 'danger');
+                    if (!this.form.S_UTME || !this.form.S_UTMN || this.form.S_UTME < 100000 || this.form.S_UTMN < 100000) {
+                        this.showAlert('請點選【電子地圖-點選座標】取得正確通報坐標！', 'danger');
                         return;
                     }
-                    if (!this.form.Hole_Conn_St) {
-                        this.showAlert('請點選道路鋪面與人手孔蓋銜接處狀況！', 'danger');
+                    if (this.selectedLanes.length === 0) {
+                        this.showAlert('請至少選取一個【車道】！', 'danger');
+                        return;
+                    }
+                    if (!this.form.Direction) {
+                        this.showAlert('請選取【方向】(單號/雙號/無法判定)！', 'danger');
+                        return;
+                    }
+                    if (!this.form.Road_Type) {
+                        this.showAlert('請選取【道路型態】(平面/非平面)！', 'danger');
                         return;
                     }
 
+                    this.form.Lane_Info = this.selectedLanes.join(',');
                     this.isSubmitting = true;
                     this.showAlert('正在儲存通報單，請稍候...', 'info');
 
                     const payload = {
                         Mode: this.mode,
                         Break_ID: this.form.Break_ID,
+                        Damage_Category: this.form.Damage_Category,
+                        Damage_Type: this.form.Damage_Type,
+                        Damage_Length: this.form.Damage_Length,
+                        Damage_Width: this.form.Damage_Width,
                         TOWN_CODE: this.form.TOWN_CODE,
-                        ROAD_LV: this.form.ROAD_LV,
                         ROAD_Name: this.form.ROAD_Name,
-                        Smooth: this.form.Smooth,
-                        Hole_Conn_St: this.form.Hole_Conn_St,
+                        Location_Desc: this.form.Location_Desc,
+                        Lane_Info: this.form.Lane_Info,
+                        Direction: this.form.Direction,
+                        Road_Type: this.form.Road_Type,
                         Memo: this.form.Memo,
                         S_UTME: this.form.S_UTME,
                         S_UTMN: this.form.S_UTMN,
                         Lat: this.form.Lat || null,
                         Lon: this.form.Lon || null,
-                        Photos: this.photos.map(p => ({
-                            FileName: p.FileName,
-                            Base64: p.Base64 || null
+                        Photos: this.photosSlots.map(s => ({
+                            Slot: s.Slot,
+                            FileName: s.FileName,
+                            Base64: s.Base64 || null,
+                            Deleted: s.Deleted
                         }))
                     };
 
@@ -1443,12 +1835,12 @@
                         .catch(err => {
                             this.isSubmitting = false;
                             console.error(err);
-                            this.showAlert('伺服器處理錯誤，儲存失敗', 'danger');
+                            this.showAlert('伺服器連線失敗或執行錯誤', 'danger');
                         });
                 },
 
                 goBack() {
-                    if (confirm('是否確認離開？未儲存的內容將會遺失。')) {
+                    if (confirm('是否確認離開？未儲存的通報內容將會遺失。')) {
                         if (window.history.length > 1) {
                             window.history.back();
                         } else {

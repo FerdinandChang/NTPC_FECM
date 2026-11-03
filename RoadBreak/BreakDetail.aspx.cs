@@ -21,6 +21,16 @@ namespace NTPC_FEC.RoadBreak
             json.MaxJsonLength = int.MaxValue;
         }
 
+        // 單張照片項目模型
+        public class SimplePhotoDto
+        {
+            public string Title { get; set; }
+            public string FileName { get; set; }
+            public string Url { get; set; }
+            public long Size { get; set; }
+            public string Time { get; set; }
+        }
+
         // 照片對比模型
         public class PhotoComparisonItem
         {
@@ -165,7 +175,7 @@ namespace NTPC_FEC.RoadBreak
                 DateTime dtRep;
                 if (DateTime.TryParse(r["Report_Date"].ToString(), out dtRep))
                 {
-                    reportDateStr = dtRep.ToString("yyyy-MM-dd HH:mm");
+                    reportDateStr = dtRep.ToString("yyyy/MM/dd HH:mm");
                 }
             }
 
@@ -175,7 +185,7 @@ namespace NTPC_FEC.RoadBreak
                 DateTime dtSet;
                 if (DateTime.TryParse(r["SetCOM_Date"].ToString(), out dtSet))
                 {
-                    setComDateStr = dtSet.ToString("yyyy-MM-dd HH:mm");
+                    setComDateStr = dtSet.ToString("yyyy/MM/dd HH:mm");
                 }
             }
 
@@ -185,13 +195,17 @@ namespace NTPC_FEC.RoadBreak
                 DateTime dtImp;
                 if (DateTime.TryParse(r["Improve_Date"].ToString(), out dtImp))
                 {
-                    improveDateStr = dtImp.ToString("yyyy-MM-dd HH:mm");
+                    improveDateStr = dtImp.ToString("yyyy/MM/dd HH:mm");
                 }
             }
 
-            // 狀態與階段判定
+            // 狀態與階段判定 (含建議持續追蹤 Need_Follow)
             string gBack = r["G_Back"] != DBNull.Value ? r["G_Back"].ToString().Trim() : "";
             string gCom = r["G_COM"] != DBNull.Value ? r["G_COM"].ToString().Trim() : "";
+            string needFollow = r.Table.Columns.Contains("Need_Follow") && r["Need_Follow"] != DBNull.Value ? r["Need_Follow"].ToString().Trim() : "N";
+            string followMemo = r.Table.Columns.Contains("Follow_Memo") && r["Follow_Memo"] != DBNull.Value ? r["Follow_Memo"].ToString().Trim() : "";
+            string rdmCaseId = r.Table.Columns.Contains("RDM_Case_ID") && r["RDM_Case_ID"] != DBNull.Value ? r["RDM_Case_ID"].ToString().Trim() : "";
+
             string statusCode = "REPORTED";
             string statusText = "新通報 (待派工)";
             string statusBadgeClass = "badge-primary";
@@ -202,10 +216,16 @@ namespace NTPC_FEC.RoadBreak
                 statusText = "非權責單位退回";
                 statusBadgeClass = "badge-danger";
             }
+            else if (needFollow == "Y")
+            {
+                statusCode = "FOLLOW";
+                statusText = "建議持續追蹤";
+                statusBadgeClass = "badge-info";
+            }
             else if (!string.IsNullOrEmpty(improveDateStr))
             {
                 statusCode = "IMPROVED";
-                statusText = "已改善完成";
+                statusText = "已改善結案";
                 statusBadgeClass = "badge-success";
             }
             else if (!string.IsNullOrEmpty(gCom))
@@ -227,9 +247,73 @@ namespace NTPC_FEC.RoadBreak
                 kindName = kindCode;
             }
 
+            // 讀取新對標欄位 (兼顧歷史舊案件)
+            string damageCat = r.Table.Columns.Contains("Damage_Category") && r["Damage_Category"] != DBNull.Value ? r["Damage_Category"].ToString().Trim() : "路面損壞";
+            string damageType = r.Table.Columns.Contains("Damage_Type") && r["Damage_Type"] != DBNull.Value ? r["Damage_Type"].ToString().Trim() : "";
+            string damageLen = r.Table.Columns.Contains("Damage_Length") && r["Damage_Length"] != DBNull.Value ? r["Damage_Length"].ToString().Trim() : "";
+            string damageWid = r.Table.Columns.Contains("Damage_Width") && r["Damage_Width"] != DBNull.Value ? r["Damage_Width"].ToString().Trim() : "";
+            string locationDesc = r.Table.Columns.Contains("Location_Desc") && r["Location_Desc"] != DBNull.Value ? r["Location_Desc"].ToString().Trim() : "";
+            string laneInfo = r.Table.Columns.Contains("Lane_Info") && r["Lane_Info"] != DBNull.Value ? r["Lane_Info"].ToString().Trim() : "全車道";
+            string direction = r.Table.Columns.Contains("Direction") && r["Direction"] != DBNull.Value ? r["Direction"].ToString().Trim() : "無法判定";
+            string roadType = r.Table.Columns.Contains("Road_Type") && r["Road_Type"] != DBNull.Value ? r["Road_Type"].ToString().Trim() : "平面";
+            string damageCnt = r.Table.Columns.Contains("Damage_Count") && r["Damage_Count"] != DBNull.Value ? r["Damage_Count"].ToString().Trim() : "1";
+
+            string replyDateStr = "";
+            if (r.Table.Columns.Contains("G_Reply_Date") && r["G_Reply_Date"] != DBNull.Value)
+            {
+                DateTime dtRpy;
+                if (DateTime.TryParse(r["G_Reply_Date"].ToString(), out dtRpy)) replyDateStr = dtRpy.ToString("yyyy/MM/dd HH:mm");
+            }
+            string reportComDateStr = "";
+            if (r.Table.Columns.Contains("G_Report_Date") && r["G_Report_Date"] != DBNull.Value)
+            {
+                DateTime dtRpt;
+                if (DateTime.TryParse(r["G_Report_Date"].ToString(), out dtRpt)) reportComDateStr = dtRpt.ToString("yyyy/MM/dd HH:mm");
+            }
+
+            if (string.IsNullOrEmpty(damageType))
+            {
+                string oldHole = r["Hole_Conn_St"] != DBNull.Value ? r["Hole_Conn_St"].ToString().Trim() : "";
+                string oldSmooth = r["Smooth"] != DBNull.Value ? r["Smooth"].ToString().Trim() : "";
+                if (oldHole == "3" || oldHole == "4") damageType = "人手孔蓋週邊破損";
+                else if (oldHole == "2") damageType = "人手孔蓋欠平順";
+                else if (oldSmooth == "4") damageType = "坑洞";
+                else if (oldSmooth == "2") damageType = "龜裂";
+                else if (oldSmooth == "3") damageType = "凹陷";
+                else damageType = "坑洞";
+            }
+
+            string pciType = r.Table.Columns.Contains("PCI_Type") && r["PCI_Type"] != DBNull.Value && !string.IsNullOrEmpty(r["PCI_Type"].ToString()) ? r["PCI_Type"].ToString().Trim() : damageType;
+            string pciSeverity = r.Table.Columns.Contains("PCI_Severity") && r["PCI_Severity"] != DBNull.Value && !string.IsNullOrEmpty(r["PCI_Severity"].ToString()) ? r["PCI_Severity"].ToString().Trim() : "輕";
+            string supervisorSuggest = r.Table.Columns.Contains("Supervisor_Suggest") && r["Supervisor_Suggest"] != DBNull.Value && !string.IsNullOrEmpty(r["Supervisor_Suggest"].ToString()) ? r["Supervisor_Suggest"].ToString().Trim() : "尚未設定";
+            string dispatchMemo = r.Table.Columns.Contains("Dispatch_Memo") && r["Dispatch_Memo"] != DBNull.Value ? r["Dispatch_Memo"].ToString().Trim() : "";
+            string dispatchDoneDate = r.Table.Columns.Contains("Dispatch_Done_Date") && r["Dispatch_Done_Date"] != DBNull.Value && !string.IsNullOrEmpty(r["Dispatch_Done_Date"].ToString()) ? r["Dispatch_Done_Date"].ToString().Trim() : "無派工";
+            string dispatchReportDate = r.Table.Columns.Contains("Dispatch_Report_Date") && r["Dispatch_Report_Date"] != DBNull.Value && !string.IsNullOrEmpty(r["Dispatch_Report_Date"].ToString()) ? r["Dispatch_Report_Date"].ToString().Trim() : "無派工";
+
             var caseData = new
             {
                 Break_ID = r["Break_ID"].ToString().Trim(),
+                RDM_Case_ID = rdmCaseId,
+                Need_Follow = needFollow,
+                Follow_Memo = followMemo,
+                PCI_Type = pciType,
+                PCI_Severity = pciSeverity,
+                Supervisor_Suggest = supervisorSuggest,
+                Dispatch_Memo = dispatchMemo,
+                Dispatch_Done_Date = dispatchDoneDate,
+                Dispatch_Report_Date = dispatchReportDate,
+                Damage_Category = damageCat,
+                Damage_Type = damageType,
+                Damage_Length = damageLen,
+                Damage_Width = damageWid,
+                Damage_Count = damageCnt,
+                Location_Desc = locationDesc,
+                Lane_Info = laneInfo,
+                Direction = direction,
+                Road_Type = roadType,
+                District_Office = (r.Table.Columns.Contains("District_Office") && r["District_Office"] != DBNull.Value && !string.IsNullOrEmpty(r["District_Office"].ToString()) ? r["District_Office"].ToString().Trim() : (r["TOWN_NA"] != DBNull.Value && !string.IsNullOrEmpty(r["TOWN_NA"].ToString()) ? r["TOWN_NA"].ToString().Trim() + "公所" : "")),
+                Handle_Unit = (r.Table.Columns.Contains("Handle_Unit") && r["Handle_Unit"] != DBNull.Value && !string.IsNullOrEmpty(r["Handle_Unit"].ToString()) ? r["Handle_Unit"].ToString().Trim() : (r["G_COM_NAME"] != DBNull.Value && !string.IsNullOrEmpty(r["G_COM_NAME"].ToString()) ? r["G_COM_NAME"].ToString().Trim() : "健利營造有限公司")),
+                Handle_Status = (r.Table.Columns.Contains("Handle_Status") && r["Handle_Status"] != DBNull.Value && !string.IsNullOrEmpty(r["Handle_Status"].ToString()) ? r["Handle_Status"].ToString().Trim() : (!string.IsNullOrEmpty(improveDateStr) ? statusText : (!string.IsNullOrEmpty(gCom) ? "處理中 (待改善)" : "機關自行修補"))),
                 Show_ID = r["Show_ID"] != DBNull.Value ? r["Show_ID"].ToString().Trim() : r["Break_ID"].ToString().Trim(),
                 Report_Date = reportDateStr,
                 Report_User = r["Report_User"].ToString(),
@@ -260,6 +344,13 @@ namespace NTPC_FEC.RoadBreak
                 G_USER = r["G_USER"].ToString(),
                 G_UserName = r["G_UserName"].ToString(),
                 G_Memo = r["G_Memo"].ToString(),
+                G_Fix_Status = r.Table.Columns.Contains("G_Fix_Status") && r["G_Fix_Status"] != DBNull.Value ? r["G_Fix_Status"].ToString().Trim() : "",
+                G_Contact_Phone = r.Table.Columns.Contains("G_Contact_Phone") && r["G_Contact_Phone"] != DBNull.Value ? r["G_Contact_Phone"].ToString().Trim() : "",
+                G_Delay_Reason = r.Table.Columns.Contains("G_Delay_Reason") && r["G_Delay_Reason"] != DBNull.Value ? r["G_Delay_Reason"].ToString().Trim() : "",
+                G_Reply_Type = r.Table.Columns.Contains("G_Reply_Type") && r["G_Reply_Type"] != DBNull.Value ? r["G_Reply_Type"].ToString().Trim() : "網路回覆",
+                G_Reply_Memo = r.Table.Columns.Contains("G_Reply_Memo") && r["G_Reply_Memo"] != DBNull.Value ? r["G_Reply_Memo"].ToString().Trim() : "",
+                G_Reply_Date = replyDateStr,
+                G_Report_Date = reportComDateStr,
                 G_Back = gBack,
                 StatusCode = statusCode,
                 StatusText = statusText,
@@ -267,7 +358,9 @@ namespace NTPC_FEC.RoadBreak
             };
 
             // 讀取現場佐證照片與改善後照片
-            List<PhotoComparisonItem> comparisonList = LoadPhotoComparisonList(breakId);
+            List<SimplePhotoDto> beforePhotos;
+            List<SimplePhotoDto> afterPhotos;
+            List<PhotoComparisonItem> comparisonList = LoadPhotoComparisonList(breakId, out beforePhotos, out afterPhotos);
 
             // 使用者操作權限
             string loginUser = Session["LoginUser"] != null ? Session["LoginUser"].ToString() : "";
@@ -276,7 +369,7 @@ namespace NTPC_FEC.RoadBreak
 
             bool canEdit = (userRole == "Admin" || caseData.Report_User == loginUser || caseData.S_USER == loginUser);
             bool canDispatch = (userRole == "Admin" || userRole == "EPD" || userRole == "Manager");
-            bool canImprove = (userRole == "Admin" || (!string.IsNullOrEmpty(caseData.G_COM) && caseData.G_COM == userUnit));
+            bool canImprove = (userRole == "Admin" || userRole == "EPD" || userRole == "Manager" || (!string.IsNullOrEmpty(caseData.G_COM) && caseData.G_COM == userUnit));
 
             var userPerms = new
             {
@@ -293,14 +386,19 @@ namespace NTPC_FEC.RoadBreak
                 Success = true,
                 Case = caseData,
                 Photos = comparisonList,
+                BeforePhotos = beforePhotos,
+                AfterPhotos = afterPhotos,
                 UserPerms = userPerms
             }));
         }
 
         // 讀取與匹配照片對比清單
-        private List<PhotoComparisonItem> LoadPhotoComparisonList(string breakId)
+        private List<PhotoComparisonItem> LoadPhotoComparisonList(string breakId, out List<SimplePhotoDto> beforeList, out List<SimplePhotoDto> afterList)
         {
             List<PhotoComparisonItem> list = new List<PhotoComparisonItem>();
+            beforeList = new List<SimplePhotoDto>();
+            afterList = new List<SimplePhotoDto>();
+
             string picDir = PathHelper.FindDirectory("Upload/RoadBreakPIC/" + breakId);
 
             if (!Directory.Exists(picDir))
@@ -314,8 +412,12 @@ namespace NTPC_FEC.RoadBreak
             // 篩選佐證照片
             var beforeFiles = allFiles
                 .Where(new Func<FileInfo, bool>(delegate(FileInfo f) {
-                    string name = f.Name;
-                    return name.IndexOf("佐證照片") >= 0 && name.IndexOf("改善後") < 0;
+                    string ext = Path.GetExtension(f.Name).ToLower();
+                    bool isImg = ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" || ext == ".bmp";
+                    return isImg &&
+                           f.Name.IndexOf("改善後", StringComparison.OrdinalIgnoreCase) < 0 &&
+                           f.Name.IndexOf("完工", StringComparison.OrdinalIgnoreCase) < 0 &&
+                           f.Name.IndexOf("after", StringComparison.OrdinalIgnoreCase) < 0;
                 }))
                 .OrderBy(new Func<FileInfo, string>(delegate(FileInfo f) { return f.Name; }))
                 .ToList();
@@ -323,11 +425,45 @@ namespace NTPC_FEC.RoadBreak
             // 篩選改善後佐證照片
             var afterFiles = allFiles
                 .Where(new Func<FileInfo, bool>(delegate(FileInfo f) {
-                    string name = f.Name;
-                    return name.IndexOf("改善後") >= 0;
+                    string ext = Path.GetExtension(f.Name).ToLower();
+                    bool isImg = ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" || ext == ".bmp";
+                    return isImg && (
+                           f.Name.IndexOf("改善後", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           f.Name.IndexOf("完工", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           f.Name.IndexOf("after", StringComparison.OrdinalIgnoreCase) >= 0);
                 }))
                 .OrderBy(new Func<FileInfo, string>(delegate(FileInfo f) { return f.Name; }))
                 .ToList();
+
+            string[] beforeLabels = new string[] { "修補前(遠照)", "修補前(近照)", "修補前(門牌)", "現場照片4", "現場照片5", "現場照片6" };
+            int bIdx = 0;
+            foreach (FileInfo bf in beforeFiles)
+            {
+                string titleStr = bIdx < beforeLabels.Length ? beforeLabels[bIdx] : ("現場照片 " + (bIdx + 1));
+                beforeList.Add(new SimplePhotoDto
+                {
+                    Title = titleStr,
+                    FileName = bf.Name,
+                    Url = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}", breakId, bf.Name)),
+                    Size = bf.Length,
+                    Time = bf.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
+                });
+                bIdx++;
+            }
+
+            int aIdx = 1;
+            foreach (FileInfo af in afterFiles)
+            {
+                afterList.Add(new SimplePhotoDto
+                {
+                    Title = "照片" + aIdx,
+                    FileName = af.Name,
+                    Url = PathHelper.ResolveUrl(string.Format("~/Upload/RoadBreakPIC/{0}/{1}", breakId, af.Name)),
+                    Size = af.Length,
+                    Time = af.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
+                });
+                aIdx++;
+            }
 
             // 先以佐證照片為基準進行配對
             int index = 1;
@@ -338,13 +474,12 @@ namespace NTPC_FEC.RoadBreak
                 string baseName = Path.GetFileNameWithoutExtension(bf.Name);
                 string numStr = baseName.Replace("佐證照片_", "").Replace("佐證照片", "");
 
-                // 嘗試尋找對應編號的改善照片
                 FileInfo matchAfter = null;
                 foreach (FileInfo af in afterFiles)
                 {
                     string afBase = Path.GetFileNameWithoutExtension(af.Name);
-                    if (afBase == "改善後佐證照片_" + numStr || 
-                        afBase == "改善後_" + numStr || 
+                    if (afBase == "改善後佐證照片_" + numStr ||
+                        afBase == "改善後_" + numStr ||
                         afBase == baseName.Replace("佐證照片", "改善後佐證照片"))
                     {
                         matchAfter = af;
@@ -352,7 +487,6 @@ namespace NTPC_FEC.RoadBreak
                     }
                 }
 
-                // 若沒精確符合且順序數量一致，嘗試按索引匹配
                 if (matchAfter == null && (index - 1) < afterFiles.Count)
                 {
                     FileInfo candidate = afterFiles[index - 1];
@@ -466,5 +600,3 @@ namespace NTPC_FEC.RoadBreak
         }
     }
 }
-
-
